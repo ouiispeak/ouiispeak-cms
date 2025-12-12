@@ -1,0 +1,18 @@
+{
+    "id": "slide-002",
+    "groupId": "group-001",
+    "orderIndex": 2,
+  
+    "slideType": "speak",
+    "activityType": "speakRepeat",
+  
+    "title": "Repeat after me",
+    "instructions": "Listen and repeat.",
+  
+    "props": {
+      "promptAudioId": "audio-123",
+      "transcript": "Let's go!",
+      "attemptsAllowed": 1
+    }
+  }
+  
