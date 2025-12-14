@@ -95,21 +95,18 @@ export default function EditSlidePage() {
             Slide type: <strong>{loadState.row.type}</strong>
           </p>
 
-          {loadState.row.type === "ai-speak-repeat" ? (
-            <AiSpeakRepeatEditor row={loadState.row} />
-          ) : (
-            <>
-              <h2>Editor not implemented yet</h2>
-              <p>
-                This slide has type <code>{loadState.row.type}</code>. A custom
-                editor for this type hasn&apos;t been built yet.
-              </p>
-              <h3>Raw DB row (debug)</h3>
-              <pre style={{ fontSize: 12 }}>
-                {JSON.stringify(loadState.row, null, 2)}
-              </pre>
-            </>
-          )}
+          {(() => {
+            const type = (loadState.row.type ?? "").trim();
+            if (type === "ai-speak-repeat") {
+              return <AiSpeakRepeatEditor row={loadState.row} />;
+            } else if (type === "title-slide") {
+              return <TitleSlideEditor row={loadState.row} />;
+            } else if (type === "text-slide") {
+              return <TextSlideEditor row={loadState.row} />;
+            } else {
+              return <RawJsonEditor row={loadState.row} />;
+            }
+          })()}
         </>
       )}
     </main>
@@ -131,6 +128,11 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
   
     const [saving, setSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
+    const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
+    const [rawJsonText, setRawJsonText] = useState(() => JSON.stringify(row.props_json ?? {}, null, 2));
+    const [rawJsonParseError, setRawJsonParseError] = useState<string | null>(null);
+    const [rawJsonSaving, setRawJsonSaving] = useState(false);
+    const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
   
     // Parse and validate slide, populate fields
     useEffect(() => {
@@ -224,10 +226,15 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
         }
   
         const validated = parsed.data;
-  
+
+        const trimmedType = (row.type ?? "").trim();
+
         const { error: updateError } = await supabase
           .from("slides")
-          .update({ props_json: validated.props })
+          .update({
+            props_json: validated.props,
+            type: trimmedType,
+          })
           .eq("id", validated.id);
   
         if (updateError) {
@@ -385,6 +392,113 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
             {saveMessage}
           </p>
         )}
+
+        <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
+          <button
+            type="button"
+            onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 13,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+              backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
+              cursor: "pointer",
+            }}
+          >
+            {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
+          </button>
+
+          {rawJsonExpanded && (
+            <div style={{ marginTop: 16 }}>
+              <textarea
+                value={rawJsonText}
+                onChange={(e) => {
+                  setRawJsonText(e.target.value);
+                  setRawJsonParseError(null);
+                }}
+                rows={15}
+                style={{
+                  width: "100%",
+                  padding: 8,
+                  borderRadius: 4,
+                  border: "1px solid #ccc",
+                  fontFamily: "monospace",
+                  fontSize: 13,
+                }}
+              />
+              {rawJsonParseError && (
+                <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+                  {rawJsonParseError}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  setRawJsonParseError(null);
+                  setRawJsonSaveMessage(null);
+                  setRawJsonSaving(true);
+
+                  try {
+                    let parsedJson: unknown;
+                    try {
+                      parsedJson = JSON.parse(rawJsonText);
+                    } catch (parseErr) {
+                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                      return;
+                    }
+
+                    const trimmedType = (row.type ?? "").trim();
+
+                    const { error: updateError } = await supabase
+                      .from("slides")
+                      .update({
+                        props_json: parsedJson,
+                        type: trimmedType,
+                      })
+                      .eq("id", row.id);
+
+                    if (updateError) {
+                      setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                      return;
+                    }
+
+                    setRawJsonSaveMessage("Saved successfully!");
+                    // Update the textarea to reflect the saved value (in case it was normalized)
+                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                  } finally {
+                    setRawJsonSaving(false);
+                  }
+                }}
+                disabled={rawJsonSaving}
+                style={{
+                  marginTop: 8,
+                  padding: "6px 12px",
+                  fontSize: 14,
+                  borderRadius: 4,
+                  border: "none",
+                  backgroundColor: "#2563eb",
+                  color: "#fff",
+                  cursor: rawJsonSaving ? "default" : "pointer",
+                  opacity: rawJsonSaving ? 0.7 : 1,
+                }}
+              >
+                {rawJsonSaving ? "Saving…" : "Save JSON"}
+              </button>
+              {rawJsonSaveMessage && (
+                <p
+                  style={{
+                    marginTop: 8,
+                    color: rawJsonSaveMessage.includes("error") ? "red" : "green",
+                    fontSize: 13,
+                  }}
+                >
+                  {rawJsonSaveMessage}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
   
         <h3 style={{ marginTop: 32 }}>Current slide data</h3>
         <pre style={{ fontSize: 12 }}>
@@ -393,4 +507,770 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
       </>
     );
   }
+
+function TitleSlideEditor({ row }: { row: SlideRow }) {
+  const props = (row.props_json as any) || {};
+  const [title, setTitle] = useState(props.title || "");
+  const [subtitle, setSubtitle] = useState(props.subtitle || "");
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
+  const [rawJsonText, setRawJsonText] = useState(() => JSON.stringify(row.props_json ?? {}, null, 2));
+  const [rawJsonParseError, setRawJsonParseError] = useState<string | null>(null);
+  const [rawJsonSaving, setRawJsonSaving] = useState(false);
+  const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaveMessage(null);
+    setSaving(true);
+
+    try {
+      const newProps: any = { title };
+      if (subtitle.trim()) {
+        newProps.subtitle = subtitle;
+      }
+
+      const trimmedType = (row.type ?? "").trim();
+
+      const { error: updateError } = await supabase
+        .from("slides")
+        .update({
+          props_json: newProps,
+          type: trimmedType,
+        })
+        .eq("id", row.id);
+
+      if (updateError) {
+        setSaveMessage("Supabase update error: " + updateError.message);
+        return;
+      }
+
+      setSaveMessage("Saved successfully!");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <h2>title-slide editor</h2>
+      <p>
+        Editing slide <code>{row.id}</code> in group{" "}
+        <code>{row.group_id ?? "none"}</code>
+      </p>
+
+      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
+        {/* Title */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Title <span style={{ color: "red" }}>*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        {/* Subtitle */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Subtitle (optional)
+          </label>
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "8px 16px",
+            fontSize: 16,
+            borderRadius: 4,
+            border: "none",
+            backgroundColor: "#2563eb",
+            color: "#fff",
+            cursor: saving ? "default" : "pointer",
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </form>
+
+      {saveMessage && (
+        <p
+          style={{
+            marginTop: 16,
+            color: saveMessage.includes("error") ? "red" : "green",
+          }}
+        >
+          {saveMessage}
+        </p>
+      )}
+
+      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
+        <button
+          type="button"
+          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+          style={{
+            padding: "4px 8px",
+            fontSize: 13,
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
+            cursor: "pointer",
+          }}
+        >
+          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
+        </button>
+
+        {rawJsonExpanded && (
+          <div style={{ marginTop: 16 }}>
+            <textarea
+              value={rawJsonText}
+              onChange={(e) => {
+                setRawJsonText(e.target.value);
+                setRawJsonParseError(null);
+              }}
+              rows={15}
+              style={{
+                width: "100%",
+                padding: 8,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+                fontFamily: "monospace",
+                fontSize: 13,
+              }}
+            />
+            {rawJsonParseError && (
+              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+                {rawJsonParseError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                setRawJsonParseError(null);
+                setRawJsonSaveMessage(null);
+                setRawJsonSaving(true);
+
+                try {
+                  let parsedJson: unknown;
+                  try {
+                    parsedJson = JSON.parse(rawJsonText);
+                  } catch (parseErr) {
+                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                    return;
+                  }
+
+                  const trimmedType = (row.type ?? "").trim();
+
+                  const { error: updateError } = await supabase
+                    .from("slides")
+                    .update({
+                      props_json: parsedJson,
+                      type: trimmedType,
+                    })
+                    .eq("id", row.id);
+
+                  if (updateError) {
+                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                    return;
+                  }
+
+                  setRawJsonSaveMessage("Saved successfully!");
+                  // Update the textarea to reflect the saved value (in case it was normalized)
+                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                } finally {
+                  setRawJsonSaving(false);
+                }
+              }}
+              disabled={rawJsonSaving}
+              style={{
+                marginTop: 8,
+                padding: "6px 12px",
+                fontSize: 14,
+                borderRadius: 4,
+                border: "none",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                cursor: rawJsonSaving ? "default" : "pointer",
+                opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+            >
+              {rawJsonSaving ? "Saving…" : "Save JSON"}
+            </button>
+            {rawJsonSaveMessage && (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
+                  fontSize: 13,
+                }}
+              >
+                {rawJsonSaveMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
+      <pre style={{ fontSize: 12 }}>
+        {JSON.stringify(row, null, 2)}
+      </pre>
+    </>
+  );
+}
+
+function TextSlideEditor({ row }: { row: SlideRow }) {
+  const props = (row.props_json as any) || {};
+  const [title, setTitle] = useState(props.title || "");
+  const [subtitle, setSubtitle] = useState(props.subtitle || "");
+  const [body, setBody] = useState(props.body || "");
+  const [bodiesText, setBodiesText] = useState(
+    props.bodies && Array.isArray(props.bodies) ? props.bodies.join("\n") : ""
+  );
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
+  const [rawJsonText, setRawJsonText] = useState(() => JSON.stringify(row.props_json ?? {}, null, 2));
+  const [rawJsonParseError, setRawJsonParseError] = useState<string | null>(null);
+  const [rawJsonSaving, setRawJsonSaving] = useState(false);
+  const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaveMessage(null);
+    setSaving(true);
+
+    try {
+      const newProps: any = {};
+
+      if (title.trim()) {
+        newProps.title = title.trim();
+      }
+      if (subtitle.trim()) {
+        newProps.subtitle = subtitle.trim();
+      }
+
+      // If bodies textarea has content, use bodies array and remove body
+      // Otherwise, use body and remove bodies
+      const bodiesLines = bodiesText
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (bodiesLines.length > 0) {
+        newProps.bodies = bodiesLines;
+        // Don't include body if bodies exists
+      } else {
+        if (body.trim()) {
+          newProps.body = body.trim();
+        }
+        // Don't include bodies if body exists
+      }
+
+      const trimmedType = (row.type ?? "").trim();
+
+      const { error: updateError } = await supabase
+        .from("slides")
+        .update({
+          props_json: newProps,
+          type: trimmedType,
+        })
+        .eq("id", row.id);
+
+      if (updateError) {
+        setSaveMessage("Supabase update error: " + updateError.message);
+        return;
+      }
+
+      setSaveMessage("Saved successfully!");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <h2>text-slide editor</h2>
+      <p>
+        Editing slide <code>{row.id}</code> in group{" "}
+        <code>{row.group_id ?? "none"}</code>
+      </p>
+
+      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
+        {/* Title */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Title (optional)
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        {/* Subtitle */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Subtitle (optional)
+          </label>
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        {/* Body */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Body {bodiesText.trim().length > 0 && <span style={{ color: "#999", fontWeight: 400 }}>(ignored if Bodies is non-empty)</span>}
+          </label>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={6}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+            }}
+          />
+        </div>
+
+        {/* Bodies */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            Bodies (one per line; empty lines ignored) {bodiesText.trim().length > 0 && <span style={{ color: "green", fontWeight: 400 }}>(will be saved)</span>}
+          </label>
+          <textarea
+            value={bodiesText}
+            onChange={(e) => setBodiesText(e.target.value)}
+            rows={6}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+              fontFamily: "monospace",
+            }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "8px 16px",
+            fontSize: 16,
+            borderRadius: 4,
+            border: "none",
+            backgroundColor: "#2563eb",
+            color: "#fff",
+            cursor: saving ? "default" : "pointer",
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </form>
+
+      {saveMessage && (
+        <p
+          style={{
+            marginTop: 16,
+            color: saveMessage.includes("error") ? "red" : "green",
+          }}
+        >
+          {saveMessage}
+        </p>
+      )}
+
+      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
+        <button
+          type="button"
+          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+          style={{
+            padding: "4px 8px",
+            fontSize: 13,
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
+            cursor: "pointer",
+          }}
+        >
+          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
+        </button>
+
+        {rawJsonExpanded && (
+          <div style={{ marginTop: 16 }}>
+            <textarea
+              value={rawJsonText}
+              onChange={(e) => {
+                setRawJsonText(e.target.value);
+                setRawJsonParseError(null);
+              }}
+              rows={15}
+              style={{
+                width: "100%",
+                padding: 8,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+                fontFamily: "monospace",
+                fontSize: 13,
+              }}
+            />
+            {rawJsonParseError && (
+              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+                {rawJsonParseError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                setRawJsonParseError(null);
+                setRawJsonSaveMessage(null);
+                setRawJsonSaving(true);
+
+                try {
+                  let parsedJson: unknown;
+                  try {
+                    parsedJson = JSON.parse(rawJsonText);
+                  } catch (parseErr) {
+                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                    return;
+                  }
+
+                  const trimmedType = (row.type ?? "").trim();
+
+                  const { error: updateError } = await supabase
+                    .from("slides")
+                    .update({
+                      props_json: parsedJson,
+                      type: trimmedType,
+                    })
+                    .eq("id", row.id);
+
+                  if (updateError) {
+                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                    return;
+                  }
+
+                  setRawJsonSaveMessage("Saved successfully!");
+                  // Update the textarea to reflect the saved value (in case it was normalized)
+                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                } finally {
+                  setRawJsonSaving(false);
+                }
+              }}
+              disabled={rawJsonSaving}
+              style={{
+                marginTop: 8,
+                padding: "6px 12px",
+                fontSize: 14,
+                borderRadius: 4,
+                border: "none",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                cursor: rawJsonSaving ? "default" : "pointer",
+                opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+            >
+              {rawJsonSaving ? "Saving…" : "Save JSON"}
+            </button>
+            {rawJsonSaveMessage && (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
+                  fontSize: 13,
+                }}
+              >
+                {rawJsonSaveMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
+      <pre style={{ fontSize: 12 }}>
+        {JSON.stringify(row, null, 2)}
+      </pre>
+    </>
+  );
+}
+
+function RawJsonEditor({ row }: { row: SlideRow }) {
+  const [jsonText, setJsonText] = useState(() => {
+    try {
+      return JSON.stringify(row.props_json, null, 2);
+    } catch {
+      return String(row.props_json ?? "");
+    }
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
+  const [rawJsonText, setRawJsonText] = useState(() => JSON.stringify(row.props_json ?? {}, null, 2));
+  const [rawJsonParseError, setRawJsonParseError] = useState<string | null>(null);
+  const [rawJsonSaving, setRawJsonSaving] = useState(false);
+  const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setSaveMessage(null);
+    setParseError(null);
+    setSaving(true);
+
+    try {
+      let parsedJson: unknown;
+      try {
+        parsedJson = JSON.parse(jsonText);
+      } catch (parseErr) {
+        setParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+        return;
+      }
+
+      const trimmedType = (row.type ?? "").trim();
+
+      const { error: updateError } = await supabase
+        .from("slides")
+        .update({
+          props_json: parsedJson,
+          type: trimmedType,
+        })
+        .eq("id", row.id);
+
+      if (updateError) {
+        setSaveMessage("Supabase update error: " + updateError.message);
+        return;
+      }
+
+      setSaveMessage("Saved successfully!");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <h2>Raw JSON editor</h2>
+      <p>
+        Editing slide <code>{row.id}</code> (type: <code>{row.type}</code>) in group{" "}
+        <code>{row.group_id ?? "none"}</code>
+      </p>
+      <p style={{ opacity: 0.7, fontSize: 13 }}>
+        No custom editor available for this slide type. Edit the raw JSON below.
+      </p>
+
+      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+            props_json (raw JSON)
+          </label>
+          <textarea
+            value={jsonText}
+            onChange={(e) => {
+              setJsonText(e.target.value);
+              setParseError(null);
+            }}
+            rows={20}
+            style={{
+              width: "100%",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+              fontFamily: "monospace",
+              fontSize: 13,
+            }}
+          />
+        </div>
+
+        {parseError && (
+          <p style={{ color: "red", marginBottom: 16 }}>
+            {parseError}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "8px 16px",
+            fontSize: 16,
+            borderRadius: 4,
+            border: "none",
+            backgroundColor: "#2563eb",
+            color: "#fff",
+            cursor: saving ? "default" : "pointer",
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </form>
+
+      {saveMessage && (
+        <p
+          style={{
+            marginTop: 16,
+            color: saveMessage.includes("error") ? "red" : "green",
+          }}
+        >
+          {saveMessage}
+        </p>
+      )}
+
+      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
+        <button
+          type="button"
+          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+          style={{
+            padding: "4px 8px",
+            fontSize: 13,
+            borderRadius: 4,
+            border: "1px solid #ccc",
+            backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
+            cursor: "pointer",
+          }}
+        >
+          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
+        </button>
+
+        {rawJsonExpanded && (
+          <div style={{ marginTop: 16 }}>
+            <textarea
+              value={rawJsonText}
+              onChange={(e) => {
+                setRawJsonText(e.target.value);
+                setRawJsonParseError(null);
+              }}
+              rows={15}
+              style={{
+                width: "100%",
+                padding: 8,
+                borderRadius: 4,
+                border: "1px solid #ccc",
+                fontFamily: "monospace",
+                fontSize: 13,
+              }}
+            />
+            {rawJsonParseError && (
+              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+                {rawJsonParseError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                setRawJsonParseError(null);
+                setRawJsonSaveMessage(null);
+                setRawJsonSaving(true);
+
+                try {
+                  let parsedJson: unknown;
+                  try {
+                    parsedJson = JSON.parse(rawJsonText);
+                  } catch (parseErr) {
+                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                    return;
+                  }
+
+                  const trimmedType = (row.type ?? "").trim();
+
+                  const { error: updateError } = await supabase
+                    .from("slides")
+                    .update({
+                      props_json: parsedJson,
+                      type: trimmedType,
+                    })
+                    .eq("id", row.id);
+
+                  if (updateError) {
+                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                    return;
+                  }
+
+                  setRawJsonSaveMessage("Saved successfully!");
+                  // Update the textarea to reflect the saved value (in case it was normalized)
+                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                } finally {
+                  setRawJsonSaving(false);
+                }
+              }}
+              disabled={rawJsonSaving}
+              style={{
+                marginTop: 8,
+                padding: "6px 12px",
+                fontSize: 14,
+                borderRadius: 4,
+                border: "none",
+                backgroundColor: "#2563eb",
+                color: "#fff",
+                cursor: rawJsonSaving ? "default" : "pointer",
+                opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+            >
+              {rawJsonSaving ? "Saving…" : "Save JSON"}
+            </button>
+            {rawJsonSaveMessage && (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
+                  fontSize: 13,
+                }}
+              >
+                {rawJsonSaveMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
+      <pre style={{ fontSize: 12 }}>
+        {JSON.stringify(row, null, 2)}
+      </pre>
+    </>
+  );
+}
   

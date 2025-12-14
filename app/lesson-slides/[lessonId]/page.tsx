@@ -75,6 +75,81 @@ export default function LessonSlidesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
 
+  function defaultPropsForType(type: string): any {
+    const trimmedType = type.trim();
+    switch (trimmedType) {
+      case "title-slide":
+        return { title: "New title slide", subtitle: "" };
+      case "text-slide":
+        return { title: "New text", body: "…" };
+      case "ai-speak-repeat":
+        return {
+          title: "New ai-speak-repeat slide",
+          lines: [
+            [
+              {
+                label: "Hello",
+                speech: { mode: "tts", lang: "en", text: "Hello" },
+              },
+            ],
+          ],
+        };
+      default:
+        return {};
+    }
+  }
+
+  async function insertSlide({
+    lessonId: lid,
+    groupId,
+    type,
+  }: {
+    lessonId: string;
+    groupId: string | null;
+    type: string;
+  }) {
+    if (!lid) return;
+    if (state.status !== "ready") return;
+
+    const trimmedType = type.trim();
+    const normalizedType = trimmedType;
+    const defaultProps = defaultPropsForType(trimmedType);
+
+    // Compute next slide order_index (whole-lesson)
+    const maxOrder = state.slides.reduce((max, s) => {
+      const v = typeof s.order_index === "number" ? s.order_index : 0;
+      return v > max ? v : max;
+    }, 0);
+
+    const nextOrderIndex = maxOrder + 1;
+
+    // Insert slide
+    const { data: slideData, error: slideInsertError } = await supabase
+      .from("slides")
+      .insert({
+        lesson_id: lid,
+        group_id: groupId,
+        type: normalizedType,
+        order_index: nextOrderIndex,
+        aid_hook: null,
+        props_json: defaultProps,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (slideInsertError) {
+      alert("Slide insert error: " + slideInsertError.message);
+      return;
+    }
+
+    if (!slideData?.id) {
+      alert("Slide insert succeeded but no id returned.");
+      return;
+    }
+
+    router.push(`/edit-slide/${slideData.id}`);
+  }
+
   async function addAiSpeakRepeatSlide() {
     if (!lessonId) return;
     if (state.status !== "ready") return;
@@ -93,7 +168,7 @@ export default function LessonSlidesPage() {
       return;
     }
 
-    let groupId = groupData?.id;
+    let groupId = groupData?.id ?? null;
 
     // 2) If no group exists, create default Intro group
     if (!groupId) {
@@ -120,97 +195,65 @@ export default function LessonSlidesPage() {
       groupId = newGroupData.id;
     }
 
-    // 3) Compute next slide order_index (whole-lesson)
-    const maxOrder = state.slides.reduce((max, s) => {
-      const v = typeof s.order_index === "number" ? s.order_index : 0;
-      return v > max ? v : max;
-    }, 0);
-
-    const nextOrderIndex = maxOrder + 1;
-
-    // 4) Insert slide
-    const { data: slideData, error: slideInsertError } = await supabase
-      .from("slides")
-      .insert({
-        lesson_id: lessonId,
-        group_id: groupId,
-        type: "ai-speak-repeat",
-        order_index: nextOrderIndex,
-        aid_hook: null,
-        props_json: {
-          title: "New ai-speak-repeat slide",
-          lines: [
-            [
-              {
-                label: "Hello",
-                speech: { mode: "tts", lang: "en", text: "Hello" },
-              },
-            ],
-          ],
-        },
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (slideInsertError) {
-      alert("Slide insert error: " + slideInsertError.message);
-      return;
-    }
-
-    if (!slideData?.id) {
-      alert("Slide insert succeeded but no id returned.");
-      return;
-    }
-
-    router.push(`/edit-slide/${slideData.id}`);
+    // 3) Insert slide using helper
+    await insertSlide({
+      lessonId,
+      groupId,
+      type: "ai-speak-repeat",
+    });
   }
 
-  async function addAiSpeakRepeatSlideToGroup(groupId: string) {
+  async function addTextSlide() {
     if (!lessonId) return;
     if (state.status !== "ready") return;
 
-    // next order_index (whole-lesson for now)
-    const maxOrder = state.slides.reduce((max, s) => {
-      const v = typeof s.order_index === "number" ? s.order_index : 0;
-      return v > max ? v : max;
-    }, 0);
-
-    const nextOrderIndex = maxOrder + 1;
-
-    const { data: slideData, error: slideInsertError } = await supabase
-      .from("slides")
-      .insert({
-        lesson_id: lessonId,
-        group_id: groupId,
-        type: "ai-speak-repeat",
-        order_index: nextOrderIndex,
-        aid_hook: null,
-        props_json: {
-          title: "New ai-speak-repeat slide",
-          lines: [
-            [
-              {
-                label: "Hello",
-                speech: { mode: "tts", lang: "en", text: "Hello" },
-              },
-            ],
-          ],
-        },
-      })
+    // 1) Fetch earliest group for this lesson
+    const { data: groupData, error: groupLookupError } = await supabase
+      .from("lesson_groups")
       .select("id")
+      .eq("lesson_id", lessonId)
+      .order("order_index", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
-    if (slideInsertError) {
-      alert("Slide insert error: " + slideInsertError.message);
+    if (groupLookupError) {
+      alert("Group lookup error: " + groupLookupError.message);
       return;
     }
 
-    if (!slideData?.id) {
-      alert("Slide insert succeeded but no id returned.");
-      return;
+    let groupId = groupData?.id ?? null;
+
+    // 2) If no group exists, create default Intro group
+    if (!groupId) {
+      const { data: newGroupData, error: groupInsertError } = await supabase
+        .from("lesson_groups")
+        .insert({
+          lesson_id: lessonId,
+          order_index: 1,
+          title: "Intro",
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (groupInsertError) {
+        alert("Group insert error: " + groupInsertError.message);
+        return;
+      }
+
+      if (!newGroupData?.id) {
+        alert("Group insert succeeded but no id returned.");
+        return;
+      }
+
+      groupId = newGroupData.id;
     }
 
-    router.push(`/edit-slide/${slideData.id}`);
+    // 3) Insert slide using helper
+    await insertSlide({
+      lessonId,
+      groupId,
+      type: "text-slide",
+    });
   }
 
   async function deleteSlide(slideId: string) {
@@ -297,8 +340,9 @@ export default function LessonSlidesPage() {
         Lesson id: <code>{lessonId}</code>
       </p>
 
-      <div style={{ margin: "16px 0" }}>
-        <button onClick={addAiSpeakRepeatSlide}>+ Add ai-speak-repeat slide</button>
+      <div style={{ margin: "16px 0", display: "flex", gap: 8 }}>
+        <button onClick={addAiSpeakRepeatSlide}>+ AI Speak (to first group)</button>
+        <button onClick={addTextSlide}>+ Text slide</button>
       </div>
 
       {state.status === "loading" && <p>Loading…</p>}
@@ -314,9 +358,26 @@ export default function LessonSlidesPage() {
                   <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 12 }}>(group)</span>
                 </div>
 
-                <button onClick={() => addAiSpeakRepeatSlideToGroup(group.id)} style={{ fontSize: 13 }}>
-                  + Add slide to this group
-                </button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "title-slide" })}
+                    style={{ fontSize: 13 }}
+                  >
+                    + Title
+                  </button>
+                  <button
+                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "text-slide" })}
+                    style={{ fontSize: 13 }}
+                  >
+                    + Text
+                  </button>
+                  <button
+                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "ai-speak-repeat" })}
+                    style={{ fontSize: 13 }}
+                  >
+                    + AI Speak
+                  </button>
+                </div>
               </div>
 
               {slides.length === 0 ? (
