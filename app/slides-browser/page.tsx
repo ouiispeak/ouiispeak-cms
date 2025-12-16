@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { BackButton } from "../../components/BackButton";
+import PageContainer from "../../components/ui/PageContainer";
 
 type LessonRow = {
   id: string;
@@ -95,37 +97,57 @@ export default function SlidesBrowserPage() {
 
   if (state.status === "loading") {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Slides Browser</h1>
-        <p>Loading lessons, groups, and slides…</p>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>Slides Browser</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <BackButton title="Back to Dashboard" />
+        </div>
+        <PageContainer>
+          <p>Loading lessons, groups, and slides…</p>
+        </PageContainer>
+      </>
     );
   }
 
   if (state.status === "error") {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Slides Browser</h1>
-        <h2 style={{ color: "red" }}>Supabase error</h2>
-        <pre style={{ fontSize: 12 }}>
-          {JSON.stringify(
-            {
-              message: state.message,
-              details: state.details,
-            },
-            null,
-            2
-          )}
-        </pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>Slides Browser</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <BackButton title="Back to Dashboard" />
+        </div>
+        <PageContainer>
+          <h2 style={{ color: "red" }}>Supabase error</h2>
+          <pre style={{ fontSize: 12 }}>
+            {JSON.stringify(
+              {
+                message: state.message,
+                details: state.details,
+              },
+              null,
+              2
+            )}
+          </pre>
+        </PageContainer>
+      </>
     );
   }
 
   const { lessons, groups, slides } = state;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Slides Browser</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Slides Browser</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer>
 
       {lessons.length === 0 && <p>No lessons found.</p>}
 
@@ -201,6 +223,7 @@ export default function SlidesBrowserPage() {
           2
         )}
       </pre>
-    </main>
+      </PageContainer>
+    </>
   );
 }

@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
+import PageContainer from "../../components/ui/PageContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -17,16 +19,26 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (!title) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>DB Slide Rename Test</h1>
-        <p>
-          No <code>title</code> query parameter provided.
-        </p>
-        <p>Use something like:</p>
-        <pre>
-          http://localhost:3000/db-slide-rename?title=My%20new%20title
-        </pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+            <span style={{ fontSize: 18 }}>←</span>
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+        <PageContainer>
+          <p>
+            No <code>title</code> query parameter provided.
+          </p>
+          <p>Use something like:</p>
+          <pre>
+            http://localhost:3000/db-slide-rename?title=My%20new%20title
+          </pre>
+        </PageContainer>
+      </>
     );
   }
 
@@ -39,20 +51,40 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (error) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>DB Slide Rename Test</h1>
-        <h2 style={{ color: "red" }}>Supabase error (load)</h2>
-        <pre>{JSON.stringify(error, null, 2)}</pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+            <span style={{ fontSize: 18 }}>←</span>
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+        <PageContainer>
+          <h2 style={{ color: "red" }}>Supabase error (load)</h2>
+          <pre>{JSON.stringify(error, null, 2)}</pre>
+        </PageContainer>
+      </>
     );
   }
 
   if (!data) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>DB Slide Rename Test</h1>
-        <h2>No slide found with id "slide-ai-001"</h2>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+            <span style={{ fontSize: 18 }}>←</span>
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+        <PageContainer>
+          <h2>No slide found with id "slide-ai-001"</h2>
+        </PageContainer>
+      </>
     );
   }
 
@@ -74,13 +106,23 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (!parsed.success) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>DB Slide Rename Test</h1>
-        <h2 style={{ color: "red" }}>Validation failed after title change</h2>
-        <pre>{JSON.stringify(parsed.error.format(), null, 2)}</pre>
-        <h3>Raw slide</h3>
-        <pre>{JSON.stringify(rawSlide, null, 2)}</pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+            <span style={{ fontSize: 18 }}>←</span>
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+        <PageContainer>
+          <h2 style={{ color: "red" }}>Validation failed after title change</h2>
+          <pre>{JSON.stringify(parsed.error.format(), null, 2)}</pre>
+          <h3>Raw slide</h3>
+          <pre>{JSON.stringify(rawSlide, null, 2)}</pre>
+        </PageContainer>
+      </>
     );
   }
 
@@ -94,17 +136,36 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (updateError) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>DB Slide Rename Test</h1>
-        <h2 style={{ color: "red" }}>Supabase error (update)</h2>
-        <pre>{JSON.stringify(updateError, null, 2)}</pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+            <span style={{ fontSize: 18 }}>←</span>
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+        <PageContainer>
+          <h2 style={{ color: "red" }}>Supabase error (update)</h2>
+          <pre>{JSON.stringify(updateError, null, 2)}</pre>
+        </PageContainer>
+      </>
     );
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>DB Slide Rename Test</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+          <span style={{ fontSize: 18 }}>←</span>
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
+      <PageContainer>
       <p>
         Updated slide <strong>{slide.id}</strong> title to:
       </p>
@@ -112,6 +173,7 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
       <h3>New props</h3>
       <pre>{JSON.stringify(slide.props, null, 2)}</pre>
-    </main>
+      </PageContainer>
+    </>
   );
 }

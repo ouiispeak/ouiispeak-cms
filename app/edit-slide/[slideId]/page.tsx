@@ -7,20 +7,31 @@ import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../../lib/realSlideSchema";
+import { Button } from "../../../components/Button";
+import { BackButton } from "../../../components/BackButton";
+import SectionCard from "../../../components/ui/SectionCard";
+import PageContainer from "../../../components/ui/PageContainer";
 
 type SlideRow = {
   id: string;
   lesson_id: string;
   group_id: string | null;
+  order_index: number | null;
   type: string;
   props_json: unknown;
   aid_hook: string | null;
 };
 
+type GroupRow = {
+  id: string;
+  title: string;
+  order_index: number | null;
+};
+
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; row: SlideRow };
+  | { status: "ready"; row: SlideRow; groups: GroupRow[] };
 
 export default function EditSlidePage() {
   const params = useParams<{ slideId: string }>();
@@ -29,6 +40,9 @@ export default function EditSlidePage() {
   const [loadState, setLoadState] = useState<LoadState>({
     status: "loading",
   });
+  const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
+  const [slideType, setSlideType] = useState<string>("");
 
   useEffect(() => {
     if (!slideId) {
@@ -42,21 +56,21 @@ export default function EditSlidePage() {
     async function load() {
       setLoadState({ status: "loading" });
 
-      const { data, error } = await supabase
+      const { data: slideData, error: slideError } = await supabase
         .from("slides")
-        .select("id, lesson_id, group_id, type, props_json, aid_hook")
+        .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook")
         .eq("id", slideId)
         .maybeSingle();
 
-      if (error) {
+      if (slideError) {
         setLoadState({
           status: "error",
-          message: `Supabase error: ${error.message}`,
+          message: `Supabase error: ${slideError.message}`,
         });
         return;
       }
 
-      if (!data) {
+      if (!slideData) {
         setLoadState({
           status: "error",
           message: `No slide found with id "${slideId}"`,
@@ -64,9 +78,31 @@ export default function EditSlidePage() {
         return;
       }
 
+      const slide = slideData as SlideRow;
+
+      // Load groups for the lesson
+      const { data: groupsData, error: groupsError } = await supabase
+        .from("lesson_groups")
+        .select("id, title, order_index")
+        .eq("lesson_id", slide.lesson_id)
+        .order("order_index", { ascending: true });
+
+      if (groupsError) {
+        setLoadState({
+          status: "error",
+          message: `Error loading groups: ${groupsError.message}`,
+        });
+        return;
+      }
+
+      setOrderIndex(slide.order_index ?? 1);
+      setSelectedGroupId(slide.group_id ?? "");
+      setSlideType(slide.type ?? "");
+
       setLoadState({
         status: "ready",
-        row: data as SlideRow,
+        row: slide,
+        groups: (groupsData ?? []) as GroupRow[],
       });
     }
 
@@ -74,8 +110,14 @@ export default function EditSlidePage() {
   }, [slideId]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 720 }}>
-      <h1>Edit slide</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Edit slide</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth={720}>
       <p>
         URL slide id: <code>{slideId}</code>
       </p>
@@ -91,29 +133,163 @@ export default function EditSlidePage() {
 
       {loadState.status === "ready" && (
         <>
-          <p>
-            Slide type: <strong>{loadState.row.type}</strong>
-          </p>
+          {/* Slide type input */}
+          <SectionCard title="Slide Type">
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
+                Slide type
+              </label>
+              <input
+                type="text"
+                value={slideType}
+                onChange={(e) => setSlideType(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: 8,
+                  borderRadius: 4,
+                  border: "1px solid #ccc",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+          </SectionCard>
+
+          {/* Order and Group controls */}
+          <SectionCard title="Placement">
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 200px" }}>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
+                  Group
+                </label>
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: 8,
+                    borderRadius: 4,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="">(no group)</option>
+                  {loadState.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: "1 1 200px" }}>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
+                  Order index
+                </label>
+                <input
+                  type="number"
+                  value={orderIndex}
+                  onChange={(e) => setOrderIndex(Number(e.target.value))}
+                  min={1}
+                  style={{
+                    width: "100%",
+                    padding: 8,
+                    borderRadius: 4,
+                    border: "1px solid #ccc",
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+            </div>
+          </SectionCard>
 
           {(() => {
             const type = (loadState.row.type ?? "").trim();
+            // Capture groups for reload callback
+            const currentGroups = loadState.groups;
+
+            const reloadSlide = async () => {
+              if (!slideId) return;
+              
+              const { data: slideData, error: slideError } = await supabase
+                .from("slides")
+                .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook")
+                .eq("id", slideId)
+                .maybeSingle();
+
+              if (!slideError && slideData) {
+                const slide = slideData as SlideRow;
+                setOrderIndex(slide.order_index ?? 1);
+                setSelectedGroupId(slide.group_id ?? "");
+                setSlideType(slide.type ?? "");
+                setLoadState({
+                  status: "ready",
+                  row: slide,
+                  groups: currentGroups,
+                });
+              }
+            };
+
             if (type === "ai-speak-repeat") {
-              return <AiSpeakRepeatEditor row={loadState.row} />;
+              return (
+                <AiSpeakRepeatEditor
+                  row={loadState.row}
+                  orderIndex={orderIndex}
+                  groupId={selectedGroupId || null}
+                  slideType={slideType}
+                  onSaveSuccess={reloadSlide}
+                />
+              );
             } else if (type === "title-slide") {
-              return <TitleSlideEditor row={loadState.row} />;
+              return (
+                <TitleSlideEditor
+                  row={loadState.row}
+                  orderIndex={orderIndex}
+                  groupId={selectedGroupId || null}
+                  slideType={slideType}
+                  onSaveSuccess={reloadSlide}
+                />
+              );
             } else if (type === "text-slide") {
-              return <TextSlideEditor row={loadState.row} />;
+              return (
+                <TextSlideEditor
+                  row={loadState.row}
+                  orderIndex={orderIndex}
+                  groupId={selectedGroupId || null}
+                  slideType={slideType}
+                  onSaveSuccess={reloadSlide}
+                />
+              );
             } else {
-              return <RawJsonEditor row={loadState.row} />;
+              return (
+                <RawJsonEditor
+                  row={loadState.row}
+                  orderIndex={orderIndex}
+                  groupId={selectedGroupId || null}
+                  slideType={slideType}
+                  onSaveSuccess={reloadSlide}
+                />
+              );
             }
           })()}
         </>
       )}
-    </main>
+      </PageContainer>
+    </>
   );
 }
 
-function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
+function AiSpeakRepeatEditor({
+  row,
+  orderIndex,
+  groupId,
+  slideType,
+  onSaveSuccess,
+}: {
+  row: SlideRow;
+  orderIndex: number;
+  groupId: string | null;
+  slideType: string;
+  onSaveSuccess: () => void;
+}) {
     const [innerState, setInnerState] = useState<
       | { status: "loading" }
       | { status: "error"; message: string }
@@ -227,23 +403,26 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
   
         const validated = parsed.data;
 
-        const trimmedType = (row.type ?? "").trim();
+        const trimmedType = slideType.trim();
 
         const { error: updateError } = await supabase
           .from("slides")
           .update({
             props_json: validated.props,
             type: trimmedType,
+            order_index: orderIndex,
+            group_id: groupId,
           })
           .eq("id", validated.id);
-  
+
         if (updateError) {
           setSaveMessage("Supabase update error: " + updateError.message);
           return;
         }
-  
+
         setInnerState({ status: "ready", slide: validated });
         setSaveMessage("Saved successfully!");
+        onSaveSuccess();
       } finally {
         setSaving(false);
       }
@@ -364,22 +543,9 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
             />
           </div>
   
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              padding: "8px 16px",
-              fontSize: 16,
-              borderRadius: 4,
-              border: "none",
-              backgroundColor: "#2563eb",
-              color: "#fff",
-              cursor: saving ? "default" : "pointer",
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
+          <Button type="submit" disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </form>
   
         {saveMessage && (
@@ -394,20 +560,14 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
         )}
 
         <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
-            style={{
-              padding: "4px 8px",
-              fontSize: 13,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-              backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
-              cursor: "pointer",
-            }}
+            className="text-xs py-1.5 px-3"
           >
             {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
-          </button>
+          </Button>
 
           {rawJsonExpanded && (
             <div style={{ marginTop: 16 }}>
@@ -448,7 +608,7 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
                       return;
                     }
 
-                    const trimmedType = (row.type ?? "").trim();
+                    const trimmedType = slideType.trim();
 
                     const { error: updateError } = await supabase
                       .from("slides")
@@ -471,17 +631,7 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
                   }
                 }}
                 disabled={rawJsonSaving}
-                style={{
-                  marginTop: 8,
-                  padding: "6px 12px",
-                  fontSize: 14,
-                  borderRadius: 4,
-                  border: "none",
-                  backgroundColor: "#2563eb",
-                  color: "#fff",
-                  cursor: rawJsonSaving ? "default" : "pointer",
-                  opacity: rawJsonSaving ? 0.7 : 1,
-                }}
+                className="mt-2"
               >
                 {rawJsonSaving ? "Saving…" : "Save JSON"}
               </button>
@@ -508,7 +658,19 @@ function AiSpeakRepeatEditor({ row }: { row: SlideRow }) {
     );
   }
 
-function TitleSlideEditor({ row }: { row: SlideRow }) {
+function TitleSlideEditor({
+  row,
+  orderIndex,
+  groupId,
+  slideType,
+  onSaveSuccess,
+}: {
+  row: SlideRow;
+  orderIndex: number;
+  groupId: string | null;
+  slideType: string;
+  onSaveSuccess: () => void;
+}) {
   const props = (row.props_json as any) || {};
   const [title, setTitle] = useState(props.title || "");
   const [subtitle, setSubtitle] = useState(props.subtitle || "");
@@ -531,13 +693,15 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
         newProps.subtitle = subtitle;
       }
 
-      const trimmedType = (row.type ?? "").trim();
+      const trimmedType = slideType.trim();
 
       const { error: updateError } = await supabase
         .from("slides")
         .update({
           props_json: newProps,
           type: trimmedType,
+          order_index: orderIndex,
+          group_id: groupId,
         })
         .eq("id", row.id);
 
@@ -547,6 +711,7 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
       }
 
       setSaveMessage("Saved successfully!");
+      onSaveSuccess();
     } finally {
       setSaving(false);
     }
@@ -554,13 +719,15 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
 
   return (
     <>
-      <h2>title-slide editor</h2>
-      <p>
-        Editing slide <code>{row.id}</code> in group{" "}
-        <code>{row.group_id ?? "none"}</code>
-      </p>
+      <SectionCard title="title-slide editor">
+        <div style={{ marginBottom: 8, fontSize: 13, color: "#666" }}>
+          UUID: <code>{row.id}</code>
+        </div>
+        <div style={{ marginBottom: 16, fontSize: 13, color: "#666" }}>
+          Group UUID: <code>{row.group_id ?? "none"}</code>
+        </div>
 
-      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
+        <form onSubmit={handleSave} style={{ marginTop: 24 }}>
         {/* Title */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
@@ -603,31 +770,44 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
           disabled={saving}
           style={{
             padding: "8px 16px",
-            fontSize: 16,
+            fontSize: 14,
             borderRadius: 4,
             border: "none",
-            backgroundColor: "#2563eb",
-            color: "#fff",
+            backgroundColor: "#9bbfb2",
+            color: "#222326",
+            fontWeight: 400,
+            border: "1px solid #9bbfb2",
             cursor: saving ? "default" : "pointer",
             opacity: saving ? 0.7 : 1,
+          }}
+          onMouseOver={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#8aaea1";
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#9bbfb2";
+            }
           }}
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
-      </form>
+        </form>
 
-      {saveMessage && (
-        <p
-          style={{
-            marginTop: 16,
-            color: saveMessage.includes("error") ? "red" : "green",
-          }}
-        >
-          {saveMessage}
-        </p>
-      )}
+        {saveMessage && (
+          <p
+            style={{
+              marginTop: 16,
+              color: saveMessage.includes("error") ? "red" : "green",
+            }}
+          >
+            {saveMessage}
+          </p>
+        )}
+      </SectionCard>
 
-      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
+      <SectionCard>
         <button
           type="button"
           onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
@@ -638,13 +818,14 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
             border: "1px solid #ccc",
             backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
             cursor: "pointer",
+            marginBottom: rawJsonExpanded ? 16 : 0,
           }}
         >
           {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
         </button>
 
         {rawJsonExpanded && (
-          <div style={{ marginTop: 16 }}>
+          <div>
             <textarea
               value={rawJsonText}
               onChange={(e) => {
@@ -682,7 +863,7 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
                     return;
                   }
 
-                  const trimmedType = (row.type ?? "").trim();
+                  const trimmedType = slideType.trim();
 
                   const { error: updateError } = await supabase
                     .from("slides")
@@ -711,10 +892,22 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
                 fontSize: 14,
                 borderRadius: 4,
                 border: "none",
-                backgroundColor: "#2563eb",
-                color: "#fff",
+                backgroundColor: "#9bbfb2",
+                color: "#222326",
+                fontWeight: 400,
+                border: "1px solid #9bbfb2",
                 cursor: rawJsonSaving ? "default" : "pointer",
                 opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+              onMouseOver={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#8aaea1";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#9bbfb2";
+                }
               }}
             >
               {rawJsonSaving ? "Saving…" : "Save JSON"}
@@ -732,7 +925,7 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
             )}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
       <pre style={{ fontSize: 12 }}>
@@ -742,7 +935,19 @@ function TitleSlideEditor({ row }: { row: SlideRow }) {
   );
 }
 
-function TextSlideEditor({ row }: { row: SlideRow }) {
+function TextSlideEditor({
+  row,
+  orderIndex,
+  groupId,
+  slideType,
+  onSaveSuccess,
+}: {
+  row: SlideRow;
+  orderIndex: number;
+  groupId: string | null;
+  slideType: string;
+  onSaveSuccess: () => void;
+}) {
   const props = (row.props_json as any) || {};
   const [title, setTitle] = useState(props.title || "");
   const [subtitle, setSubtitle] = useState(props.subtitle || "");
@@ -777,8 +982,8 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
       // Otherwise, use body and remove bodies
       const bodiesLines = bodiesText
         .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+        .map((line: string) => line.trim())
+        .filter((line: string) => line.length > 0);
 
       if (bodiesLines.length > 0) {
         newProps.bodies = bodiesLines;
@@ -790,13 +995,15 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
         // Don't include bodies if body exists
       }
 
-      const trimmedType = (row.type ?? "").trim();
+      const trimmedType = slideType.trim();
 
       const { error: updateError } = await supabase
         .from("slides")
         .update({
           props_json: newProps,
           type: trimmedType,
+          order_index: orderIndex,
+          group_id: groupId,
         })
         .eq("id", row.id);
 
@@ -806,6 +1013,7 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
       }
 
       setSaveMessage("Saved successfully!");
+      onSaveSuccess();
     } finally {
       setSaving(false);
     }
@@ -898,13 +1106,25 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
           disabled={saving}
           style={{
             padding: "8px 16px",
-            fontSize: 16,
+            fontSize: 14,
             borderRadius: 4,
             border: "none",
-            backgroundColor: "#2563eb",
-            color: "#fff",
+            backgroundColor: "#9bbfb2",
+            color: "#222326",
+            fontWeight: 400,
+            border: "1px solid #9bbfb2",
             cursor: saving ? "default" : "pointer",
             opacity: saving ? 0.7 : 1,
+          }}
+          onMouseOver={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#8aaea1";
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#9bbfb2";
+            }
           }}
         >
           {saving ? "Saving…" : "Save changes"}
@@ -977,7 +1197,7 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
                     return;
                   }
 
-                  const trimmedType = (row.type ?? "").trim();
+                  const trimmedType = slideType.trim();
 
                   const { error: updateError } = await supabase
                     .from("slides")
@@ -1006,10 +1226,22 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
                 fontSize: 14,
                 borderRadius: 4,
                 border: "none",
-                backgroundColor: "#2563eb",
-                color: "#fff",
+                backgroundColor: "#9bbfb2",
+                color: "#222326",
+                fontWeight: 400,
+                border: "1px solid #9bbfb2",
                 cursor: rawJsonSaving ? "default" : "pointer",
                 opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+              onMouseOver={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#8aaea1";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#9bbfb2";
+                }
               }}
             >
               {rawJsonSaving ? "Saving…" : "Save JSON"}
@@ -1037,7 +1269,19 @@ function TextSlideEditor({ row }: { row: SlideRow }) {
   );
 }
 
-function RawJsonEditor({ row }: { row: SlideRow }) {
+function RawJsonEditor({
+  row,
+  orderIndex,
+  groupId,
+  slideType,
+  onSaveSuccess,
+}: {
+  row: SlideRow;
+  orderIndex: number;
+  groupId: string | null;
+  slideType: string;
+  onSaveSuccess: () => void;
+}) {
   const [jsonText, setJsonText] = useState(() => {
     try {
       return JSON.stringify(row.props_json, null, 2);
@@ -1069,13 +1313,15 @@ function RawJsonEditor({ row }: { row: SlideRow }) {
         return;
       }
 
-      const trimmedType = (row.type ?? "").trim();
+      const trimmedType = slideType.trim();
 
       const { error: updateError } = await supabase
         .from("slides")
         .update({
           props_json: parsedJson,
           type: trimmedType,
+          order_index: orderIndex,
+          group_id: groupId,
         })
         .eq("id", row.id);
 
@@ -1085,6 +1331,7 @@ function RawJsonEditor({ row }: { row: SlideRow }) {
       }
 
       setSaveMessage("Saved successfully!");
+      onSaveSuccess();
     } finally {
       setSaving(false);
     }
@@ -1135,13 +1382,25 @@ function RawJsonEditor({ row }: { row: SlideRow }) {
           disabled={saving}
           style={{
             padding: "8px 16px",
-            fontSize: 16,
+            fontSize: 14,
             borderRadius: 4,
             border: "none",
-            backgroundColor: "#2563eb",
-            color: "#fff",
+            backgroundColor: "#9bbfb2",
+            color: "#222326",
+            fontWeight: 400,
+            border: "1px solid #9bbfb2",
             cursor: saving ? "default" : "pointer",
             opacity: saving ? 0.7 : 1,
+          }}
+          onMouseOver={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#8aaea1";
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#9bbfb2";
+            }
           }}
         >
           {saving ? "Saving…" : "Save changes"}
@@ -1214,7 +1473,7 @@ function RawJsonEditor({ row }: { row: SlideRow }) {
                     return;
                   }
 
-                  const trimmedType = (row.type ?? "").trim();
+                  const trimmedType = slideType.trim();
 
                   const { error: updateError } = await supabase
                     .from("slides")
@@ -1243,10 +1502,22 @@ function RawJsonEditor({ row }: { row: SlideRow }) {
                 fontSize: 14,
                 borderRadius: 4,
                 border: "none",
-                backgroundColor: "#2563eb",
-                color: "#fff",
+                backgroundColor: "#9bbfb2",
+                color: "#222326",
+                fontWeight: 400,
+                border: "1px solid #9bbfb2",
                 cursor: rawJsonSaving ? "default" : "pointer",
                 opacity: rawJsonSaving ? 0.7 : 1,
+              }}
+              onMouseOver={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#8aaea1";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!rawJsonSaving) {
+                  e.currentTarget.style.backgroundColor = "#9bbfb2";
+                }
               }}
             >
               {rawJsonSaving ? "Saving…" : "Save JSON"}

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { loadLessonById } from "../../../lib/loadLesson";
+import { BackButton } from "../../../components/BackButton";
+import PageContainer from "../../../components/ui/PageContainer";
 
 type LoadState =
   | { status: "loading" }
@@ -39,12 +41,14 @@ export default function LessonPreviewPage() {
   }, [lessonId]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 980 }}>
-      <div style={{ marginBottom: 12 }}>
-        <Link href="/">← Back to CMS</Link>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Lesson Preview</h1>
       </div>
-
-      <h1 style={{ margin: 0 }}>Lesson Preview</h1>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth={980}>
       <p style={{ opacity: 0.7, fontSize: 13 }}>
         lessonId: <code>{lessonId}</code>
       </p>
@@ -59,6 +63,7 @@ export default function LessonPreviewPage() {
           {JSON.stringify(state.lesson, null, 2)}
         </pre>
       )}
-    </main>
+      </PageContainer>
+    </>
   );
 }

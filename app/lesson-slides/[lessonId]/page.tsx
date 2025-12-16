@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import { Button } from "../../../components/Button";
+import { BackButton } from "../../../components/BackButton";
+import PageContainer from "../../../components/ui/PageContainer";
 
 type SlideRow = {
   id: string;
@@ -22,7 +25,7 @@ type GroupRow = {
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; slides: SlideRow[]; groups: GroupRow[] };
+  | { status: "ready"; slides: SlideRow[]; groups: GroupRow[]; slideTypes: string[]; lessonTitle: string };
 
 export default function LessonSlidesPage() {
   const params = useParams<{ lessonId: string }>();
@@ -40,20 +43,42 @@ export default function LessonSlidesPage() {
 
     setState({ status: "loading" });
 
-    const [{ data: slides, error: slidesError }, { data: groups, error: groupsError }] =
-      await Promise.all([
-        supabase
-          .from("slides")
-          .select("id, type, props_json, order_index, group_id")
-          .eq("lesson_id", lessonId)
-          .order("order_index", { ascending: true }),
-        supabase
-          .from("lesson_groups")
-          .select("id, title, order_index")
-          .eq("lesson_id", lessonId)
-          .order("order_index", { ascending: true }),
-      ]);
+    const [
+      { data: lesson, error: lessonError },
+      { data: slides, error: slidesError },
+      { data: groups, error: groupsError },
+      { data: allSlides, error: allSlidesError },
+    ] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("title")
+        .eq("id", lessonId)
+        .maybeSingle(),
+      supabase
+        .from("slides")
+        .select("id, type, props_json, order_index, group_id")
+        .eq("lesson_id", lessonId)
+        .order("order_index", { ascending: true }),
+      supabase
+        .from("lesson_groups")
+        .select("id, title, order_index")
+        .eq("lesson_id", lessonId)
+        .order("order_index", { ascending: true }),
+      // Get all distinct slide types from the entire database
+      supabase
+        .from("slides")
+        .select("type")
+        .not("type", "is", null),
+    ]);
 
+    if (lessonError) {
+      setState({ status: "error", message: lessonError.message });
+      return;
+    }
+    if (!lesson) {
+      setState({ status: "error", message: "Lesson not found" });
+      return;
+    }
     if (slidesError) {
       setState({ status: "error", message: slidesError.message });
       return;
@@ -62,11 +87,26 @@ export default function LessonSlidesPage() {
       setState({ status: "error", message: groupsError.message });
       return;
     }
+    if (allSlidesError) {
+      setState({ status: "error", message: allSlidesError.message });
+      return;
+    }
+
+    // Extract unique slide types, trim whitespace, and filter out empty strings
+    const uniqueTypes = Array.from(
+      new Set(
+        (allSlides ?? [])
+          .map((s: any) => (s.type || "").trim())
+          .filter((t: string) => t.length > 0)
+      )
+    ).sort();
 
     setState({
       status: "ready",
       slides: (slides ?? []) as SlideRow[],
       groups: (groups ?? []) as GroupRow[],
+      slideTypes: uniqueTypes,
+      lessonTitle: lesson.title,
     });
   }
 
@@ -94,8 +134,20 @@ export default function LessonSlidesPage() {
             ],
           ],
         };
+      case "ai-speak-student-repeat":
+        return {
+          title: "New ai-speak-student-repeat slide",
+          lines: [
+            [
+              {
+                label: "Hello",
+                speech: { mode: "tts", lang: "en", text: "Hello" },
+              },
+            ],
+          ],
+        };
       default:
-        return {};
+        return { title: `New ${trimmedType} slide` };
     }
   }
 
@@ -256,6 +308,59 @@ export default function LessonSlidesPage() {
     });
   }
 
+  async function addGroup() {
+    if (!lessonId) return;
+    if (state.status !== "ready") return;
+
+    // Compute next order_index
+    const maxOrder = state.groups.reduce((max, g) => {
+      const v = typeof g.order_index === "number" ? g.order_index : 0;
+      return v > max ? v : max;
+    }, 0);
+
+    const nextOrderIndex = maxOrder + 1;
+
+    // Insert new group
+    const { error: groupInsertError } = await supabase
+      .from("lesson_groups")
+      .insert({
+        lesson_id: lessonId,
+        title: "New group",
+        order_index: nextOrderIndex,
+      });
+
+    if (groupInsertError) {
+      alert("Group insert error: " + groupInsertError.message);
+      return;
+    }
+
+    // Reload data
+    await load();
+  }
+
+  async function renameGroup(groupId: string, currentTitle: string) {
+    const newTitle = window.prompt("Rename group:", currentTitle);
+    
+    if (newTitle === null) return; // User cancelled
+    if (newTitle.trim() === "") {
+      alert("Group title cannot be empty.");
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("lesson_groups")
+      .update({ title: newTitle.trim() })
+      .eq("id", groupId);
+
+    if (updateError) {
+      alert("Update error: " + updateError.message);
+      return;
+    }
+
+    // Reload data
+    await load();
+  }
+
   async function deleteSlide(slideId: string) {
     if (busySlideId) return;
 
@@ -334,15 +439,55 @@ export default function LessonSlidesPage() {
   }, [state]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 900 }}>
-      <h1>Lesson Slides</h1>
-      <p style={{ opacity: 0.7, fontSize: 13 }}>
-        Lesson id: <code>{lessonId}</code>
-      </p>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0, fontSize: "1.75rem" }}>Lesson Slides</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth="lg">
+        <div style={{ marginBottom: 16 }}>
+        {state.status === "ready" && (
+          <>
+            <div style={{ borderTop: "1px solid #ddd", marginTop: 12, marginBottom: 12 }}></div>
+            <h2 style={{ margin: 0 }}>{state.lessonTitle}</h2>
+            <p style={{ margin: 0, marginTop: 4, opacity: 0.7, fontSize: 13 }}>
+              Lesson id: <code>{lessonId}</code>
+            </p>
+          </>
+        )}
+      </div>
 
       <div style={{ margin: "16px 0", display: "flex", gap: 8 }}>
-        <button onClick={addAiSpeakRepeatSlide}>+ AI Speak (to first group)</button>
-        <button onClick={addTextSlide}>+ Text slide</button>
+        <Button onClick={addGroup}>+ Add group</Button>
+        {lessonId && (
+          <a
+            href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lessonId}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 400,
+              borderRadius: 6,
+              border: "1px solid #a6a198",
+              backgroundColor: "#a6a198",
+              color: "#222326",
+              textDecoration: "none",
+              cursor: "pointer",
+              display: "inline-block",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#959088";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#a6a198";
+            }}
+          >
+            Preview in Player
+          </a>
+        )}
       </div>
 
       {state.status === "loading" && <p>Loading…</p>}
@@ -351,32 +496,48 @@ export default function LessonSlidesPage() {
       {state.status === "ready" && grouped && (
         <div style={{ marginTop: 16 }}>
           {grouped.orderedGroups.map(({ group, slides }) => (
-            <section key={group.id} style={{ marginBottom: 18 }}>
+            <section key={group.id} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "2px solid #ddd" }}>
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>
                   {group.title}{" "}
                   <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 12 }}>(group)</span>
                 </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "title-slide" })}
-                    style={{ fontSize: 13 }}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <Button
+                    variant="secondary"
+                    className="text-xs py-1.5 px-3"
+                    onClick={() => renameGroup(group.id, group.title)}
                   >
-                    + Title
-                  </button>
-                  <button
-                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "text-slide" })}
-                    style={{ fontSize: 13 }}
+                    Rename
+                  </Button>
+                  <select
+                    onChange={(e) => {
+                      const slideType = e.target.value;
+                      if (slideType) {
+                        insertSlide({ lessonId: lessonId!, groupId: group.id, type: slideType });
+                        e.target.value = ""; // Reset dropdown
+                      }
+                    }}
+                    style={{
+                      fontSize: 13,
+                      padding: "4px 8px",
+                      borderRadius: 4,
+                      border: "1px solid #ccc",
+                      backgroundColor: "#fff",
+                      cursor: "pointer",
+                    }}
+                    defaultValue=""
                   >
-                    + Text
-                  </button>
-                  <button
-                    onClick={() => insertSlide({ lessonId: lessonId!, groupId: group.id, type: "ai-speak-repeat" })}
-                    style={{ fontSize: 13 }}
-                  >
-                    + AI Speak
-                  </button>
+                    <option value="" disabled>
+                      + Add slide
+                    </option>
+                    {state.slideTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -414,17 +575,32 @@ export default function LessonSlidesPage() {
 
                         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                           <Link href={`/edit-slide/${s.id}`}>Edit</Link>
-                          <button
+                          <Button
+                            variant="danger"
                             onClick={() => deleteSlide(s.id)}
                             disabled={!!busySlideId}
-                            style={{
-                              fontSize: 13,
-                              opacity: isBusy ? 0.6 : 1,
-                              cursor: busySlideId ? "default" : "pointer",
-                            }}
+                            className="text-xs py-1.5 px-3"
+                            title={isBusy ? "Deleting…" : "Delete"}
                           >
-                            {isBusy ? "Deleting…" : "Delete"}
-                          </button>
+                            {isBusy ? (
+                              "Deleting…"
+                            ) : (
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              </svg>
+                            )}
+                          </Button>
                         </div>
                       </li>
                     );
@@ -470,12 +646,49 @@ export default function LessonSlidesPage() {
                               onClick={() => deleteSlide(s.id)}
                               disabled={!!busySlideId}
                               style={{
-                                fontSize: 13,
+                                fontSize: 14,
+                                fontWeight: 400,
+                                padding: "8px 12px",
+                                borderRadius: 6,
+                                border: "1px solid #bf6f6f",
+                                backgroundColor: "#bf6f6f",
+                                color: "#222326",
                                 opacity: isBusy ? 0.6 : 1,
                                 cursor: busySlideId ? "default" : "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                               }}
+                              onMouseOver={(e) => {
+                                if (!busySlideId) {
+                                  e.currentTarget.style.backgroundColor = "#ad5f5f";
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                if (!busySlideId) {
+                                  e.currentTarget.style.backgroundColor = "#bf6f6f";
+                                }
+                              }}
+                              title={isBusy ? "Deleting…" : "Delete"}
                             >
-                              {isBusy ? "Deleting…" : "Delete"}
+                              {isBusy ? (
+                                "Deleting…"
+                              ) : (
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M3 6h18" />
+                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                </svg>
+                              )}
                             </button>
                           </div>
                         </li>
@@ -518,12 +731,49 @@ export default function LessonSlidesPage() {
                           onClick={() => deleteSlide(s.id)}
                           disabled={!!busySlideId}
                           style={{
-                            fontSize: 13,
+                            fontSize: 14,
+                            fontWeight: 400,
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            border: "1px solid #bf6f6f",
+                            backgroundColor: "#bf6f6f",
+                            color: "#222326",
                             opacity: isBusy ? 0.6 : 1,
                             cursor: busySlideId ? "default" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
+                          onMouseOver={(e) => {
+                            if (!busySlideId) {
+                              e.currentTarget.style.backgroundColor = "#ad5f5f";
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!busySlideId) {
+                              e.currentTarget.style.backgroundColor = "#bf6f6f";
+                            }
+                          }}
+                          title={isBusy ? "Deleting…" : "Delete"}
                         >
-                          {isBusy ? "Deleting…" : "Delete"}
+                          {isBusy ? (
+                            "Deleting…"
+                          ) : (
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          )}
                         </button>
                       </div>
                     </li>
@@ -534,6 +784,7 @@ export default function LessonSlidesPage() {
           )}
         </div>
       )}
-    </main>
+      </PageContainer>
+    </>
   );
 }

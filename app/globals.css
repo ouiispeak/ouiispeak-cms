@@ -1,8 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f5f3;
+  --foreground: #222326;
+  
+  /* UI Tokens */
+  --ui-border: #ddd;
+  --ui-bg: #edeae7;
+  --ui-primary: #9bbfb2;
+  --ui-primary-hover: #8aaea1;
+  --ui-danger: #bf6f6f;
+  --ui-danger-hover: #ad5f5f;
+  --ui-secondary: #a6a198;
+  --ui-secondary-hover: #959088;
 }
 
 @theme inline {
@@ -12,15 +23,62 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: #f6f5f3;
+  color: #222326;
+  font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+  font-weight: 400;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+* {
+  color: #222326;
+}
+
+a {
+  color: #0c9599;
+  font-size: 14px;
+  font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+  font-weight: 400;
+}
+
+button {
+  font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #222326;
+}
+
+button[data-variant="danger"],
+button.danger,
+.variant-danger {
+  background-color: #bf6f6f !important;
+  color: #222326 !important;
+}
+
+button:not([data-variant="danger"]):not(.danger):not(.variant-danger) {
+  background-color: #9bbfb2;
+  color: #222326;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+input,
+select,
+textarea {
+  background-color: #edeae7;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  background-color: transparent;
 }

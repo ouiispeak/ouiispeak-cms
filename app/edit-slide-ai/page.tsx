@@ -6,6 +6,8 @@ import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
+import { BackButton } from "../../components/BackButton";
+import PageContainer from "../../components/ui/PageContainer";
 
 type LoadState =
   | { status: "idle" }
@@ -128,8 +130,14 @@ export default function EditSlideAiPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 600 }}>
-      <h1>Edit ai-speak-repeat slide</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Edit ai-speak-repeat slide</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth="sm">
       <p>
         Editing slide with id: <code>slide-ai-001</code> from Supabase.
       </p>
@@ -161,7 +169,7 @@ export default function EditSlideAiPage() {
                 style={{
                   width: "100%",
                   padding: 8,
-                  fontSize: 16,
+                  fontSize: 14,
                   borderRadius: 4,
                   border: "1px solid #ccc",
                 }}
@@ -174,12 +182,25 @@ export default function EditSlideAiPage() {
               style={{
                 padding: "8px 16px",
                 fontSize: 16,
-                borderRadius: 4,
-                border: "none",
-                backgroundColor: "#2563eb",
-                color: "#fff",
-                cursor: saving ? "default" : "pointer",
+                fontWeight: 500,
+                borderRadius: 6,
+                border: "1px solid #2563eb",
+                backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
+                border: "1px solid #9bbfb2",
+                fontWeight: 400,
+                color: "#222326",
+                cursor: saving ? "not-allowed" : "pointer",
                 opacity: saving ? 0.7 : 1,
+              }}
+              onMouseOver={(e) => {
+                if (!saving) {
+                  e.currentTarget.style.backgroundColor = "#8aaea1";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!saving) {
+                  e.currentTarget.style.backgroundColor = "#9bbfb2";
+                }
               }}
             >
               {saving ? "Saving..." : "Save title"}
@@ -203,6 +224,7 @@ export default function EditSlideAiPage() {
           </pre>
         </>
       )}
-    </main>
+      </PageContainer>
+    </>
   );
 }

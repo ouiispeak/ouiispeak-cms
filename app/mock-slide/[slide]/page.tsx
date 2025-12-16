@@ -1,8 +1,17 @@
+import Link from "next/link";
 import slide1Raw from "../../../mock-data/slide1.json";
 import slide2Raw from "../../../mock-data/slide2.json";
 import { slideSchema, type Slide } from "../../../lib/slideSchema";
+import PageContainer from "../../../components/ui/PageContainer";
 
 export const dynamic = "force-dynamic";
+
+const BackLink = () => (
+  <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
+    <span style={{ fontSize: 18 }}>←</span>
+    <span>Back to Dashboard</span>
+  </Link>
+);
 
 export default async function MockSlidePage({
   params,
@@ -20,19 +29,32 @@ export default async function MockSlidePage({
 
   if (!result.success) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Mock Slide</h1>
-        <h2 style={{ color: "red" }}>Validation failed</h2>
-        <pre>{JSON.stringify(result.error.format(), null, 2)}</pre>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>Mock Slide</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <BackLink />
+        </div>
+        <PageContainer>
+          <h2 style={{ color: "red" }}>Validation failed</h2>
+          <pre>{JSON.stringify(result.error.format(), null, 2)}</pre>
+        </PageContainer>
+      </>
     );
   }
 
   const validatedSlide: Slide = result.data;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Mock Slide</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Mock Slide</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackLink />
+      </div>
+      <PageContainer>
       <p>
         Currently showing:{" "}
         <strong>{slideParam === "2" ? "Slide 2" : "Slide 1"}</strong>
@@ -67,6 +89,7 @@ export default async function MockSlidePage({
 
       <h3>Raw JSON</h3>
       <pre>{JSON.stringify(validatedSlide, null, 2)}</pre>
-    </main>
+      </PageContainer>
+    </>
   );
 }

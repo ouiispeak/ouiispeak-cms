@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { BackButton } from "../../components/BackButton";
+import PageContainer from "../../components/ui/PageContainer";
 
 function slugify(input: string) {
   return input
@@ -12,15 +15,24 @@ function slugify(input: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function NewModulePage() {
+function NewModuleForm() {
+  const searchParams = useSearchParams();
+  const levelParam = searchParams?.get("level");
+  
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [level, setLevel] = useState("A1");
+  const [level, setLevel] = useState(levelParam || "A1");
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [description, setDescription] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (levelParam) {
+      setLevel(levelParam);
+    }
+  }, [levelParam]);
 
   function autoSlugFromTitle(nextTitle: string) {
     setTitle(nextTitle);
@@ -62,8 +74,14 @@ export default function NewModulePage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 720 }}>
-      <h1>Create module</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Create module</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth="md">
       <p style={{ fontSize: 12, opacity: 0.7 }}>
   SUPABASE URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}
 </p>
@@ -134,10 +152,26 @@ export default function NewModulePage() {
           disabled={saving}
           style={{
             padding: "8px 16px",
-            background: "#2563eb",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
+            fontSize: 14,
+            fontWeight: 500,
+            borderRadius: 6,
+            border: "1px solid #2563eb",
+            backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
+            border: "1px solid #9bbfb2",
+            fontWeight: 400,
+              color: "#222326",
+            cursor: saving ? "not-allowed" : "pointer",
+            opacity: saving ? 0.7 : 1,
+          }}
+          onMouseOver={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#8aaea1";
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = "#9bbfb2";
+            }
           }}
         >
           {saving ? "Creating…" : "Create module"}
@@ -149,6 +183,15 @@ export default function NewModulePage() {
           {message}
         </p>
       )}
-    </main>
+      </PageContainer>
+    </>
+  );
+}
+
+export default function NewModulePage() {
+  return (
+    <Suspense fallback={<><div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1 style={{ margin: 0 }}>Create module</h1></div><PageContainer maxWidth="md"><p>Loading...</p></PageContainer></>}>
+      <NewModuleForm />
+    </Suspense>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import { BackButton } from "../../../components/BackButton";
+import PageContainer from "../../../components/ui/PageContainer";
 
 type ModuleRow = {
   id: string;
@@ -141,8 +143,14 @@ export default function EditLessonPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 720 }}>
-      <h1>Edit lesson</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Edit lesson</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer maxWidth="md">
       <p>
         Lesson id: <code>{lessonId}</code>
       </p>
@@ -224,13 +232,24 @@ export default function EditLessonPage() {
             disabled={saving}
             style={{
               padding: "8px 16px",
-              fontSize: 16,
-              borderRadius: 4,
-              border: "none",
-              backgroundColor: "#2563eb",
-              color: "#fff",
-              cursor: saving ? "default" : "pointer",
+              fontSize: 14,
+              fontWeight: 400,
+              borderRadius: 6,
+              border: "1px solid #9bbfb2",
+              backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
+              color: "#222326",
+              cursor: saving ? "not-allowed" : "pointer",
               opacity: saving ? 0.7 : 1,
+            }}
+            onMouseOver={(e) => {
+              if (!saving) {
+                e.currentTarget.style.backgroundColor = "#8aaea1";
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!saving) {
+                e.currentTarget.style.backgroundColor = "#9bbfb2";
+              }
             }}
           >
             {saving ? "Saving…" : "Save changes"}
@@ -248,7 +267,8 @@ export default function EditLessonPage() {
           {message}
         </p>
       )}
-    </main>
+      </PageContainer>
+    </>
   );
 }
 

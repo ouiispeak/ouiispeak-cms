@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { BackButton } from "../../components/BackButton";
 
 type ModuleRow = {
   id: string;
@@ -54,16 +55,29 @@ export default function ModulesBrowserPage() {
 
   if (error) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Modules Browser</h1>
-        <p style={{ color: "red" }}>{error}</p>
-      </main>
+      <>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <h1 style={{ margin: 0 }}>Modules Browser</h1>
+        </div>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+          <BackButton title="Back to Dashboard" />
+        </div>
+        <PageContainer>
+          <p style={{ color: "red" }}>{error}</p>
+        </PageContainer>
+      </>
     );
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Modules Browser</h1>
+    <>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <h1 style={{ margin: 0 }}>Modules Browser</h1>
+      </div>
+      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
+        <BackButton title="Back to Dashboard" />
+      </div>
+      <PageContainer>
 
       {modules.map((module) => {
         const moduleLessons = lessons.filter(
@@ -102,6 +116,7 @@ export default function ModulesBrowserPage() {
           </section>
         );
       })}
-    </main>
+      </PageContainer>
+    </>
   );
 }
