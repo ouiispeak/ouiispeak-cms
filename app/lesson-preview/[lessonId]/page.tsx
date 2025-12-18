@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { loadLessonById } from "../../../lib/loadLesson";
-import { BackButton } from "../../../components/BackButton";
-import PageContainer from "../../../components/ui/PageContainer";
+import PageShell from "../../../components/ui/PageShell";
+import CmsSection from "../../../components/ui/CmsSection";
+import { uiTokens } from "../../../lib/uiTokens";
 
 type LoadState =
   | { status: "loading" }
@@ -41,29 +41,29 @@ export default function LessonPreviewPage() {
   }, [lessonId]);
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Lesson Preview</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth={980}>
-      <p style={{ opacity: 0.7, fontSize: 13 }}>
-        lessonId: <code>{lessonId}</code>
-      </p>
-
+    <PageShell
+      title="Lesson Preview"
+      maxWidth={980}
+      meta={
+        <>
+          lessonId: <code className="codeText">{lessonId}</code>
+        </>
+      }
+    >
       {state.status === "loading" && <p>Loading…</p>}
       {state.status === "error" && (
-        <p style={{ color: "red" }}>Error: {state.message}</p>
+        <CmsSection title="Error" description={state.message}>
+          <p style={{ color: uiTokens.color.danger }}>Error: {state.message}</p>
+        </CmsSection>
       )}
 
       {state.status === "ready" && (
-        <pre style={{ fontSize: 12, marginTop: 16 }}>
-          {JSON.stringify(state.lesson, null, 2)}
-        </pre>
+        <CmsSection title="Lesson JSON">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(state.lesson, null, 2)}
+          </pre>
+        </CmsSection>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

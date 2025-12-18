@@ -2,8 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Textarea from "../../components/ui/Textarea";
+import Select from "../../components/ui/Select";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 type LessonRow = {
   id: string;
@@ -25,6 +31,15 @@ export default function NewGroupPage() {
   const [lessonId, setLessonId] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [title, setTitle] = useState("");
+
+  // New fields
+  const [groupCode, setGroupCode] = useState("");
+  const [shortSummary, setShortSummary] = useState("");
+  const [groupType, setGroupType] = useState("");
+  const [isRequiredToPass, setIsRequiredToPass] = useState(false);
+  const [passingScoreType, setPassingScoreType] = useState("");
+  const [passingScoreValue, setPassingScoreValue] = useState<number | null>(null);
+  const [maxScoreValue, setMaxScoreValue] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -61,6 +76,23 @@ export default function NewGroupPage() {
       return;
     }
 
+    // Validate group_type
+    const validGroupTypes = ["title", "intro", "practice", "test", "wrap-up", "finale"];
+    if (groupType && !validGroupTypes.includes(groupType)) {
+      setMessage(`Invalid group type. Must be one of: ${validGroupTypes.join(", ")}`);
+      return;
+    }
+
+    // Validate passing_score_type
+    const validPassingScoreTypes = ["percent", "raw", "none"];
+    if (passingScoreType && !validPassingScoreTypes.includes(passingScoreType)) {
+      setMessage(`Invalid passing score type. Must be one of: ${validPassingScoreTypes.join(", ")}`);
+      return;
+    }
+
+    // Helper function to convert empty string to null
+    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
+
     setSaving(true);
 
     try {
@@ -70,6 +102,20 @@ export default function NewGroupPage() {
           lesson_id: lessonId,
           order_index: orderIndex,
           title: title.trim(),
+          group_code: nullIfEmpty(groupCode),
+          short_summary: nullIfEmpty(shortSummary),
+          group_type: nullIfEmpty(groupType),
+          group_summary: null,
+          group_slides: null,
+          group_goal: null,
+          prerequisites: null,
+          is_required_to_pass: isRequiredToPass,
+          passing_score_type: nullIfEmpty(passingScoreType),
+          passing_score_value: passingScoreValue,
+          max_score_value: maxScoreValue,
+          extra_practice_notes: null,
+          l1_l2: null,
+          media_used_ids: null,
         })
         .select("id, lesson_id, order_index, title")
         .maybeSingle();
@@ -92,110 +138,108 @@ export default function NewGroupPage() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Create new group</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="md">
+    <PageShell title="Create new group" maxWidth="md">
+      {loadError && <p style={{ color: uiTokens.color.danger }}>{loadError}</p>}
 
-      {loadError && <p style={{ color: "red" }}>{loadError}</p>}
+      <CmsSection>
+        <form onSubmit={handleSubmit}>
+          <FormField label="Lesson" required>
+            <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+              <option value="">Select a lesson…</option>
+              {lessons.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.title} ({l.slug})
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Lesson
-          </label>
-          <select
-            value={lessonId}
-            onChange={(e) => setLessonId(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          >
-            <option value="">Select a lesson…</option>
-            {lessons.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.title} ({l.slug})
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormField label="Order index" required>
+            <Input
+              type="number"
+              value={orderIndex}
+              onChange={(e) => setOrderIndex(Number(e.target.value))}
+            />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Order index
-          </label>
-          <input
-            type="number"
-            value={orderIndex}
-            onChange={(e) => setOrderIndex(Number(e.target.value))}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
+          <FormField label="Group title" required>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Group title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
+          <FormField label="Group code">
+            <Input value={groupCode} onChange={(e) => setGroupCode(e.target.value)} />
+          </FormField>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            borderRadius: 6,
-            border: "1px solid #2563eb",
-            backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-            border: "1px solid #9bbfb2",
-            fontWeight: 400,
-              color: "#222326",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Creating…" : "Create group"}
-        </button>
-      </form>
+          <FormField label="Short summary">
+            <Textarea
+              value={shortSummary}
+              onChange={(e) => setShortSummary(e.target.value)}
+              rows={3}
+            />
+          </FormField>
+
+          <FormField label="Group type">
+            <Select value={groupType} onChange={(e) => setGroupType(e.target.value)}>
+              <option value="">Select a type…</option>
+              <option value="title">Title</option>
+              <option value="intro">Intro</option>
+              <option value="practice">Practice</option>
+              <option value="test">Test</option>
+              <option value="wrap-up">Wrap-up</option>
+              <option value="finale">Finale</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Is required to pass">
+            <label style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
+              <input
+                type="checkbox"
+                checked={isRequiredToPass}
+                onChange={(e) => setIsRequiredToPass(e.target.checked)}
+                style={{ width: "auto" }}
+              />
+              <span>Required to pass</span>
+            </label>
+          </FormField>
+
+          <FormField label="Passing score type">
+            <Select value={passingScoreType} onChange={(e) => setPassingScoreType(e.target.value)}>
+              <option value="">Select a type…</option>
+              <option value="percent">percent</option>
+              <option value="raw">raw</option>
+              <option value="none">none</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Passing score value">
+            <Input
+              type="number"
+              value={passingScoreValue ?? ""}
+              onChange={(e) => setPassingScoreValue(e.target.value ? Number(e.target.value) : null)}
+            />
+          </FormField>
+
+          <FormField label="Max score value">
+            <Input
+              type="number"
+              value={maxScoreValue ?? ""}
+              onChange={(e) => setMaxScoreValue(e.target.value ? Number(e.target.value) : null)}
+            />
+          </FormField>
+
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create group"}
+            </Button>
+          </div>
+        </form>
+      </CmsSection>
 
       {message && (
         <p
           style={{
-            marginTop: 16,
-            color: message.toLowerCase().includes("error") ? "red" : "green",
+            marginTop: uiTokens.space.md,
+            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
           }}
         >
           {message}
@@ -203,14 +247,12 @@ export default function NewGroupPage() {
       )}
 
       {createdGroup && (
-        <>
-          <h2 style={{ marginTop: 24 }}>Created group</h2>
-          <pre style={{ fontSize: 12 }}>
+        <CmsSection title="Created group">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             {JSON.stringify(createdGroup, null, 2)}
           </pre>
-        </>
+        </CmsSection>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

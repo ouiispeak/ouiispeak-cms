@@ -5,8 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { Button } from "../../../components/Button";
-import { BackButton } from "../../../components/BackButton";
-import PageContainer from "../../../components/ui/PageContainer";
+import PageShell from "../../../components/ui/PageShell";
+import CmsSection from "../../../components/ui/CmsSection";
+import LinkButton from "../../../components/ui/LinkButton";
+import Select from "../../../components/ui/Select";
+import { uiTokens } from "../../../lib/uiTokens";
 
 type SlideRow = {
   id: string;
@@ -439,79 +442,74 @@ export default function LessonSlidesPage() {
   }, [state]);
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0, fontSize: "1.75rem" }}>Lesson Slides</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="lg">
-        <div style={{ marginBottom: 16 }}>
-        {state.status === "ready" && (
+    <PageShell
+      title="Lesson Slides"
+      maxWidth="lg"
+      meta={
+        state.status === "ready" ? (
           <>
-            <div style={{ borderTop: "1px solid #ddd", marginTop: 12, marginBottom: 12 }}></div>
-            <h2 style={{ margin: 0 }}>{state.lessonTitle}</h2>
-            <p style={{ margin: 0, marginTop: 4, opacity: 0.7, fontSize: 13 }}>
-              Lesson id: <code>{lessonId}</code>
-            </p>
+            {state.lessonTitle}
+            <br />
+            <span className="metaText">
+              Lesson id: <code className="codeText">{lessonId}</code>
+            </span>
           </>
-        )}
-      </div>
-
-      <div style={{ margin: "16px 0", display: "flex", gap: 8 }}>
-        <Button onClick={addGroup}>+ Add group</Button>
-        {lessonId && (
-          <a
-            href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lessonId}`}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              padding: "8px 16px",
-              fontSize: 14,
-              fontWeight: 400,
-              borderRadius: 6,
-              border: "1px solid #a6a198",
-              backgroundColor: "#a6a198",
-              color: "#222326",
-              textDecoration: "none",
-              cursor: "pointer",
-              display: "inline-block",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#959088";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#a6a198";
-            }}
-          >
-            Preview in Player
-          </a>
-        )}
-      </div>
-
+        ) : undefined
+      }
+      actions={
+        <>
+          <Button size="sm" onClick={addGroup}>
+            + Add group
+          </Button>
+          {lessonId && (
+            <a
+              href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lessonId}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: "6px 12px",
+                borderRadius: uiTokens.radius.md,
+                border: `1px solid ${uiTokens.color.secondary}`,
+                backgroundColor: uiTokens.color.secondary,
+                color: uiTokens.color.secondaryText,
+                textDecoration: "none",
+                fontSize: uiTokens.font.meta.size,
+                fontWeight: 400,
+                display: "inline-block",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = uiTokens.color.secondaryHover;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = uiTokens.color.secondary;
+              }}
+            >
+              Preview in Player
+            </a>
+          )}
+        </>
+      }
+    >
       {state.status === "loading" && <p>Loading…</p>}
-      {state.status === "error" && <p style={{ color: "red" }}>Error: {state.message}</p>}
+      {state.status === "error" && <p style={{ color: uiTokens.color.danger }}>Error: {state.message}</p>}
 
       {state.status === "ready" && grouped && (
-        <div style={{ marginTop: 16 }}>
+        <>
           {grouped.orderedGroups.map(({ group, slides }) => (
-            <section key={group.id} style={{ marginBottom: 18, paddingBottom: 18, borderBottom: "2px solid #ddd" }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>
+            <CmsSection
+              key={group.id}
+              title={
+                <>
                   {group.title}{" "}
-                  <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 12 }}>(group)</span>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <Button
-                    variant="secondary"
-                    className="text-xs py-1.5 px-3"
-                    onClick={() => renameGroup(group.id, group.title)}
-                  >
+                  <span style={{ opacity: 0.6, fontWeight: 400, fontSize: uiTokens.font.meta.size }}>(group)</span>
+                </>
+              }
+              actions={
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => renameGroup(group.id, group.title)}>
                     Rename
                   </Button>
-                  <select
+                  <Select
                     onChange={(e) => {
                       const slideType = e.target.value;
                       if (slideType) {
@@ -519,14 +517,7 @@ export default function LessonSlidesPage() {
                         e.target.value = ""; // Reset dropdown
                       }
                     }}
-                    style={{
-                      fontSize: 13,
-                      padding: "4px 8px",
-                      borderRadius: 4,
-                      border: "1px solid #ccc",
-                      backgroundColor: "#fff",
-                      cursor: "pointer",
-                    }}
+                    style={{ fontSize: uiTokens.font.meta.size, padding: "4px 8px" }}
                     defaultValue=""
                   >
                     <option value="" disabled>
@@ -537,9 +528,10 @@ export default function LessonSlidesPage() {
                         {type}
                       </option>
                     ))}
-                  </select>
-                </div>
-              </div>
+                  </Select>
+                </>
+              }
+            >
 
               {slides.length === 0 ? (
                 <div style={{ opacity: 0.6, fontSize: 13 }}>No slides in this group yet.</div>
@@ -573,13 +565,15 @@ export default function LessonSlidesPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                          <Link href={`/edit-slide/${s.id}`}>Edit</Link>
+                        <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
+                          <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
+                            Edit
+                          </LinkButton>
                           <Button
                             variant="danger"
+                            size="sm"
                             onClick={() => deleteSlide(s.id)}
                             disabled={!!busySlideId}
-                            className="text-xs py-1.5 px-3"
                             title={isBusy ? "Deleting…" : "Delete"}
                           >
                             {isBusy ? (
@@ -607,12 +601,11 @@ export default function LessonSlidesPage() {
                   })}
                 </ul>
               )}
-            </section>
+            </CmsSection>
           ))}
 
           {grouped.extraGroups.length > 0 && (
-            <section style={{ marginTop: 24 }}>
-              <div style={{ fontWeight: 800, marginBottom: 8 }}>Unknown groups</div>
+            <CmsSection title="Unknown groups">
               {grouped.extraGroups.map(({ group, slides }) => (
                 <div key={group.id} style={{ marginBottom: 14 }}>
                   <div style={{ opacity: 0.7, fontSize: 13, marginBottom: 6 }}>
@@ -640,35 +633,15 @@ export default function LessonSlidesPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                            <Link href={`/edit-slide/${s.id}`}>Edit</Link>
-                            <button
+                          <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
+                            <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
+                              Edit
+                            </LinkButton>
+                            <Button
+                              variant="danger"
+                              size="sm"
                               onClick={() => deleteSlide(s.id)}
                               disabled={!!busySlideId}
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 400,
-                                padding: "8px 12px",
-                                borderRadius: 6,
-                                border: "1px solid #bf6f6f",
-                                backgroundColor: "#bf6f6f",
-                                color: "#222326",
-                                opacity: isBusy ? 0.6 : 1,
-                                cursor: busySlideId ? "default" : "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                              onMouseOver={(e) => {
-                                if (!busySlideId) {
-                                  e.currentTarget.style.backgroundColor = "#ad5f5f";
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                if (!busySlideId) {
-                                  e.currentTarget.style.backgroundColor = "#bf6f6f";
-                                }
-                              }}
                               title={isBusy ? "Deleting…" : "Delete"}
                             >
                               {isBusy ? (
@@ -689,7 +662,7 @@ export default function LessonSlidesPage() {
                                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                 </svg>
                               )}
-                            </button>
+                            </Button>
                           </div>
                         </li>
                       );
@@ -697,12 +670,11 @@ export default function LessonSlidesPage() {
                   </ul>
                 </div>
               ))}
-            </section>
+            </CmsSection>
           )}
 
           {grouped.ungrouped.length > 0 && (
-            <section style={{ marginTop: 24 }}>
-              <div style={{ fontWeight: 800, marginBottom: 8 }}>Ungrouped slides</div>
+            <CmsSection title="Ungrouped slides">
               <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                 {grouped.ungrouped.map((s) => {
                   const isBusy = busySlideId === s.id;
@@ -725,35 +697,15 @@ export default function LessonSlidesPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                        <Link href={`/edit-slide/${s.id}`}>Edit</Link>
-                        <button
+                      <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
+                        <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
+                          Edit
+                        </LinkButton>
+                        <Button
+                          variant="danger"
+                          size="sm"
                           onClick={() => deleteSlide(s.id)}
                           disabled={!!busySlideId}
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 400,
-                            padding: "8px 12px",
-                            borderRadius: 6,
-                            border: "1px solid #bf6f6f",
-                            backgroundColor: "#bf6f6f",
-                            color: "#222326",
-                            opacity: isBusy ? 0.6 : 1,
-                            cursor: busySlideId ? "default" : "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          onMouseOver={(e) => {
-                            if (!busySlideId) {
-                              e.currentTarget.style.backgroundColor = "#ad5f5f";
-                            }
-                          }}
-                          onMouseOut={(e) => {
-                            if (!busySlideId) {
-                              e.currentTarget.style.backgroundColor = "#bf6f6f";
-                            }
-                          }}
                           title={isBusy ? "Deleting…" : "Delete"}
                         >
                           {isBusy ? (
@@ -774,17 +726,16 @@ export default function LessonSlidesPage() {
                               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                             </svg>
                           )}
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   );
                 })}
               </ul>
-            </section>
+            </CmsSection>
           )}
-        </div>
+        </>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import LinkButton from "../../components/ui/LinkButton";
+import { uiTokens } from "../../lib/uiTokens";
 
 type LessonRow = {
   id: string;
@@ -97,32 +99,17 @@ export default function SlidesBrowserPage() {
 
   if (state.status === "loading") {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>Slides Browser</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackButton title="Back to Dashboard" />
-        </div>
-        <PageContainer>
-          <p>Loading lessons, groups, and slides…</p>
-        </PageContainer>
-      </>
+      <PageShell title="Slides Browser">
+        <p>Loading lessons, groups, and slides…</p>
+      </PageShell>
     );
   }
 
   if (state.status === "error") {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>Slides Browser</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackButton title="Back to Dashboard" />
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Supabase error</h2>
-          <pre style={{ fontSize: 12 }}>
+      <PageShell title="Slides Browser">
+        <CmsSection title="Supabase error" description={state.message}>
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             {JSON.stringify(
               {
                 message: state.message,
@@ -132,23 +119,15 @@ export default function SlidesBrowserPage() {
               2
             )}
           </pre>
-        </PageContainer>
-      </>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   const { lessons, groups, slides } = state;
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Slides Browser</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer>
-
+    <PageShell title="Slides Browser">
       {lessons.length === 0 && <p>No lessons found.</p>}
 
       {lessons.map((lesson) => {
@@ -157,19 +136,14 @@ export default function SlidesBrowserPage() {
         );
 
         return (
-          <section
+          <CmsSection
             key={lesson.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 16,
-              marginTop: 16,
-            }}
+            title={
+              <>
+                Lesson: {lesson.title} <span className="metaText">({lesson.lesson_slug})</span>
+              </>
+            }
           >
-            <h2 style={{ marginTop: 0 }}>
-              Lesson: {lesson.title} ({lesson.lesson_slug})
-            </h2>
-
             {lessonGroups.length === 0 && <p>No groups yet.</p>}
 
             {lessonGroups.map((group) => {
@@ -181,25 +155,24 @@ export default function SlidesBrowserPage() {
                 <div
                   key={group.id}
                   style={{
-                    borderTop: "1px solid #eee",
-                    paddingTop: 8,
-                    marginTop: 8,
+                    borderTop: `1px solid ${uiTokens.color.borderSubtle}`,
+                    paddingTop: uiTokens.space.xs,
+                    marginTop: uiTokens.space.xs,
                   }}
                 >
-                  <h3>
+                  <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: 0, marginBottom: uiTokens.space.xs }}>
                     Group {group.order_index}: {group.title}
                   </h3>
 
-                  {groupSlides.length === 0 && <p>No slides yet.</p>}
+                  {groupSlides.length === 0 && <p className="metaText">No slides yet.</p>}
 
                   {groupSlides.length > 0 && (
-                    <ul>
+                    <ul style={{ paddingLeft: uiTokens.space.md, margin: 0 }}>
                       {groupSlides.map((slide) => (
-                        <li key={slide.id}>
-                          <a href={`/edit-slide/${slide.id}`}>
-                            Slide {slide.order_index}: {slide.type} (id:{" "}
-                            {slide.id})
-                          </a>
+                        <li key={slide.id} style={{ marginBottom: uiTokens.space.xs }}>
+                          <LinkButton href={`/edit-slide/${slide.id}`} variant="ghost" size="sm">
+                            Slide {slide.order_index}: {slide.type} (id: <code className="codeText">{slide.id}</code>)
+                          </LinkButton>
                         </li>
                       ))}
                     </ul>
@@ -207,23 +180,23 @@ export default function SlidesBrowserPage() {
                 </div>
               );
             })}
-          </section>
+          </CmsSection>
         );
       })}
 
-      <h2 style={{ marginTop: 32 }}>Raw data (debug)</h2>
-      <pre style={{ fontSize: 12 }}>
-        {JSON.stringify(
-          {
-            lessons,
-            groups,
-            slides,
-          },
-          null,
-          2
-        )}
-      </pre>
-      </PageContainer>
-    </>
+      <CmsSection title="Raw data (debug)">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(
+            {
+              lessons,
+              groups,
+              slides,
+            },
+            null,
+            2
+          )}
+        </pre>
+      </CmsSection>
+    </PageShell>
   );
 }

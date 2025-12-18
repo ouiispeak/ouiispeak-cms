@@ -1,54 +1,85 @@
 "use client";
 
 import { ButtonHTMLAttributes, ReactNode } from "react";
-import { primary, primaryHover, danger, dangerHover, secondary, secondaryHover } from "../lib/uiTokens";
+import { uiTokens } from "../lib/uiTokens";
 
-type ButtonVariant = "primary" | "secondary" | "danger";
+type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonSize = "sm" | "md";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   children: ReactNode;
 };
 
-export function Button({ variant = "primary", children, className = "", disabled, style, ...props }: ButtonProps) {
+export function Button({
+  variant = "primary",
+  size = "md",
+  children,
+  className = "",
+  disabled,
+  style,
+  ...props
+}: ButtonProps) {
   const getVariantStyles = () => {
     if (disabled) {
       return {
-        backgroundColor: primary,
-        borderColor: primary,
-        color: "#222326",
+        backgroundColor: uiTokens.color.primary,
+        borderColor: uiTokens.color.primary,
+        color: uiTokens.color.primaryText,
         opacity: 0.7,
       };
     }
-    
+
     switch (variant) {
       case "danger":
         return {
-          backgroundColor: danger,
-          borderColor: danger,
-          color: "#222326",
+          backgroundColor: uiTokens.color.danger,
+          borderColor: uiTokens.color.danger,
+          color: uiTokens.color.dangerText,
         };
       case "secondary":
         return {
-          backgroundColor: secondary,
-          borderColor: secondary,
-          color: "#222326",
+          backgroundColor: uiTokens.color.secondary,
+          borderColor: uiTokens.color.secondary,
+          color: uiTokens.color.secondaryText,
+        };
+      case "ghost":
+        return {
+          backgroundColor: "transparent",
+          borderColor: uiTokens.color.border,
+          color: uiTokens.color.text,
         };
       case "primary":
       default:
         return {
-          backgroundColor: primary,
-          borderColor: primary,
-          color: "#222326",
+          backgroundColor: uiTokens.color.primary,
+          borderColor: uiTokens.color.primary,
+          color: uiTokens.color.primaryText,
+        };
+    }
+  };
+
+  const getSizeStyles = () => {
+    switch (size) {
+      case "sm":
+        return {
+          padding: "6px 12px",
+          fontSize: uiTokens.font.meta.size,
+        };
+      case "md":
+      default:
+        return {
+          padding: "8px 16px",
+          fontSize: uiTokens.font.label.size,
         };
     }
   };
 
   const baseStyle: React.CSSProperties = {
-    padding: "8px 16px",
-    fontSize: "14px",
+    ...getSizeStyles(),
     fontWeight: 400,
-    borderRadius: 6,
+    borderRadius: uiTokens.radius.md,
     border: "1px solid",
     cursor: disabled ? "not-allowed" : "pointer",
     fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
@@ -60,11 +91,13 @@ export function Button({ variant = "primary", children, className = "", disabled
   const handleMouseOver = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!disabled) {
       if (variant === "danger") {
-        e.currentTarget.style.backgroundColor = dangerHover;
+        e.currentTarget.style.backgroundColor = uiTokens.color.dangerHover;
       } else if (variant === "secondary") {
-        e.currentTarget.style.backgroundColor = secondaryHover;
+        e.currentTarget.style.backgroundColor = uiTokens.color.secondaryHover;
+      } else if (variant === "ghost") {
+        e.currentTarget.style.backgroundColor = uiTokens.color.bgAlt;
       } else {
-        e.currentTarget.style.backgroundColor = primaryHover;
+        e.currentTarget.style.backgroundColor = uiTokens.color.primaryHover;
       }
     }
     props.onMouseOver?.(e);
@@ -73,11 +106,13 @@ export function Button({ variant = "primary", children, className = "", disabled
   const handleMouseOut = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!disabled) {
       if (variant === "danger") {
-        e.currentTarget.style.backgroundColor = danger;
+        e.currentTarget.style.backgroundColor = uiTokens.color.danger;
       } else if (variant === "secondary") {
-        e.currentTarget.style.backgroundColor = secondary;
+        e.currentTarget.style.backgroundColor = uiTokens.color.secondary;
+      } else if (variant === "ghost") {
+        e.currentTarget.style.backgroundColor = "transparent";
       } else {
-        e.currentTarget.style.backgroundColor = primary;
+        e.currentTarget.style.backgroundColor = uiTokens.color.primary;
       }
     }
     props.onMouseOut?.(e);

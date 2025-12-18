@@ -2,18 +2,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f5f3;
+  --background: #edeae7;
   --foreground: #222326;
   
   /* UI Tokens */
-  --ui-border: #ddd;
+  --ui-border: #d9d3c7;
   --ui-bg: #edeae7;
+  --ui-bg-alt: #f6f5f3;
   --ui-primary: #9bbfb2;
-  --ui-primary-hover: #8aaea1;
+  --ui-primary-hover: #85a6a0;
   --ui-danger: #bf6f6f;
-  --ui-danger-hover: #ad5f5f;
+  --ui-danger-hover: #bf1736;
   --ui-secondary: #a6a198;
-  --ui-secondary-hover: #959088;
+  --ui-secondary-hover: #b8bcb7;
 }
 
 @theme inline {
@@ -24,10 +25,12 @@
 }
 
 body {
-  background: #f6f5f3;
+  background: #edeae7;
   color: #222326;
   font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
   font-weight: 400;
+  margin: 0;
+  padding: 0;
 }
 
 * {
@@ -61,15 +64,33 @@ button:not([data-variant="danger"]):not(.danger):not(.variant-danger) {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: 24px;
   font-weight: 400;
   margin: 0;
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: 18px;
   font-weight: 400;
   margin: 0;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.metaText {
+  font-size: 13px;
+  font-weight: 400;
+  color: #595852;
+}
+
+.codeText {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 input,

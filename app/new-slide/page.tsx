@@ -3,8 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { aiSpeakRepeatSlideSchema } from "../../lib/realSlideSchema";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 type LessonRow = { id: string; slug: string; title: string };
 type GroupRow = { id: string; lesson_id: string; order_index: number; title: string };
@@ -156,114 +161,62 @@ export default function NewSlidePage() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Create new slide</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="md">
+    <PageShell title="Create new slide" maxWidth="md">
+      {loadError && <p style={{ color: uiTokens.color.danger }}>{loadError}</p>}
 
-      {loadError && <p style={{ color: "red" }}>{loadError}</p>}
+      <CmsSection>
+        <form onSubmit={handleSubmit}>
+          <FormField label="Lesson" required>
+            <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+              <option value="">Select a lesson…</option>
+              {lessons.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.title} ({l.slug})
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Lesson
-          </label>
-          <select
-            value={lessonId}
-            onChange={(e) => setLessonId(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          >
-            <option value="">Select a lesson…</option>
-            {lessons.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.title} ({l.slug})
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormField label="Group" required>
+            <Select
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              disabled={!lessonId}
+            >
+              <option value="">{lessonId ? "Select a group…" : "Select a lesson first…"}</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  Group {g.order_index}: {g.title}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Group
-          </label>
-          <select
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-            disabled={!lessonId}
-          >
-            <option value="">{lessonId ? "Select a group…" : "Select a lesson first…"}</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                Group {g.order_index}: {g.title}
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormField label="Order index" required>
+            <Input
+              type="number"
+              value={orderIndex}
+              onChange={(e) => setOrderIndex(Number(e.target.value))}
+            />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Order index
-          </label>
-          <input
-            type="number"
-            value={orderIndex}
-            onChange={(e) => setOrderIndex(Number(e.target.value))}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-        </div>
+          <FormField label="Slide title (ai-speak-repeat)" required>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Slide title (ai-speak-repeat)
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            borderRadius: 6,
-            border: "1px solid #2563eb",
-            backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-            border: "1px solid #9bbfb2",
-            fontWeight: 400,
-              color: "#222326",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Creating…" : "Create slide"}
-        </button>
-      </form>
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create slide"}
+            </Button>
+          </div>
+        </form>
+      </CmsSection>
 
       {message && (
         <p
           style={{
-            marginTop: 16,
-            color: message.toLowerCase().includes("error") ? "red" : "green",
+            marginTop: uiTokens.space.md,
+            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
           }}
         >
           {message}
@@ -271,14 +224,12 @@ export default function NewSlidePage() {
       )}
 
       {createdSlide && (
-        <>
-          <h2 style={{ marginTop: 24 }}>Created slide</h2>
-          <pre style={{ fontSize: 12 }}>
+        <CmsSection title="Created slide">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             {JSON.stringify(createdSlide, null, 2)}
           </pre>
-        </>
+        </CmsSection>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

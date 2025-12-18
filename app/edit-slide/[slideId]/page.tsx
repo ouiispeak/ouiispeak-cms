@@ -8,9 +8,13 @@ import {
   type RealAiSpeakRepeatSlide,
 } from "../../../lib/realSlideSchema";
 import { Button } from "../../../components/Button";
-import { BackButton } from "../../../components/BackButton";
-import SectionCard from "../../../components/ui/SectionCard";
-import PageContainer from "../../../components/ui/PageContainer";
+import PageShell from "../../../components/ui/PageShell";
+import CmsSection from "../../../components/ui/CmsSection";
+import FormField from "../../../components/ui/FormField";
+import Input from "../../../components/ui/Input";
+import Select from "../../../components/ui/Select";
+import Textarea from "../../../components/ui/Textarea";
+import { uiTokens } from "../../../lib/uiTokens";
 
 type SlideRow = {
   id: string;
@@ -20,6 +24,13 @@ type SlideRow = {
   type: string;
   props_json: unknown;
   aid_hook: string | null;
+  code: string | null;
+  meta_json: unknown;
+  is_activity: boolean | null;
+  score_type: string | null;
+  passing_score_value: number | null;
+  max_score_value: number | null;
+  pass_required_for_next: boolean | null;
 };
 
 type GroupRow = {
@@ -58,7 +69,7 @@ export default function EditSlidePage() {
 
       const { data: slideData, error: slideError } = await supabase
         .from("slides")
-        .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook")
+        .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook, code, meta_json, is_activity, score_type, passing_score_value, max_score_value, pass_required_for_next")
         .eq("id", slideId)
         .maybeSingle();
 
@@ -110,96 +121,66 @@ export default function EditSlidePage() {
   }, [slideId]);
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Edit slide</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth={720}>
-      <p>
-        URL slide id: <code>{slideId}</code>
-      </p>
-
+    <PageShell
+      title="Edit slide"
+      maxWidth={720}
+      meta={
+        <>
+          URL slide id: <code className="codeText">{slideId}</code>
+        </>
+      }
+    >
       {loadState.status === "loading" && <p>Loading slide…</p>}
 
       {loadState.status === "error" && (
-        <>
-          <h2 style={{ color: "red" }}>Error</h2>
-          <p>{loadState.message}</p>
-        </>
+        <CmsSection title="Error" description={loadState.message}>
+          <p style={{ color: uiTokens.color.danger }}>{loadState.message}</p>
+        </CmsSection>
       )}
 
       {loadState.status === "ready" && (
         <>
           {/* Slide type input */}
-          <SectionCard title="Slide Type">
-            <div>
-              <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
-                Slide type
-              </label>
-              <input
+          <CmsSection title="Slide Type">
+            <FormField label="Slide type" required>
+              <Input
                 type="text"
                 value={slideType}
                 onChange={(e) => setSlideType(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  fontSize: 14,
-                }}
               />
-            </div>
-          </SectionCard>
+            </FormField>
+          </CmsSection>
 
           {/* Order and Group controls */}
-          <SectionCard title="Placement">
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <CmsSection title="Placement">
+            <div style={{ display: "flex", gap: uiTokens.space.md, flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 200px" }}>
-                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
-                  Group
-                </label>
-                <select
-                  value={selectedGroupId}
-                  onChange={(e) => setSelectedGroupId(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: 8,
-                    borderRadius: 4,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                  }}
-                >
-                  <option value="">(no group)</option>
-                  {loadState.groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.title}
-                    </option>
-                  ))}
-                </select>
+                <FormField label="Group">
+                  <Select
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                  >
+                    <option value="">(no group)</option>
+                    {loadState.groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.title}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
               </div>
               <div style={{ flex: "1 1 200px" }}>
-                <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: 14 }}>
-                  Order index
-                </label>
-                <input
-                  type="number"
-                  value={orderIndex}
-                  onChange={(e) => setOrderIndex(Number(e.target.value))}
-                  min={1}
-                  style={{
-                    width: "100%",
-                    padding: 8,
-                    borderRadius: 4,
-                    border: "1px solid #ccc",
-                    fontSize: 14,
-                  }}
-                />
+                <FormField label="Order index" required>
+                  <Input
+                    type="number"
+                    value={orderIndex}
+                    onChange={(e) => setOrderIndex(Number(e.target.value))}
+                    min={1}
+                  />
+                </FormField>
               </div>
             </div>
-          </SectionCard>
+          </CmsSection>
 
           {(() => {
             const type = (loadState.row.type ?? "").trim();
@@ -211,7 +192,7 @@ export default function EditSlidePage() {
               
               const { data: slideData, error: slideError } = await supabase
                 .from("slides")
-                .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook")
+                .select("id, lesson_id, group_id, order_index, type, props_json, aid_hook, code, meta_json, is_activity, score_type, passing_score_value, max_score_value, pass_required_for_next")
                 .eq("id", slideId)
                 .maybeSingle();
 
@@ -272,8 +253,7 @@ export default function EditSlidePage() {
           })()}
         </>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }
 
@@ -301,6 +281,18 @@ function AiSpeakRepeatEditor({
     const [note, setNote] = useState("");
     const [defaultLang, setDefaultLang] = useState("en");
     const [phrasesText, setPhrasesText] = useState("");
+    const [metadata, setMetadata] = useState<AuthoringMetadataState>({
+      code: row.code || "",
+      slideGoal: ((row.meta_json as any) || {}).slideGoal || "",
+      activityName: ((row.meta_json as any) || {}).activityName || "",
+      requiresExternalTTS: ((row.meta_json as any) || {}).requires?.externalTTS || false,
+      buttons: Array.isArray(((row.meta_json as any) || {}).buttons) ? ((row.meta_json as any) || {}).buttons : [],
+      isActivity: row.is_activity || false,
+      scoreType: row.score_type || "none",
+      passingScoreValue: row.passing_score_value ?? null,
+      maxScoreValue: row.max_score_value ?? null,
+      passRequiredForNext: row.pass_required_for_next || false,
+    });
   
     const [saving, setSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -405,6 +397,20 @@ function AiSpeakRepeatEditor({
 
         const trimmedType = slideType.trim();
 
+        // Build meta_json from metadata state
+        const metaJson: any = {};
+        if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+        if (metadata.activityName) metaJson.activityName = metadata.activityName;
+        if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+          metaJson.requires = {};
+          if (metadata.requiresExternalTTS) {
+            metaJson.requires.externalTTS = true;
+          }
+        }
+        if (metadata.buttons.length > 0) {
+          metaJson.buttons = metadata.buttons;
+        }
+
         const { error: updateError } = await supabase
           .from("slides")
           .update({
@@ -412,6 +418,13 @@ function AiSpeakRepeatEditor({
             type: trimmedType,
             order_index: orderIndex,
             group_id: groupId,
+            code: metadata.code || null,
+            meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+            is_activity: metadata.isActivity,
+            score_type: metadata.scoreType || "none",
+            passing_score_value: metadata.passingScoreValue,
+            max_score_value: metadata.maxScoreValue,
+            pass_required_for_next: metadata.passRequiredForNext,
           })
           .eq("id", validated.id);
 
@@ -434,10 +447,9 @@ function AiSpeakRepeatEditor({
   
     if (innerState.status === "error") {
       return (
-        <>
-          <h2 style={{ color: "red" }}>ai-speak-repeat editor error</h2>
-          <p>{innerState.message}</p>
-        </>
+        <CmsSection title="ai-speak-repeat editor error" description={innerState.message}>
+          <p style={{ color: uiTokens.color.danger }}>{innerState.message}</p>
+        </CmsSection>
       );
     }
   
@@ -445,202 +457,188 @@ function AiSpeakRepeatEditor({
   
     return (
       <>
-        <h2>ai-speak-repeat editor</h2>
-        <p>
-          Editing slide <code>{slide.id}</code> in group{" "}
-          <code>{slide.groupId ?? "none"}</code>
-        </p>
-  
-        <form onSubmit={handleSave} style={{ marginTop: 24 }}>
-          {/* Title */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-              Slide title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
-            />
-          </div>
-  
-          {/* Subtitle */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-              Subtitle
-            </label>
-            <input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
-            />
-          </div>
-  
-          {/* Note */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-              Note
-            </label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
-            />
-          </div>
-  
-          {/* Default language */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-              Default language
-            </label>
-            <input
-              type="text"
-              value={defaultLang}
-              onChange={(e) => setDefaultLang(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-              }}
-            />
-          </div>
-  
-          {/* Phrases */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-              Phrases (one per line)
-            </label>
-            <textarea
-              value={phrasesText}
-              onChange={(e) => setPhrasesText(e.target.value)}
-              rows={6}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                fontFamily: "monospace",
-              }}
-            />
-          </div>
-  
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </form>
-  
-        {saveMessage && (
-          <p
-            style={{
-              marginTop: 16,
-              color: saveMessage.includes("error") ? "red" : "green",
-            }}
-          >
-            {saveMessage}
-          </p>
-        )}
+        <CmsSection
+          title="ai-speak-repeat editor"
+          description={
+            <>
+              Editing slide <code className="codeText">{slide.id}</code> in group{" "}
+              <code className="codeText">{slide.groupId ?? "none"}</code>
+            </>
+          }
+        >
+          <form onSubmit={handleSave}>
+            <FormField label="Slide title" required>
+              <Input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </FormField>
 
-        <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
-            className="text-xs py-1.5 px-3"
-          >
-            {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
-          </Button>
+            <FormField label="Subtitle">
+              <Input
+                type="text"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+              />
+            </FormField>
 
+            <FormField label="Note">
+              <Input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Default language" required>
+              <Input
+                type="text"
+                value={defaultLang}
+                onChange={(e) => setDefaultLang(e.target.value)}
+              />
+            </FormField>
+
+            <FormField label="Phrases (one per line)" required>
+              <Textarea
+                value={phrasesText}
+                onChange={(e) => setPhrasesText(e.target.value)}
+                rows={6}
+                style={{ fontFamily: "monospace" }}
+              />
+            </FormField>
+
+            <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save changes"}
+              </Button>
+            </div>
+          </form>
+  
+          {saveMessage && (
+            <p
+              style={{
+                marginTop: uiTokens.space.md,
+                color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
+              }}
+            >
+              {saveMessage}
+            </p>
+          )}
+        </CmsSection>
+
+        <AuthoringMetadataSection
+          row={row}
+          slideType={slideType}
+          onMetadataChange={setMetadata}
+        />
+
+        <CmsSection
+          title="Raw props_json (advanced)"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+            >
+              {rawJsonExpanded ? "▼" : "▶"} {rawJsonExpanded ? "Collapse" : "Expand"}
+            </Button>
+          }
+        >
           {rawJsonExpanded && (
-            <div style={{ marginTop: 16 }}>
-              <textarea
+            <div>
+              <Textarea
                 value={rawJsonText}
                 onChange={(e) => {
                   setRawJsonText(e.target.value);
                   setRawJsonParseError(null);
                 }}
                 rows={15}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                }}
+                style={{ fontFamily: "monospace", fontSize: uiTokens.font.code.size }}
               />
               {rawJsonParseError && (
-                <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+                <p style={{ color: uiTokens.color.danger, marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
                   {rawJsonParseError}
                 </p>
               )}
-              <button
-                type="button"
-                onClick={async () => {
-                  setRawJsonParseError(null);
-                  setRawJsonSaveMessage(null);
-                  setRawJsonSaving(true);
+              <div style={{ marginTop: uiTokens.space.md, display: "flex", justifyContent: "flex-end" }}>
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    setRawJsonParseError(null);
+                    setRawJsonSaveMessage(null);
+                    setRawJsonSaving(true);
 
-                  try {
-                    let parsedJson: unknown;
                     try {
-                      parsedJson = JSON.parse(rawJsonText);
-                    } catch (parseErr) {
-                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
-                      return;
+                      let parsedJson: unknown;
+                      try {
+                        parsedJson = JSON.parse(rawJsonText);
+                      } catch (parseErr) {
+                        setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                        return;
+                      }
+
+                      // Remove bodies if present (legacy support - we only use body)
+                      if (parsedJson && typeof parsedJson === 'object' && 'bodies' in parsedJson) {
+                        const { bodies, ...rest } = parsedJson as any;
+                        parsedJson = rest;
+                      }
+
+                      const trimmedType = slideType.trim();
+
+                      // Build meta_json from current metadata state
+                      const metaJson: any = {};
+                      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+                      if (metadata.activityName) metaJson.activityName = metadata.activityName;
+                      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+                        metaJson.requires = {};
+                        if (metadata.requiresExternalTTS) {
+                          metaJson.requires.externalTTS = true;
+                        }
+                      }
+                      if (metadata.buttons.length > 0) {
+                        metaJson.buttons = metadata.buttons;
+                      }
+
+                      const { error: updateError } = await supabase
+                        .from("slides")
+                        .update({
+                          props_json: parsedJson,
+                          type: trimmedType,
+                          code: metadata.code || null,
+                          meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+                          is_activity: metadata.isActivity,
+                          score_type: metadata.scoreType || "none",
+                          passing_score_value: metadata.passingScoreValue,
+                          max_score_value: metadata.maxScoreValue,
+                          pass_required_for_next: metadata.passRequiredForNext,
+                        })
+                        .eq("id", row.id);
+
+                      if (updateError) {
+                        setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                        return;
+                      }
+
+                      setRawJsonSaveMessage("Saved successfully!");
+                      // Update the textarea to reflect the saved value (in case it was normalized)
+                      setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                    } finally {
+                      setRawJsonSaving(false);
                     }
-
-                    const trimmedType = slideType.trim();
-
-                    const { error: updateError } = await supabase
-                      .from("slides")
-                      .update({
-                        props_json: parsedJson,
-                        type: trimmedType,
-                      })
-                      .eq("id", row.id);
-
-                    if (updateError) {
-                      setRawJsonSaveMessage("Supabase update error: " + updateError.message);
-                      return;
-                    }
-
-                    setRawJsonSaveMessage("Saved successfully!");
-                    // Update the textarea to reflect the saved value (in case it was normalized)
-                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
-                  } finally {
-                    setRawJsonSaving(false);
-                  }
-                }}
-                disabled={rawJsonSaving}
-                className="mt-2"
-              >
-                {rawJsonSaving ? "Saving…" : "Save JSON"}
-              </button>
+                  }}
+                  disabled={rawJsonSaving}
+                >
+                  {rawJsonSaving ? "Saving…" : "Save JSON"}
+                </Button>
+              </div>
               {rawJsonSaveMessage && (
                 <p
                   style={{
-                    marginTop: 8,
-                    color: rawJsonSaveMessage.includes("error") ? "red" : "green",
-                    fontSize: 13,
+                    marginTop: uiTokens.space.xs,
+                    color: rawJsonSaveMessage.includes("error") ? uiTokens.color.danger : "green",
+                    fontSize: uiTokens.font.meta.size,
                   }}
                 >
                   {rawJsonSaveMessage}
@@ -648,15 +646,241 @@ function AiSpeakRepeatEditor({
               )}
             </div>
           )}
-        </div>
+        </CmsSection>
   
-        <h3 style={{ marginTop: 32 }}>Current slide data</h3>
-        <pre style={{ fontSize: 12 }}>
-          {JSON.stringify(slide, null, 2)}
-        </pre>
+        <CmsSection title="Current slide data">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(slide, null, 2)}
+          </pre>
+        </CmsSection>
       </>
     );
   }
+
+type AuthoringMetadataState = {
+  code: string;
+  slideGoal: string;
+  activityName: string;
+  requiresExternalTTS: boolean;
+  buttons: string[];
+  isActivity: boolean;
+  scoreType: string;
+  passingScoreValue: number | null;
+  maxScoreValue: number | null;
+  passRequiredForNext: boolean;
+};
+
+function AuthoringMetadataSection({
+  row,
+  slideType,
+  onMetadataChange,
+}: {
+  row: SlideRow;
+  slideType: string;
+  onMetadataChange: (metadata: AuthoringMetadataState) => void;
+}) {
+  // Initialize state from row data, handling backward compatibility
+  const metaJson = (row.meta_json as any) || {};
+  const [code, setCode] = useState(row.code || "");
+  const [slideGoal, setSlideGoal] = useState(metaJson.slideGoal || "");
+  const [activityName, setActivityName] = useState(metaJson.activityName || "");
+  const [requiresExternalTTS, setRequiresExternalTTS] = useState(
+    metaJson.requires?.externalTTS || false
+  );
+  const [buttonsText, setButtonsText] = useState(
+    Array.isArray(metaJson.buttons) ? metaJson.buttons.join(", ") : ""
+  );
+  const [isActivity, setIsActivity] = useState(row.is_activity || false);
+  const [scoreType, setScoreType] = useState(row.score_type || "none");
+  const [passingScoreValue, setPassingScoreValue] = useState<number | null>(
+    row.passing_score_value ?? null
+  );
+  const [maxScoreValue, setMaxScoreValue] = useState<number | null>(
+    row.max_score_value ?? null
+  );
+  const [passRequiredForNext, setPassRequiredForNext] = useState(
+    row.pass_required_for_next || false
+  );
+
+  const isTitleSlide = slideType === "title-slide";
+
+  // Notify parent of changes
+  useEffect(() => {
+    const buttons = buttonsText
+      .split(",")
+      .map((b: string) => b.trim())
+      .filter((b: string) => b.length > 0);
+
+    onMetadataChange({
+      code,
+      slideGoal,
+      activityName,
+      requiresExternalTTS,
+      buttons,
+      isActivity,
+      scoreType,
+      passingScoreValue,
+      maxScoreValue,
+      passRequiredForNext,
+    });
+  }, [
+    code,
+    slideGoal,
+    activityName,
+    requiresExternalTTS,
+    buttonsText,
+    isActivity,
+    scoreType,
+    passingScoreValue,
+    maxScoreValue,
+    passRequiredForNext,
+    onMetadataChange,
+  ]);
+
+  return (
+    <CmsSection title="Authoring metadata">
+      <FormField label="Code">
+        <Input
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </FormField>
+
+      <FormField label="Slide goal">
+        <Textarea
+          value={slideGoal}
+          onChange={(e) => setSlideGoal(e.target.value)}
+          rows={3}
+        />
+      </FormField>
+
+      <FormField label="Activity name">
+        <Input
+          type="text"
+          value={activityName}
+          onChange={(e) => setActivityName(e.target.value)}
+        />
+      </FormField>
+
+      <FormField label="Requires external TTS">
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: uiTokens.space.xs,
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={requiresExternalTTS}
+            onChange={(e) => setRequiresExternalTTS(e.target.checked)}
+            style={{
+              width: 18,
+              height: 18,
+              cursor: "pointer",
+            }}
+          />
+          <span>Enable external TTS requirement</span>
+        </label>
+      </FormField>
+
+      <FormField label="Buttons (comma-separated)">
+        <Input
+          type="text"
+          value={buttonsText}
+          onChange={(e) => setButtonsText(e.target.value)}
+          placeholder="e.g., Continue, Skip, Retry"
+        />
+      </FormField>
+
+      <FormField label="Is activity">
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: uiTokens.space.xs,
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isActivity}
+            onChange={(e) => setIsActivity(e.target.checked)}
+            style={{
+              width: 18,
+              height: 18,
+              cursor: "pointer",
+            }}
+          />
+          <span>Mark as activity</span>
+        </label>
+      </FormField>
+
+      {!isTitleSlide && (
+        <>
+          <FormField label="Score type">
+            <Select value={scoreType} onChange={(e) => setScoreType(e.target.value)}>
+              <option value="none">None</option>
+              <option value="percent">Percent</option>
+              <option value="raw">Raw</option>
+            </Select>
+          </FormField>
+
+          <FormField label="Passing score">
+            <Input
+              type="number"
+              value={passingScoreValue ?? ""}
+              onChange={(e) =>
+                setPassingScoreValue(
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              placeholder="Optional"
+            />
+          </FormField>
+
+          <FormField label="Max score">
+            <Input
+              type="number"
+              value={maxScoreValue ?? ""}
+              onChange={(e) =>
+                setMaxScoreValue(
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              placeholder="Optional"
+            />
+          </FormField>
+
+          <FormField label="Pass required for next">
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: uiTokens.space.xs,
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={passRequiredForNext}
+                onChange={(e) => setPassRequiredForNext(e.target.checked)}
+                style={{
+                  width: 18,
+                  height: 18,
+                  cursor: "pointer",
+                }}
+              />
+              <span>Require passing score to proceed</span>
+            </label>
+          </FormField>
+        </>
+      )}
+    </CmsSection>
+  );
+}
 
 function TitleSlideEditor({
   row,
@@ -674,6 +898,18 @@ function TitleSlideEditor({
   const props = (row.props_json as any) || {};
   const [title, setTitle] = useState(props.title || "");
   const [subtitle, setSubtitle] = useState(props.subtitle || "");
+  const [metadata, setMetadata] = useState<AuthoringMetadataState>({
+    code: row.code || "",
+    slideGoal: ((row.meta_json as any) || {}).slideGoal || "",
+    activityName: ((row.meta_json as any) || {}).activityName || "",
+    requiresExternalTTS: ((row.meta_json as any) || {}).requires?.externalTTS || false,
+    buttons: Array.isArray(((row.meta_json as any) || {}).buttons) ? ((row.meta_json as any) || {}).buttons : [],
+    isActivity: row.is_activity || false,
+    scoreType: row.score_type || "none",
+    passingScoreValue: row.passing_score_value ?? null,
+    maxScoreValue: row.max_score_value ?? null,
+    passRequiredForNext: row.pass_required_for_next || false,
+  });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
@@ -695,6 +931,20 @@ function TitleSlideEditor({
 
       const trimmedType = slideType.trim();
 
+      // Build meta_json from metadata state
+      const metaJson: any = {};
+      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+      if (metadata.activityName) metaJson.activityName = metadata.activityName;
+      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+        metaJson.requires = {};
+        if (metadata.requiresExternalTTS) {
+          metaJson.requires.externalTTS = true;
+        }
+      }
+      if (metadata.buttons.length > 0) {
+        metaJson.buttons = metadata.buttons;
+      }
+
       const { error: updateError } = await supabase
         .from("slides")
         .update({
@@ -702,6 +952,13 @@ function TitleSlideEditor({
           type: trimmedType,
           order_index: orderIndex,
           group_id: groupId,
+          code: metadata.code || null,
+          meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+          is_activity: metadata.isActivity,
+          score_type: "none",
+          passing_score_value: null,
+          max_score_value: null,
+          pass_required_for_next: false,
         })
         .eq("id", row.id);
 
@@ -719,95 +976,61 @@ function TitleSlideEditor({
 
   return (
     <>
-      <SectionCard title="title-slide editor">
-        <div style={{ marginBottom: 8, fontSize: 13, color: "#666" }}>
-          UUID: <code>{row.id}</code>
-        </div>
-        <div style={{ marginBottom: 16, fontSize: 13, color: "#666" }}>
-          Group UUID: <code>{row.group_id ?? "none"}</code>
-        </div>
+      <CmsSection
+        title="title-slide editor"
+        description={
+          <>
+            UUID: <code className="codeText">{row.id}</code>
+            <br />
+            Group UUID: <code className="codeText">{row.group_id ?? "none"}</code>
+          </>
+        }
+      >
 
-        <form onSubmit={handleSave} style={{ marginTop: 24 }}>
-        {/* Title */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Title <span style={{ color: "red" }}>*</span>
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
+        <form onSubmit={handleSave}>
+          <FormField label="Title" required>
+            <Input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </FormField>
 
-        {/* Subtitle */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Subtitle (optional)
-          </label>
-          <input
-            type="text"
-            value={subtitle}
-            onChange={(e) => setSubtitle(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
+          <FormField label="Subtitle (optional)">
+            <Input
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+            />
+          </FormField>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            borderRadius: 4,
-            border: "none",
-            backgroundColor: "#9bbfb2",
-            color: "#222326",
-            fontWeight: 400,
-            border: "1px solid #9bbfb2",
-            cursor: saving ? "default" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
         </form>
 
         {saveMessage && (
           <p
             style={{
-              marginTop: 16,
-              color: saveMessage.includes("error") ? "red" : "green",
+              marginTop: uiTokens.space.md,
+              color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
             }}
           >
             {saveMessage}
           </p>
         )}
-      </SectionCard>
+      </CmsSection>
 
-      <SectionCard>
+      <AuthoringMetadataSection
+        row={row}
+        slideType={slideType}
+        onMetadataChange={setMetadata}
+      />
+
+      <CmsSection>
         <button
           type="button"
           onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
@@ -847,77 +1070,77 @@ function TitleSlideEditor({
                 {rawJsonParseError}
               </p>
             )}
-            <button
-              type="button"
-              onClick={async () => {
-                setRawJsonParseError(null);
-                setRawJsonSaveMessage(null);
-                setRawJsonSaving(true);
+            <div style={{ marginTop: uiTokens.space.xs, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setRawJsonParseError(null);
+                  setRawJsonSaveMessage(null);
+                  setRawJsonSaving(true);
 
-                try {
-                  let parsedJson: unknown;
                   try {
-                    parsedJson = JSON.parse(rawJsonText);
-                  } catch (parseErr) {
-                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
-                    return;
+                    let parsedJson: unknown;
+                    try {
+                      parsedJson = JSON.parse(rawJsonText);
+                    } catch (parseErr) {
+                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                      return;
+                    }
+
+                    const trimmedType = slideType.trim();
+
+                    // Build meta_json from current metadata state
+                    const metaJson: any = {};
+                    if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+                    if (metadata.activityName) metaJson.activityName = metadata.activityName;
+                    if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+                      metaJson.requires = {};
+                      if (metadata.requiresExternalTTS) {
+                        metaJson.requires.externalTTS = true;
+                      }
+                    }
+                    if (metadata.buttons.length > 0) {
+                      metaJson.buttons = metadata.buttons;
+                    }
+
+                    const { error: updateError } = await supabase
+                      .from("slides")
+                      .update({
+                        props_json: parsedJson,
+                        type: trimmedType,
+                        code: metadata.code || null,
+                        meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+                        is_activity: metadata.isActivity,
+                        score_type: metadata.scoreType || "none",
+                        passing_score_value: metadata.passingScoreValue,
+                        max_score_value: metadata.maxScoreValue,
+                        pass_required_for_next: metadata.passRequiredForNext,
+                      })
+                      .eq("id", row.id);
+
+                    if (updateError) {
+                      setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                      return;
+                    }
+
+                    setRawJsonSaveMessage("Saved successfully!");
+                    // Update the textarea to reflect the saved value (in case it was normalized)
+                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                  } finally {
+                    setRawJsonSaving(false);
                   }
-
-                  const trimmedType = slideType.trim();
-
-                  const { error: updateError } = await supabase
-                    .from("slides")
-                    .update({
-                      props_json: parsedJson,
-                      type: trimmedType,
-                    })
-                    .eq("id", row.id);
-
-                  if (updateError) {
-                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
-                    return;
-                  }
-
-                  setRawJsonSaveMessage("Saved successfully!");
-                  // Update the textarea to reflect the saved value (in case it was normalized)
-                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
-                } finally {
-                  setRawJsonSaving(false);
-                }
-              }}
-              disabled={rawJsonSaving}
-              style={{
-                marginTop: 8,
-                padding: "6px 12px",
-                fontSize: 14,
-                borderRadius: 4,
-                border: "none",
-                backgroundColor: "#9bbfb2",
-                color: "#222326",
-                fontWeight: 400,
-                border: "1px solid #9bbfb2",
-                cursor: rawJsonSaving ? "default" : "pointer",
-                opacity: rawJsonSaving ? 0.7 : 1,
-              }}
-              onMouseOver={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#8aaea1";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#9bbfb2";
-                }
-              }}
-            >
-              {rawJsonSaving ? "Saving…" : "Save JSON"}
-            </button>
+                }}
+                disabled={rawJsonSaving}
+              >
+                {rawJsonSaving ? "Saving…" : "Save JSON"}
+              </Button>
+            </div>
             {rawJsonSaveMessage && (
               <p
                 style={{
-                  marginTop: 8,
-                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
-                  fontSize: 13,
+                  marginTop: uiTokens.space.xs,
+                  color: rawJsonSaveMessage.includes("error") ? uiTokens.color.danger : "green",
+                  fontSize: uiTokens.font.meta.size,
                 }}
               >
                 {rawJsonSaveMessage}
@@ -925,12 +1148,13 @@ function TitleSlideEditor({
             )}
           </div>
         )}
-      </SectionCard>
+      </CmsSection>
 
-      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
-      <pre style={{ fontSize: 12 }}>
-        {JSON.stringify(row, null, 2)}
-      </pre>
+      <CmsSection title="Raw DB row (debug)">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(row, null, 2)}
+        </pre>
+      </CmsSection>
     </>
   );
 }
@@ -951,10 +1175,22 @@ function TextSlideEditor({
   const props = (row.props_json as any) || {};
   const [title, setTitle] = useState(props.title || "");
   const [subtitle, setSubtitle] = useState(props.subtitle || "");
-  const [body, setBody] = useState(props.body || "");
-  const [bodiesText, setBodiesText] = useState(
-    props.bodies && Array.isArray(props.bodies) ? props.bodies.join("\n") : ""
-  );
+  // Handle legacy bodies: if body is empty but bodies exists, join it into body for display
+  // But do not persist bodies back - we only save body
+  const initialBody = props.body || (props.bodies && Array.isArray(props.bodies) ? props.bodies.join("\n") : "");
+  const [body, setBody] = useState(initialBody);
+  const [metadata, setMetadata] = useState<AuthoringMetadataState>({
+    code: row.code || "",
+    slideGoal: ((row.meta_json as any) || {}).slideGoal || "",
+    activityName: ((row.meta_json as any) || {}).activityName || "",
+    requiresExternalTTS: ((row.meta_json as any) || {}).requires?.externalTTS || false,
+    buttons: Array.isArray(((row.meta_json as any) || {}).buttons) ? ((row.meta_json as any) || {}).buttons : [],
+    isActivity: row.is_activity || false,
+    scoreType: row.score_type || "none",
+    passingScoreValue: row.passing_score_value ?? null,
+    maxScoreValue: row.max_score_value ?? null,
+    passRequiredForNext: row.pass_required_for_next || false,
+  });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
@@ -978,24 +1214,26 @@ function TextSlideEditor({
         newProps.subtitle = subtitle.trim();
       }
 
-      // If bodies textarea has content, use bodies array and remove body
-      // Otherwise, use body and remove bodies
-      const bodiesLines = bodiesText
-        .split("\n")
-        .map((line: string) => line.trim())
-        .filter((line: string) => line.length > 0);
-
-      if (bodiesLines.length > 0) {
-        newProps.bodies = bodiesLines;
-        // Don't include body if bodies exists
-      } else {
-        if (body.trim()) {
-          newProps.body = body.trim();
-        }
-        // Don't include bodies if body exists
+      // Only write body (string), never bodies
+      if (body.trim()) {
+        newProps.body = body.trim();
       }
 
       const trimmedType = slideType.trim();
+
+      // Build meta_json from metadata state
+      const metaJson: any = {};
+      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+      if (metadata.activityName) metaJson.activityName = metadata.activityName;
+      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+        metaJson.requires = {};
+        if (metadata.requiresExternalTTS) {
+          metaJson.requires.externalTTS = true;
+        }
+      }
+      if (metadata.buttons.length > 0) {
+        metaJson.buttons = metadata.buttons;
+      }
 
       const { error: updateError } = await supabase
         .from("slides")
@@ -1004,6 +1242,13 @@ function TextSlideEditor({
           type: trimmedType,
           order_index: orderIndex,
           group_id: groupId,
+          code: metadata.code || null,
+          meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+          is_activity: metadata.isActivity,
+          score_type: metadata.scoreType || "none",
+          passing_score_value: metadata.passingScoreValue,
+          max_score_value: metadata.maxScoreValue,
+          pass_required_for_next: metadata.passRequiredForNext,
         })
         .eq("id", row.id);
 
@@ -1021,237 +1266,165 @@ function TextSlideEditor({
 
   return (
     <>
-      <h2>text-slide editor</h2>
-      <p>
-        Editing slide <code>{row.id}</code> in group{" "}
-        <code>{row.group_id ?? "none"}</code>
-      </p>
+      <CmsSection
+        title="text-slide editor"
+        description={
+          <>
+            Editing slide <code className="codeText">{row.id}</code> in group{" "}
+            <code className="codeText">{row.group_id ?? "none"}</code>
+          </>
+        }
+      >
+        <form onSubmit={handleSave}>
+          <FormField label="Title (optional)">
+            <Input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </FormField>
 
-      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
-        {/* Title */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Title (optional)
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+          <FormField label="Subtitle (optional)">
+            <Input
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+            />
+          </FormField>
+
+          <FormField label="Body">
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={6}
+            />
+          </FormField>
+
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+
+        {saveMessage && (
+          <p
             style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
+              marginTop: uiTokens.space.md,
+              color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
             }}
-          />
-        </div>
+          >
+            {saveMessage}
+          </p>
+        )}
+      </CmsSection>
 
-        {/* Subtitle */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Subtitle (optional)
-          </label>
-          <input
-            type="text"
-            value={subtitle}
-            onChange={(e) => setSubtitle(e.target.value)}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
+      <AuthoringMetadataSection
+        row={row}
+        slideType={slideType}
+        onMetadataChange={setMetadata}
+      />
 
-        {/* Body */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Body {bodiesText.trim().length > 0 && <span style={{ color: "#999", fontWeight: 400 }}>(ignored if Bodies is non-empty)</span>}
-          </label>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={6}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-            }}
-          />
-        </div>
-
-        {/* Bodies */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            Bodies (one per line; empty lines ignored) {bodiesText.trim().length > 0 && <span style={{ color: "green", fontWeight: 400 }}>(will be saved)</span>}
-          </label>
-          <textarea
-            value={bodiesText}
-            onChange={(e) => setBodiesText(e.target.value)}
-            rows={6}
-            style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-              fontFamily: "monospace",
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            borderRadius: 4,
-            border: "none",
-            backgroundColor: "#9bbfb2",
-            color: "#222326",
-            fontWeight: 400,
-            border: "1px solid #9bbfb2",
-            cursor: saving ? "default" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-      </form>
-
-      {saveMessage && (
-        <p
-          style={{
-            marginTop: 16,
-            color: saveMessage.includes("error") ? "red" : "green",
-          }}
-        >
-          {saveMessage}
-        </p>
-      )}
-
-      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
-          style={{
-            padding: "4px 8px",
-            fontSize: 13,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
-            cursor: "pointer",
-          }}
-        >
-          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
-        </button>
-
+      <CmsSection
+        title="Raw props_json (advanced)"
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+          >
+            {rawJsonExpanded ? "▼" : "▶"} {rawJsonExpanded ? "Collapse" : "Expand"}
+          </Button>
+        }
+      >
         {rawJsonExpanded && (
-          <div style={{ marginTop: 16 }}>
-            <textarea
+          <div>
+            <Textarea
               value={rawJsonText}
               onChange={(e) => {
                 setRawJsonText(e.target.value);
                 setRawJsonParseError(null);
               }}
               rows={15}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                fontFamily: "monospace",
-                fontSize: 13,
-              }}
+              style={{ fontFamily: "monospace", fontSize: uiTokens.font.code.size }}
             />
             {rawJsonParseError && (
-              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+              <p style={{ color: uiTokens.color.danger, marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
                 {rawJsonParseError}
               </p>
             )}
-            <button
-              type="button"
-              onClick={async () => {
-                setRawJsonParseError(null);
-                setRawJsonSaveMessage(null);
-                setRawJsonSaving(true);
+            <div style={{ marginTop: uiTokens.space.md, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setRawJsonParseError(null);
+                  setRawJsonSaveMessage(null);
+                  setRawJsonSaving(true);
 
-                try {
-                  let parsedJson: unknown;
                   try {
-                    parsedJson = JSON.parse(rawJsonText);
-                  } catch (parseErr) {
-                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
-                    return;
+                    let parsedJson: unknown;
+                    try {
+                      parsedJson = JSON.parse(rawJsonText);
+                    } catch (parseErr) {
+                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                      return;
+                    }
+
+                    const trimmedType = slideType.trim();
+
+                    // Build meta_json from current metadata state
+                    const metaJson: any = {};
+                    if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+                    if (metadata.activityName) metaJson.activityName = metadata.activityName;
+                    if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+                      metaJson.requires = {};
+                      if (metadata.requiresExternalTTS) {
+                        metaJson.requires.externalTTS = true;
+                      }
+                    }
+                    if (metadata.buttons.length > 0) {
+                      metaJson.buttons = metadata.buttons;
+                    }
+
+                    const { error: updateError } = await supabase
+                      .from("slides")
+                      .update({
+                        props_json: parsedJson,
+                        type: trimmedType,
+                        code: metadata.code || null,
+                        meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+                        is_activity: metadata.isActivity,
+                        score_type: metadata.scoreType || "none",
+                        passing_score_value: metadata.passingScoreValue,
+                        max_score_value: metadata.maxScoreValue,
+                        pass_required_for_next: metadata.passRequiredForNext,
+                      })
+                      .eq("id", row.id);
+
+                    if (updateError) {
+                      setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                      return;
+                    }
+
+                    setRawJsonSaveMessage("Saved successfully!");
+                    // Update the textarea to reflect the saved value (in case it was normalized)
+                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                  } finally {
+                    setRawJsonSaving(false);
                   }
-
-                  const trimmedType = slideType.trim();
-
-                  const { error: updateError } = await supabase
-                    .from("slides")
-                    .update({
-                      props_json: parsedJson,
-                      type: trimmedType,
-                    })
-                    .eq("id", row.id);
-
-                  if (updateError) {
-                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
-                    return;
-                  }
-
-                  setRawJsonSaveMessage("Saved successfully!");
-                  // Update the textarea to reflect the saved value (in case it was normalized)
-                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
-                } finally {
-                  setRawJsonSaving(false);
-                }
-              }}
-              disabled={rawJsonSaving}
-              style={{
-                marginTop: 8,
-                padding: "6px 12px",
-                fontSize: 14,
-                borderRadius: 4,
-                border: "none",
-                backgroundColor: "#9bbfb2",
-                color: "#222326",
-                fontWeight: 400,
-                border: "1px solid #9bbfb2",
-                cursor: rawJsonSaving ? "default" : "pointer",
-                opacity: rawJsonSaving ? 0.7 : 1,
-              }}
-              onMouseOver={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#8aaea1";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#9bbfb2";
-                }
-              }}
-            >
-              {rawJsonSaving ? "Saving…" : "Save JSON"}
-            </button>
+                }}
+                disabled={rawJsonSaving}
+              >
+                {rawJsonSaving ? "Saving…" : "Save JSON"}
+              </Button>
+            </div>
             {rawJsonSaveMessage && (
               <p
                 style={{
-                  marginTop: 8,
-                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
-                  fontSize: 13,
+                  marginTop: uiTokens.space.xs,
+                  color: rawJsonSaveMessage.includes("error") ? uiTokens.color.danger : "green",
+                  fontSize: uiTokens.font.meta.size,
                 }}
               >
                 {rawJsonSaveMessage}
@@ -1259,12 +1432,13 @@ function TextSlideEditor({
             )}
           </div>
         )}
-      </div>
+      </CmsSection>
 
-      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
-      <pre style={{ fontSize: 12 }}>
-        {JSON.stringify(row, null, 2)}
-      </pre>
+      <CmsSection title="Raw DB row (debug)">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(row, null, 2)}
+        </pre>
+      </CmsSection>
     </>
   );
 }
@@ -1288,6 +1462,18 @@ function RawJsonEditor({
     } catch {
       return String(row.props_json ?? "");
     }
+  });
+  const [metadata, setMetadata] = useState<AuthoringMetadataState>({
+    code: row.code || "",
+    slideGoal: ((row.meta_json as any) || {}).slideGoal || "",
+    activityName: ((row.meta_json as any) || {}).activityName || "",
+    requiresExternalTTS: ((row.meta_json as any) || {}).requires?.externalTTS || false,
+    buttons: Array.isArray(((row.meta_json as any) || {}).buttons) ? ((row.meta_json as any) || {}).buttons : [],
+    isActivity: row.is_activity || false,
+    scoreType: row.score_type || "none",
+    passingScoreValue: row.passing_score_value ?? null,
+    maxScoreValue: row.max_score_value ?? null,
+    passRequiredForNext: row.pass_required_for_next || false,
   });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -1313,7 +1499,27 @@ function RawJsonEditor({
         return;
       }
 
+      // Remove bodies if present (legacy support - we only use body)
+      if (parsedJson && typeof parsedJson === 'object' && 'bodies' in parsedJson) {
+        const { bodies, ...rest } = parsedJson as any;
+        parsedJson = rest;
+      }
+
       const trimmedType = slideType.trim();
+
+      // Build meta_json from metadata state
+      const metaJson: any = {};
+      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+      if (metadata.activityName) metaJson.activityName = metadata.activityName;
+      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+        metaJson.requires = {};
+        if (metadata.requiresExternalTTS) {
+          metaJson.requires.externalTTS = true;
+        }
+      }
+      if (metadata.buttons.length > 0) {
+        metaJson.buttons = metadata.buttons;
+      }
 
       const { error: updateError } = await supabase
         .from("slides")
@@ -1322,6 +1528,13 @@ function RawJsonEditor({
           type: trimmedType,
           order_index: orderIndex,
           group_id: groupId,
+          code: metadata.code || null,
+          meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+          is_activity: metadata.isActivity,
+          score_type: metadata.scoreType || "none",
+          passing_score_value: metadata.passingScoreValue,
+          max_score_value: metadata.maxScoreValue,
+          pass_required_for_next: metadata.passRequiredForNext,
         })
         .eq("id", row.id);
 
@@ -1339,195 +1552,161 @@ function RawJsonEditor({
 
   return (
     <>
-      <h2>Raw JSON editor</h2>
-      <p>
-        Editing slide <code>{row.id}</code> (type: <code>{row.type}</code>) in group{" "}
-        <code>{row.group_id ?? "none"}</code>
-      </p>
-      <p style={{ opacity: 0.7, fontSize: 13 }}>
-        No custom editor available for this slide type. Edit the raw JSON below.
-      </p>
+      <CmsSection
+        title="Raw JSON editor"
+        description={
+          <>
+            Editing slide <code className="codeText">{row.id}</code> (type: <code className="codeText">{row.type}</code>) in group{" "}
+            <code className="codeText">{row.group_id ?? "none"}</code>
+            <br />
+            <span className="metaText">No custom editor available for this slide type. Edit the raw JSON below.</span>
+          </>
+        }
+      >
+        <form onSubmit={handleSave}>
+          <FormField label="props_json (raw JSON)" required>
+            <Textarea
+              value={jsonText}
+              onChange={(e) => {
+                setJsonText(e.target.value);
+                setParseError(null);
+              }}
+              rows={20}
+              style={{ fontFamily: "monospace", fontSize: uiTokens.font.code.size }}
+            />
+          </FormField>
 
-      <form onSubmit={handleSave} style={{ marginTop: 24 }}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
-            props_json (raw JSON)
-          </label>
-          <textarea
-            value={jsonText}
-            onChange={(e) => {
-              setJsonText(e.target.value);
-              setParseError(null);
-            }}
-            rows={20}
+          {parseError && (
+            <p style={{ color: uiTokens.color.danger, marginBottom: uiTokens.space.md }}>
+              {parseError}
+            </p>
+          )}
+
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+
+        {saveMessage && (
+          <p
             style={{
-              width: "100%",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-              fontFamily: "monospace",
-              fontSize: 13,
+              marginTop: uiTokens.space.md,
+              color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
             }}
-          />
-        </div>
-
-        {parseError && (
-          <p style={{ color: "red", marginBottom: 16 }}>
-            {parseError}
+          >
+            {saveMessage}
           </p>
         )}
+      </CmsSection>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            borderRadius: 4,
-            border: "none",
-            backgroundColor: "#9bbfb2",
-            color: "#222326",
-            fontWeight: 400,
-            border: "1px solid #9bbfb2",
-            cursor: saving ? "default" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-      </form>
+      <AuthoringMetadataSection
+        row={row}
+        slideType={slideType}
+        onMetadataChange={setMetadata}
+      />
 
-      {saveMessage && (
-        <p
-          style={{
-            marginTop: 16,
-            color: saveMessage.includes("error") ? "red" : "green",
-          }}
-        >
-          {saveMessage}
-        </p>
-      )}
-
-      <div style={{ marginTop: 32, borderTop: "1px solid #ddd", paddingTop: 16 }}>
-        <button
-          type="button"
-          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
-          style={{
-            padding: "4px 8px",
-            fontSize: 13,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            backgroundColor: rawJsonExpanded ? "#f0f0f0" : "#fff",
-            cursor: "pointer",
-          }}
-        >
-          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
-        </button>
-
+      <CmsSection
+        title="Raw props_json (advanced)"
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
+          >
+            {rawJsonExpanded ? "▼" : "▶"} {rawJsonExpanded ? "Collapse" : "Expand"}
+          </Button>
+        }
+      >
         {rawJsonExpanded && (
-          <div style={{ marginTop: 16 }}>
-            <textarea
+          <div>
+            <Textarea
               value={rawJsonText}
               onChange={(e) => {
                 setRawJsonText(e.target.value);
                 setRawJsonParseError(null);
               }}
               rows={15}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                fontFamily: "monospace",
-                fontSize: 13,
-              }}
+              style={{ fontFamily: "monospace", fontSize: uiTokens.font.code.size }}
             />
             {rawJsonParseError && (
-              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
+              <p style={{ color: uiTokens.color.danger, marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
                 {rawJsonParseError}
               </p>
             )}
-            <button
-              type="button"
-              onClick={async () => {
-                setRawJsonParseError(null);
-                setRawJsonSaveMessage(null);
-                setRawJsonSaving(true);
+            <div style={{ marginTop: uiTokens.space.md, display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setRawJsonParseError(null);
+                  setRawJsonSaveMessage(null);
+                  setRawJsonSaving(true);
 
-                try {
-                  let parsedJson: unknown;
                   try {
-                    parsedJson = JSON.parse(rawJsonText);
-                  } catch (parseErr) {
-                    setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
-                    return;
+                    let parsedJson: unknown;
+                    try {
+                      parsedJson = JSON.parse(rawJsonText);
+                    } catch (parseErr) {
+                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
+                      return;
+                    }
+
+                    const trimmedType = slideType.trim();
+
+                    // Build meta_json from current metadata state
+                    const metaJson: any = {};
+                    if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
+                    if (metadata.activityName) metaJson.activityName = metadata.activityName;
+                    if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
+                      metaJson.requires = {};
+                      if (metadata.requiresExternalTTS) {
+                        metaJson.requires.externalTTS = true;
+                      }
+                    }
+                    if (metadata.buttons.length > 0) {
+                      metaJson.buttons = metadata.buttons;
+                    }
+
+                    const { error: updateError } = await supabase
+                      .from("slides")
+                      .update({
+                        props_json: parsedJson,
+                        type: trimmedType,
+                        code: metadata.code || null,
+                        meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
+                        is_activity: metadata.isActivity,
+                        score_type: metadata.scoreType || "none",
+                        passing_score_value: metadata.passingScoreValue,
+                        max_score_value: metadata.maxScoreValue,
+                        pass_required_for_next: metadata.passRequiredForNext,
+                      })
+                      .eq("id", row.id);
+
+                    if (updateError) {
+                      setRawJsonSaveMessage("Supabase update error: " + updateError.message);
+                      return;
+                    }
+
+                    setRawJsonSaveMessage("Saved successfully!");
+                    // Update the textarea to reflect the saved value (in case it was normalized)
+                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
+                  } finally {
+                    setRawJsonSaving(false);
                   }
-
-                  const trimmedType = slideType.trim();
-
-                  const { error: updateError } = await supabase
-                    .from("slides")
-                    .update({
-                      props_json: parsedJson,
-                      type: trimmedType,
-                    })
-                    .eq("id", row.id);
-
-                  if (updateError) {
-                    setRawJsonSaveMessage("Supabase update error: " + updateError.message);
-                    return;
-                  }
-
-                  setRawJsonSaveMessage("Saved successfully!");
-                  // Update the textarea to reflect the saved value (in case it was normalized)
-                  setRawJsonText(JSON.stringify(parsedJson, null, 2));
-                } finally {
-                  setRawJsonSaving(false);
-                }
-              }}
-              disabled={rawJsonSaving}
-              style={{
-                marginTop: 8,
-                padding: "6px 12px",
-                fontSize: 14,
-                borderRadius: 4,
-                border: "none",
-                backgroundColor: "#9bbfb2",
-                color: "#222326",
-                fontWeight: 400,
-                border: "1px solid #9bbfb2",
-                cursor: rawJsonSaving ? "default" : "pointer",
-                opacity: rawJsonSaving ? 0.7 : 1,
-              }}
-              onMouseOver={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#8aaea1";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!rawJsonSaving) {
-                  e.currentTarget.style.backgroundColor = "#9bbfb2";
-                }
-              }}
-            >
-              {rawJsonSaving ? "Saving…" : "Save JSON"}
-            </button>
+                }}
+                disabled={rawJsonSaving}
+              >
+                {rawJsonSaving ? "Saving…" : "Save JSON"}
+              </Button>
+            </div>
             {rawJsonSaveMessage && (
               <p
                 style={{
-                  marginTop: 8,
-                  color: rawJsonSaveMessage.includes("error") ? "red" : "green",
-                  fontSize: 13,
+                  marginTop: uiTokens.space.xs,
+                  color: rawJsonSaveMessage.includes("error") ? uiTokens.color.danger : "green",
+                  fontSize: uiTokens.font.meta.size,
                 }}
               >
                 {rawJsonSaveMessage}
@@ -1535,12 +1714,13 @@ function RawJsonEditor({
             )}
           </div>
         )}
-      </div>
+      </CmsSection>
 
-      <h3 style={{ marginTop: 32 }}>Raw DB row (debug)</h3>
-      <pre style={{ fontSize: 12 }}>
-        {JSON.stringify(row, null, 2)}
-      </pre>
+      <CmsSection title="Raw DB row (debug)">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(row, null, 2)}
+        </pre>
+      </CmsSection>
     </>
   );
 }

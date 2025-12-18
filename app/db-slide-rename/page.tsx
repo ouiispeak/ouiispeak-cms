@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import { uiTokens } from "../../lib/uiTokens";
 
 export const dynamic = "force-dynamic";
 
@@ -19,26 +20,17 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (!title) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-            <span style={{ fontSize: 18 }}>←</span>
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-        <PageContainer>
+      <PageShell title="DB Slide Rename Test">
+        <CmsSection>
           <p>
-            No <code>title</code> query parameter provided.
+            No <code className="codeText">title</code> query parameter provided.
           </p>
           <p>Use something like:</p>
-          <pre>
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             http://localhost:3000/db-slide-rename?title=My%20new%20title
           </pre>
-        </PageContainer>
-      </>
+        </CmsSection>
+      </PageShell>
     );
   }
 
@@ -51,40 +43,23 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (error) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-            <span style={{ fontSize: 18 }}>←</span>
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Supabase error (load)</h2>
-          <pre>{JSON.stringify(error, null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Rename Test">
+        <CmsSection title="Supabase error (load)" description="Failed to load slide">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(error, null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   if (!data) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-            <span style={{ fontSize: 18 }}>←</span>
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-        <PageContainer>
-          <h2>No slide found with id "slide-ai-001"</h2>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Rename Test">
+        <CmsSection title="Not Found">
+          <p>No slide found with id "slide-ai-001"</p>
+        </CmsSection>
+      </PageShell>
     );
   }
 
@@ -106,23 +81,17 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (!parsed.success) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-            <span style={{ fontSize: 18 }}>←</span>
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Validation failed after title change</h2>
-          <pre>{JSON.stringify(parsed.error.format(), null, 2)}</pre>
-          <h3>Raw slide</h3>
-          <pre>{JSON.stringify(rawSlide, null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Rename Test">
+        <CmsSection title="Validation failed" description="After title change">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(parsed.error.format(), null, 2)}
+          </pre>
+          <h3 style={{ marginTop: uiTokens.space.md, fontSize: uiTokens.font.label.size }}>Raw slide</h3>
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(rawSlide, null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
@@ -136,44 +105,32 @@ export default async function DbSlideRenamePage({ searchParams }: PageProps) {
 
   if (updateError) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-            <span style={{ fontSize: 18 }}>←</span>
-            <span>Back to Dashboard</span>
-          </Link>
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Supabase error (update)</h2>
-          <pre>{JSON.stringify(updateError, null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Rename Test">
+        <CmsSection title="Supabase error (update)" description="Failed to update slide">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(updateError, null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>DB Slide Rename Test</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-          <span style={{ fontSize: 18 }}>←</span>
-          <span>Back to Dashboard</span>
-        </Link>
-      </div>
-      <PageContainer>
-      <p>
-        Updated slide <strong>{slide.id}</strong> title to:
-      </p>
-      <h2>{slide.props.title}</h2>
+    <PageShell title="DB Slide Rename Test">
+      <CmsSection>
+        <p>
+          Updated slide <strong>{slide.id}</strong> title to:
+        </p>
+        <h2 style={{ fontSize: uiTokens.font.sectionTitle.size, marginTop: uiTokens.space.sm }}>
+          {slide.props.title}
+        </h2>
+      </CmsSection>
 
-      <h3>New props</h3>
-      <pre>{JSON.stringify(slide.props, null, 2)}</pre>
-      </PageContainer>
-    </>
+      <CmsSection title="New props">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(slide.props, null, 2)}
+        </pre>
+      </CmsSection>
+    </PageShell>
   );
 }

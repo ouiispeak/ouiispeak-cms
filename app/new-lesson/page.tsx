@@ -3,8 +3,14 @@
 import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Textarea from "../../components/ui/Textarea";
+import Select from "../../components/ui/Select";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 type ModuleRow = {
   id: string;
@@ -41,6 +47,10 @@ function NewLessonForm() {
   const [lessonSlugPart, setLessonSlugPart] = useState(""); // e.g. "lesson-1"
   const [title, setTitle] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [shortSummaryStudent, setShortSummaryStudent] = useState("");
+  const [learningObjectives, setLearningObjectives] = useState("");
+  const [notesForTeacherOrAI, setNotesForTeacherOrAI] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -90,6 +100,9 @@ function NewLessonForm() {
 
     const fullSlug = `${selectedModule.slug}/${slugify(lessonSlugPart)}`;
 
+    // Helper function to convert empty string to null
+    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
+
     setSaving(true);
 
     try {
@@ -100,9 +113,25 @@ function NewLessonForm() {
           slug: fullSlug,
           title: title.trim(),
           order_index: orderIndex,
-          estimated_minutes: null,
+          estimated_minutes: estimatedMinutes,
           required_score: null,
           content: null,
+          short_summary_student: nullIfEmpty(shortSummaryStudent),
+          learning_objectives: nullIfEmpty(learningObjectives),
+          notes_for_teacher_or_ai: nullIfEmpty(notesForTeacherOrAI),
+          // Set all other new fields to null
+          short_summary_admin: null,
+          course_organization_group: null,
+          slide_contents: null,
+          grouping_strategy_summary: null,
+          activity_types: null,
+          activity_description: null,
+          signature_metaphors: null,
+          main_grammar_topics: null,
+          pronunciation_focus: null,
+          vocabulary_theme: null,
+          l1_l2_issues: null,
+          prerequisites: null,
         })
         .select("id, module_id, slug, title, order_index")
         .maybeSingle();
@@ -125,119 +154,105 @@ function NewLessonForm() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Create new lesson</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="md">
-
+    <PageShell title="Create new lesson" maxWidth="md">
       {loadError && (
-        <p style={{ color: "red", marginTop: 12 }}>
+        <p style={{ color: "red", marginTop: uiTokens.space.sm }}>
           {loadError}
         </p>
       )}
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Module
-          </label>
-          <select
-            value={moduleId}
-            onChange={(e) => setModuleId(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
+      <CmsSection>
+        <form onSubmit={handleSubmit}>
+          <FormField label="Module" required>
+            <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
+              <option value="">Select a module…</option>
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title} ({m.slug})
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField
+            label="Lesson slug (just the lesson part)"
+            required
+            helper={
+              <>
+                Full slug will become:{" "}
+                <code className="codeText">
+                  {moduleId
+                    ? `${modules.find((m) => m.id === moduleId)?.slug ?? "module"}/${slugify(lessonSlugPart || "lesson-1")}`
+                    : `module/lesson-1`}
+                </code>
+              </>
+            }
           >
-            <option value="">Select a module…</option>
-            {modules.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title} ({m.slug})
-              </option>
-            ))}
-          </select>
-        </div>
+            <Input
+              value={lessonSlugPart}
+              onChange={(e) => setLessonSlugPart(e.target.value)}
+              placeholder="lesson-1"
+            />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Lesson slug (just the lesson part)
-          </label>
-          <input
-            value={lessonSlugPart}
-            onChange={(e) => setLessonSlugPart(e.target.value)}
-            placeholder="lesson-1"
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-            Full slug will become:{" "}
-            <code>
-              {moduleId
-                ? `${modules.find((m) => m.id === moduleId)?.slug ?? "module"}/${slugify(lessonSlugPart || "lesson-1")}`
-                : `module/lesson-1`}
-            </code>
-          </p>
-        </div>
+          <FormField label="Lesson title" required>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Lesson title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-        </div>
+          <FormField label="Order index" required>
+            <Input
+              type="number"
+              value={orderIndex}
+              onChange={(e) => setOrderIndex(Number(e.target.value))}
+            />
+          </FormField>
 
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-            Order index
-          </label>
-          <input
-            type="number"
-            value={orderIndex}
-            onChange={(e) => setOrderIndex(Number(e.target.value))}
-            style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #ccc" }}
-          />
-        </div>
+          <FormField label="Estimated Minutes">
+            <Input
+              type="number"
+              value={estimatedMinutes ?? ""}
+              onChange={(e) => setEstimatedMinutes(e.target.value ? Number(e.target.value) : null)}
+              placeholder="Optional"
+            />
+          </FormField>
 
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            borderRadius: 6,
-            border: "1px solid #2563eb",
-            backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-            border: "1px solid #9bbfb2",
-            fontWeight: 400,
-              color: "#222326",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Creating…" : "Create lesson"}
-        </button>
-      </form>
+          <FormField label="Short Summary (Student)">
+            <Textarea
+              value={shortSummaryStudent}
+              onChange={(e) => setShortSummaryStudent(e.target.value)}
+              rows={3}
+            />
+          </FormField>
+
+          <FormField label="Learning Objectives">
+            <Textarea
+              value={learningObjectives}
+              onChange={(e) => setLearningObjectives(e.target.value)}
+              rows={3}
+            />
+          </FormField>
+
+          <FormField label="Notes for Teacher or AI">
+            <Textarea
+              value={notesForTeacherOrAI}
+              onChange={(e) => setNotesForTeacherOrAI(e.target.value)}
+              rows={4}
+            />
+          </FormField>
+
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create lesson"}
+            </Button>
+          </div>
+        </form>
+      </CmsSection>
 
       {message && (
         <p
           style={{
-            marginTop: 16,
-            color: message.toLowerCase().includes("error") ? "red" : "green",
+            marginTop: uiTokens.space.md,
+            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
           }}
         >
           {message}
@@ -245,21 +260,19 @@ function NewLessonForm() {
       )}
 
       {createdLesson && (
-        <>
-          <h2 style={{ marginTop: 24 }}>Created lesson</h2>
-          <pre style={{ fontSize: 12 }}>
+        <CmsSection title="Created lesson">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             {JSON.stringify(createdLesson, null, 2)}
           </pre>
-        </>
+        </CmsSection>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }
 
 export default function NewLessonPage() {
   return (
-    <Suspense fallback={<><div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1 style={{ margin: 0 }}>Create new lesson</h1></div><PageContainer maxWidth="md"><p>Loading...</p></PageContainer></>}>
+    <Suspense fallback={<PageShell title="Create new lesson" maxWidth="md"><p>Loading...</p></PageShell>}>
       <NewLessonForm />
     </Suspense>
   );

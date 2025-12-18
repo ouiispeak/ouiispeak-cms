@@ -3,8 +3,12 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import PageContainer from "../components/ui/PageContainer";
-import SectionCard from "../components/ui/SectionCard";
+import PageShell from "../components/ui/PageShell";
+import CmsSection from "../components/ui/CmsSection";
+import LinkButton from "../components/ui/LinkButton";
+import Input from "../components/ui/Input";
+import { Button } from "../components/Button";
+import { uiTokens } from "../lib/uiTokens";
 
 type ModuleRow = {
   id: string;
@@ -309,16 +313,16 @@ export default function CmsHome() {
 
   return (
     <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>CMS Dashboard</h1>
-      </div>
-      <PageContainer style={{ width: "90vw" }}>
-        <div style={{ color: "#000000", fontSize: 13, marginTop: 16, marginBottom: 24 }}>
-          Grid view: CEFR → Modules → Lessons → Groups → Slides
-        </div>
+      <PageShell
+        title="CMS Dashboard"
+        showBack={false}
+        meta="Grid view: CEFR → Modules → Lessons → Groups → Slides"
+        maxWidth={undefined}
+      >
+        <div style={{ width: "90vw", maxWidth: "none", margin: "0 auto" }}>
 
-      {state.status === "loading" && <p>Loading…</p>}
-      {state.status === "error" && <p style={{ color: "red" }}>{state.message}</p>}
+          {state.status === "loading" && <p>Loading…</p>}
+          {state.status === "error" && <p style={{ color: uiTokens.color.danger }}>{state.message}</p>}
 
       {deleteState.type && (
         <div
@@ -336,110 +340,63 @@ export default function CmsHome() {
           }}
           onClick={handleDeleteCancel}
         >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              padding: 24,
-              borderRadius: 8,
-              maxWidth: 500,
-              width: "90%",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ marginTop: 0, marginBottom: 16 }}>
-              Delete {deleteState.type === "module" ? "Module" : "Lesson"}
-            </h2>
-            <p style={{ marginBottom: 16 }}>
-              Are you sure you want to delete "{deleteState.title}"?
-            </p>
-            {deleteState.type === "module" && (
-              <p style={{ marginBottom: 16, color: "#666", fontSize: 14 }}>
-                This will also delete all lessons, groups, and slides in this module.
-              </p>
-            )}
-            {deleteState.type === "lesson" && (
-              <p style={{ marginBottom: 16, color: "#666", fontSize: 14 }}>
-                This will also delete all groups and slides in this lesson.
-              </p>
-            )}
-            <p style={{ marginBottom: 8, fontWeight: 600 }}>
-              Step {deleteStep} of 2: Type "delete" to confirm
-            </p>
-            <input
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleDeleteConfirm();
-                } else if (e.key === "Escape") {
-                  handleDeleteCancel();
-                }
-              }}
+            <div
               style={{
-                width: "100%",
-                padding: 8,
-                border: "1px solid #ddd",
-                borderRadius: 4,
-                fontSize: 14,
-                marginBottom: 16,
+                backgroundColor: uiTokens.color.bgAlt,
+                padding: uiTokens.space.lg,
+                borderRadius: uiTokens.radius.lg,
+                maxWidth: 500,
+                width: "90%",
               }}
-              placeholder="Type 'delete' to confirm"
-              autoFocus
-            />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button
-                onClick={handleDeleteCancel}
-                style={{
-                  padding: "8px 16px",
-                  border: "1px solid #ddd",
-                  borderRadius: 4,
-                  background: "#ffffff",
-                  cursor: "pointer",
-                  fontSize: 14,
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f5f5f5";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "#ffffff";
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                disabled={deleteConfirmText.toLowerCase() !== "delete"}
-                style={{
-                  padding: "8px 16px",
-                  border: "none",
-                  borderRadius: 4,
-                  background:
-                    deleteConfirmText.toLowerCase() === "delete"
-                      ? "#d32f2f"
-                      : "#ccc",
-                  color: "#ffffff",
-                  cursor:
-                    deleteConfirmText.toLowerCase() === "delete"
-                      ? "pointer"
-                      : "not-allowed",
-                  fontSize: 14,
-                }}
-                onMouseOver={(e) => {
-                  if (deleteConfirmText.toLowerCase() === "delete") {
-                    e.currentTarget.style.backgroundColor = "#b82727";
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 style={{ marginTop: 0, marginBottom: uiTokens.space.md, fontSize: uiTokens.font.sectionTitle.size }}>
+                Delete {deleteState.type === "module" ? "Module" : "Lesson"}
+              </h2>
+              <p style={{ marginBottom: uiTokens.space.md }}>
+                Are you sure you want to delete "{deleteState.title}"?
+              </p>
+              {deleteState.type === "module" && (
+                <p style={{ marginBottom: uiTokens.space.md, color: uiTokens.color.mutedText, fontSize: uiTokens.font.meta.size }}>
+                  This will also delete all lessons, groups, and slides in this module.
+                </p>
+              )}
+              {deleteState.type === "lesson" && (
+                <p style={{ marginBottom: uiTokens.space.md, color: uiTokens.color.mutedText, fontSize: uiTokens.font.meta.size }}>
+                  This will also delete all groups and slides in this lesson.
+                </p>
+              )}
+              <p style={{ marginBottom: uiTokens.space.xs, fontWeight: uiTokens.font.label.weight }}>
+                Step {deleteStep} of 2: Type "delete" to confirm
+              </p>
+              <Input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleDeleteConfirm();
+                  } else if (e.key === "Escape") {
+                    handleDeleteCancel();
                   }
                 }}
-                onMouseOut={(e) => {
-                  if (deleteConfirmText.toLowerCase() === "delete") {
-                    e.currentTarget.style.backgroundColor = "#d32f2f";
-                  }
-                }}
-              >
-                {deleteStep === 1 ? "Continue" : "Delete"}
-              </button>
+                style={{ marginBottom: uiTokens.space.md }}
+                placeholder="Type 'delete' to confirm"
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: uiTokens.space.xs, justifyContent: "flex-end" }}>
+                <Button variant="ghost" onClick={handleDeleteCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteConfirmText.toLowerCase() !== "delete"}
+                >
+                  {deleteStep === 1 ? "Continue" : "Delete"}
+                </Button>
+              </div>
             </div>
-          </div>
         </div>
       )}
 
@@ -450,36 +407,17 @@ export default function CmsHome() {
             const isOpen = !!openLevels[lvl];
 
             return (
-              <SectionCard
+              <CmsSection
                 key={lvl}
                 title={lvl}
                 actions={
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ color: "#000000", fontSize: 14 }}>
+                  <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
+                    <span style={{ color: uiTokens.color.text, fontSize: uiTokens.font.meta.size }}>
                       {levelModules.length} modules
                     </span>
-                    <Link
-                      href={`/new-module?level=${lvl}`}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: 6,
-                        border: "1px solid #9bbfb2",
-                        backgroundColor: "#9bbfb2",
-                        color: "#222326",
-                        textDecoration: "none",
-                        fontSize: 13,
-                        fontWeight: 400,
-                        display: "inline-block",
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = "#8aaea1";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = "#9bbfb2";
-                      }}
-                    >
+                    <LinkButton href={`/new-module?level=${lvl}`} size="sm">
                       + Add Module
-                    </Link>
+                    </LinkButton>
                   </div>
                 }
               >
@@ -540,72 +478,17 @@ export default function CmsHome() {
                             <span style={{ color: "#000000" }}>
                               {moduleLessons.length} lessons
                             </span>
-                            <Link
-                              href={`/new-lesson?module_id=${mid}`}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 6,
-                                border: "1px solid #9bbfb2",
-                                backgroundColor: "#9bbfb2",
-                                color: "#222326",
-                                textDecoration: "none",
-                                fontSize: 13,
-                                fontWeight: 400,
-                                display: "inline-block",
-                              }}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = "#8aaea1";
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = "#9bbfb2";
-                              }}
-                            >
+                            <LinkButton href={`/new-lesson?module_id=${mid}`} size="sm">
                               + Add Lesson
-                            </Link>
-                            <Link
-                              href={`/edit-module/${mid}`}
-                              style={{
-                                padding: "6px 12px",
-                                borderRadius: 6,
-                                border: "1px solid #9bbfb2",
-                                backgroundColor: "#9bbfb2",
-                                color: "#222326",
-                                textDecoration: "none",
-                                fontSize: 13,
-                                fontWeight: 400,
-                                display: "inline-block",
-                              }}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = "#8aaea1";
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = "#9bbfb2";
-                              }}
-                            >
+                            </LinkButton>
+                            <LinkButton href={`/edit-module/${mid}`} size="sm">
                               edit
-                            </Link>
-                            <button
+                            </LinkButton>
+                            <Button
+                              variant="danger"
+                              size="sm"
                               onClick={() => handleDeleteClick("module", mid, m.title)}
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 400,
-                                padding: "8px 12px",
-                                borderRadius: 6,
-                                border: "1px solid #bf6f6f",
-                                backgroundColor: "#bf6f6f",
-                                color: "#222326",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
                               title="Delete module"
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = "#ad5f5f";
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = "#bf6f6f";
-                              }}
                             >
                               <svg
                                 width="16"
@@ -621,7 +504,7 @@ export default function CmsHome() {
                                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                               </svg>
-                            </button>
+                            </Button>
                           </div>
                         </div>
 
@@ -661,120 +544,45 @@ export default function CmsHome() {
                                     {lessonOpen ? "▾" : "▸"} {l.title}
                                   </button>
 
-                                  <div style={{ display: "flex", gap: 8, fontSize: 13, alignItems: "center" }}>
-                                    <Link
-                                      href={`/lesson-slides/${lid}`}
-                                      style={{
-                                        padding: "6px 12px",
-                                        borderRadius: 6,
-                                        border: "1px solid #9bbfb2",
-                                        backgroundColor: "#9bbfb2",
-                                        color: "#222326",
-                                        textDecoration: "none",
-                                        fontSize: 13,
-                                        fontWeight: 400,
-                                        display: "inline-block",
-                                      }}
-                                      onMouseOver={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#8aaea1";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#9bbfb2";
-                                      }}
-                                    >
+                                  <div style={{ display: "flex", gap: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, alignItems: "center" }}>
+                                    <LinkButton href={`/lesson-slides/${lid}`} size="sm">
                                       manage
-                                    </Link>
-                                    <Link
-                                      href={`/lesson-preview/${lid}`}
-                                      style={{
-                                        padding: "6px 12px",
-                                        borderRadius: 6,
-                                        border: "1px solid #a6a198",
-                                        backgroundColor: "#a6a198",
-                                        color: "#222326",
-                                        textDecoration: "none",
-                                        fontSize: 13,
-                                        fontWeight: 400,
-                                        display: "inline-block",
-                                      }}
-                                      onMouseOver={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#959088";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#a6a198";
-                                      }}
-                                    >
+                                    </LinkButton>
+                                    <LinkButton href={`/lesson-preview/${lid}`} variant="secondary" size="sm">
                                       JSON
-                                    </Link>
+                                    </LinkButton>
                                     <a
                                       href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lid}`}
                                       target="_blank"
                                       rel="noreferrer"
                                       style={{
                                         padding: "6px 12px",
-                                        borderRadius: 6,
-                                        border: "1px solid #a6a198",
-                                        backgroundColor: "#a6a198",
-                                        color: "#222326",
+                                        borderRadius: uiTokens.radius.md,
+                                        border: `1px solid ${uiTokens.color.secondary}`,
+                                        backgroundColor: uiTokens.color.secondary,
+                                        color: uiTokens.color.secondaryText,
                                         textDecoration: "none",
-                                        fontSize: 13,
+                                        fontSize: uiTokens.font.meta.size,
                                         fontWeight: 400,
                                         display: "inline-block",
                                       }}
                                       onMouseOver={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#959088";
+                                        e.currentTarget.style.backgroundColor = uiTokens.color.secondaryHover;
                                       }}
                                       onMouseOut={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#a6a198";
+                                        e.currentTarget.style.backgroundColor = uiTokens.color.secondary;
                                       }}
                                     >
                                       player
                                     </a>
-                                    <Link
-                                      href={`/edit-lesson/${lid}`}
-                                      style={{
-                                        padding: "6px 12px",
-                                        borderRadius: 6,
-                                        border: "1px solid #9bbfb2",
-                                        backgroundColor: "#9bbfb2",
-                                        color: "#222326",
-                                        textDecoration: "none",
-                                        fontSize: 13,
-                                        fontWeight: 400,
-                                        display: "inline-block",
-                                        marginLeft: 16,
-                                      }}
-                                      onMouseOver={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#8aaea1";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#9bbfb2";
-                                      }}
-                                    >
+                                    <LinkButton href={`/edit-lesson/${lid}`} size="sm" style={{ marginLeft: uiTokens.space.md }}>
                                       edit
-                                    </Link>
-                                    <button
+                                    </LinkButton>
+                                    <Button
+                                      variant="danger"
+                                      size="sm"
                                       onClick={() => handleDeleteClick("lesson", lid, l.title)}
-                                      style={{
-                                        fontSize: 14,
-                                        fontWeight: 400,
-                                        padding: "8px 12px",
-                                        borderRadius: 6,
-                                        border: "1px solid #bf6f6f",
-                                        backgroundColor: "#bf6f6f",
-                                        color: "#222326",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                      }}
                                       title="Delete lesson"
-                                      onMouseOver={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#ad5f5f";
-                                      }}
-                                      onMouseOut={(e) => {
-                                        e.currentTarget.style.backgroundColor = "#bf6f6f";
-                                      }}
                                     >
                                       <svg
                                         width="16"
@@ -790,7 +598,7 @@ export default function CmsHome() {
                                         <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                                         <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                                       </svg>
-                                    </button>
+                                    </Button>
                                   </div>
                                 </div>
 
@@ -835,28 +643,9 @@ export default function CmsHome() {
                                                 <span style={{ color: "#000000" }}>
                                                   {groupSlides.length} slides
                                                 </span>
-                                                <Link
-                                                  href={`/edit-group/${gid}`}
-                                                  style={{
-                                                    padding: "6px 12px",
-                                                    borderRadius: 6,
-                                                    border: "1px solid #9bbfb2",
-                                                    backgroundColor: "#9bbfb2",
-                                                    color: "#222326",
-                                                    textDecoration: "none",
-                                                    fontSize: 12,
-                                                    fontWeight: 400,
-                                                    display: "inline-block",
-                                                  }}
-                                                  onMouseOver={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "#8aaea1";
-                                                  }}
-                                                  onMouseOut={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "#9bbfb2";
-                                                  }}
-                                                >
+                                                <LinkButton href={`/edit-group/${gid}`} size="sm">
                                                   edit
-                                                </Link>
+                                                </LinkButton>
                                               </div>
                                             </div>
 
@@ -901,28 +690,9 @@ export default function CmsHome() {
                                                         </span>
                                                       )}
                                                     </div>
-                                                    <Link
-                                                      href={`/edit-slide/${s.id}`}
-                                                      style={{
-                                                        padding: "6px 12px",
-                                                        borderRadius: 6,
-                                                        border: "1px solid #9bbfb2",
-                                                        backgroundColor: "#9bbfb2",
-                                                        color: "#222326",
-                                                        textDecoration: "none",
-                                                        fontSize: 12,
-                                                        fontWeight: 400,
-                                                        display: "inline-block",
-                                                      }}
-                                                      onMouseOver={(e) => {
-                                                        e.currentTarget.style.backgroundColor = "#8aaea1";
-                                                      }}
-                                                      onMouseOut={(e) => {
-                                                        e.currentTarget.style.backgroundColor = "#9bbfb2";
-                                                      }}
-                                                    >
+                                                    <LinkButton href={`/edit-slide/${s.id}`} size="sm">
                                                       edit
-                                                    </Link>
+                                                    </LinkButton>
                                                   </div>
                                                 );
                                               })
@@ -1010,28 +780,9 @@ export default function CmsHome() {
                                                   </span>
                                                 )}
                                               </div>
-                                              <Link
-                                                href={`/edit-slide/${s.id}`}
-                                                style={{
-                                                  padding: "6px 12px",
-                                                  borderRadius: 6,
-                                                  border: "1px solid #9bbfb2",
-                                                  backgroundColor: "#9bbfb2",
-                                                  color: "#222326",
-                                                  textDecoration: "none",
-                                                  fontSize: 12,
-                                                  fontWeight: 400,
-                                                  display: "inline-block",
-                                                }}
-                                                onMouseOver={(e) => {
-                                                  e.currentTarget.style.backgroundColor = "#8aaea1";
-                                                }}
-                                                onMouseOut={(e) => {
-                                                  e.currentTarget.style.backgroundColor = "#9bbfb2";
-                                                }}
-                                              >
+                                              <LinkButton href={`/edit-slide/${s.id}`} size="sm">
                                                 edit
-                                              </Link>
+                                              </LinkButton>
                                             </div>
                                           );
                                         })}
@@ -1072,12 +823,13 @@ export default function CmsHome() {
                   </div>
                 ) : null}
                 </div>
-              </SectionCard>
+              </CmsSection>
             );
           })}
         </>
       )}
-      </PageContainer>
+        </div>
+      </PageShell>
     </>
   );
 }

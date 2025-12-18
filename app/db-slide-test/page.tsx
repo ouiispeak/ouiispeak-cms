@@ -1,19 +1,13 @@
-import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import { uiTokens } from "../../lib/uiTokens";
 
 export const dynamic = "force-dynamic";
-
-const BackLink = () => (
-  <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-    <span style={{ fontSize: 18 }}>←</span>
-    <span>Back to Dashboard</span>
-  </Link>
-);
 
 export default async function DbSlideTestPage() {
   // 1. Load the slide row from Supabase
@@ -25,34 +19,23 @@ export default async function DbSlideTestPage() {
 
   if (error) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackLink />
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Supabase error</h2>
-          <pre>{JSON.stringify(error, null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Test">
+        <CmsSection title="Supabase error" description="Failed to load slide">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(error, null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   if (!data) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackLink />
-        </div>
-        <PageContainer>
-          <h2>No slide found with id "slide-ai-001"</h2>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Test">
+        <CmsSection title="Not Found">
+          <p>No slide found with id "slide-ai-001"</p>
+        </CmsSection>
+      </PageShell>
     );
   }
 
@@ -69,61 +52,57 @@ export default async function DbSlideTestPage() {
 
   if (!result.success) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>DB Slide Test</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackLink />
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Validation failed</h2>
-          <pre>{JSON.stringify(result.error.format(), null, 2)}</pre>
-          <h3>Raw slide</h3>
-          <pre>{JSON.stringify(rawSlide, null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="DB Slide Test">
+        <CmsSection title="Validation failed" description="Slide data does not match schema">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(result.error.format(), null, 2)}
+          </pre>
+          <h3 style={{ marginTop: uiTokens.space.md, fontSize: uiTokens.font.label.size }}>Raw slide</h3>
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(rawSlide, null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   const slide: RealAiSpeakRepeatSlide = result.data;
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>DB Slide Test</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackLink />
-      </div>
-      <PageContainer>
-      <p>
-        Loaded slide from Supabase with id: <strong>{slide.id}</strong>
-      </p>
+    <PageShell
+      title="DB Slide Test"
+      meta={
+        <>
+          Loaded slide from Supabase with id: <code className="codeText">{slide.id}</code>
+        </>
+      }
+    >
+      <CmsSection title={slide.props.title}>
+        {slide.props.subtitle && <p>{slide.props.subtitle}</p>}
+        {slide.props.note && (
+          <p>
+            <em>{slide.props.note}</em>
+          </p>
+        )}
 
-      <h2>{slide.props.title}</h2>
-      {slide.props.subtitle && <p>{slide.props.subtitle}</p>}
-      {slide.props.note && (
-        <p>
-          <em>{slide.props.note}</em>
-        </p>
-      )}
+        <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: uiTokens.space.md }}>Lines</h3>
+        {slide.props.lines.map((row, rowIndex) => (
+          <ul key={rowIndex} style={{ paddingLeft: uiTokens.space.md }}>
+            {row.map((cell, cellIndex) => (
+              <li key={cellIndex} style={{ marginBottom: uiTokens.space.xs }}>
+                <strong>{cell.label}</strong> –{" "}
+                {cell.speech.text ?? "[no text, maybe file mode]"}
+              </li>
+            ))}
+          </ul>
+        ))}
+      </CmsSection>
 
-      <h3>Lines</h3>
-      {slide.props.lines.map((row, rowIndex) => (
-        <ul key={rowIndex}>
-          {row.map((cell, cellIndex) => (
-            <li key={cellIndex}>
-              <strong>{cell.label}</strong> –{" "}
-              {cell.speech.text ?? "[no text, maybe file mode]"}
-            </li>
-          ))}
-        </ul>
-      ))}
-
-      <h3>Raw data from DB</h3>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-      </PageContainer>
-    </>
+      <CmsSection title="Raw data from DB">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </CmsSection>
+    </PageShell>
   );
 }

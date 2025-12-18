@@ -1236,6 +1236,558 @@ By constraining buttons to three predictable zones, users can quickly locate act
 
 ---
 
+## CMS Page Archetypes
+
+**Status:** Complete Analysis — Implementation Pending  
+**Purpose:** Define standard page layout patterns to ensure consistent structure across all CMS pages. Each archetype specifies the order and placement of PageHeader, PageMeta, CmsSection, and PageActions components.
+
+### Archetype Overview
+
+| Archetype | Pages | Primary Purpose | Key Characteristics |
+|-----------|-------|-----------------|---------------------|
+| **Dashboard/Grid View** | `page.tsx` | Overview and navigation | Expandable hierarchy, no PageActions |
+| **Form Create** | `new-*` pages | Create new entities | Single form, PageActions at bottom |
+| **Form Edit** | `edit-*` pages | Edit existing entities | Multiple sections, PageActions or SectionActions |
+| **List/Management** | `lesson-slides`, `modules-browser`, `slides-browser` | Manage collections | Repeating sections, InlineActions |
+| **Preview/Display** | `lesson-preview`, `real-slide`, `mock-slide`, `db-slide-test` | View data | Read-only display, no actions |
+| **Debug/Test** | `debug-tables`, `test-db`, `db-slide-rename` | Development tools | Minimal structure, diagnostic info |
+
+---
+
+### Archetype 1: Dashboard/Grid View
+
+**Purpose:** Provides hierarchical overview of CMS content structure with expandable/collapsible sections.
+
+**Pages:**
+- `app/page.tsx` (CMS Dashboard)
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>CMS Dashboard</h1>            │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer                           │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageMeta                            │ │
+│ │ "Grid view: CEFR → Modules → ..."  │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (CEFR Level A0)          │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                  │ │ │
+│ │ │ Title: "A0"                    │ │ │
+│ │ │ Actions: "+ Add Module"        │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Expand/Collapse button       │ │ │
+│ │ │ - Module rows (expandable)     │ │ │
+│ │ │   - Lesson rows (expandable)   │ │ │
+│ │ │     - Group rows (expandable)   │ │ │
+│ │ │       - Slide rows              │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (CEFR Level A1)          │ │
+│ │ ... (same structure)                │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ... (repeating for A2, B1, B2, C1, C2) │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays "CMS Dashboard"
+- **PageBackButtonRow:** Not present (dashboard is entry point)
+- **PageMeta:** Required, explains grid structure
+- **CmsSection:** Repeating (one per CEFR level), contains nested expandable content
+- **PageActions:** Not present (actions are InlineActions within sections)
+- **Modal Dialogs:** May appear for delete confirmations (overlay, not part of layout)
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>CMS Dashboard</h1></div>`
+- PageMeta: `<div style={{ fontSize: 13, marginTop: 16, marginBottom: 24 }}>Grid view: ...</div>`
+- CmsSection: `SectionCard` component with `title` and `actions` props
+- SectionBody: Expandable hierarchy with InlineActions in rows
+
+---
+
+### Archetype 2: Form Create
+
+**Purpose:** Create new entities (lessons, modules, groups, slides) via form submission.
+
+**Pages:**
+- `app/new-lesson/page.tsx`
+- `app/new-module/page.tsx`
+- `app/new-group/page.tsx`
+- `app/new-slide/page.tsx`
+- `app/new-slide-ai/page.tsx`
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>Create new [entity]</h1>        │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageBackButtonRow                       │
+│ ┌─────────────────────────────────────┐ │
+│ │ <BackButton title="Back to ..." /> │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer (maxWidth: "md")          │
+│ ┌─────────────────────────────────────┐ │
+│ │ Error State (if loadError)          │ │
+│ │ <p style={{ color: "red" }}>...</p>│ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ <form onSubmit={handleSubmit}>      │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ Form Fields                    │ │ │
+│ │ │ - Label + Input/Select/Textarea │ │ │
+│ │ │ - Label + Input/Select/Textarea │ │ │
+│ │ │ ...                            │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │                                     │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ PageActions (inside form)        │ │ │
+│ │ │ <Button type="submit">          │ │ │
+│ │ │   Create [entity]               │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Status Message (if message)         │ │
+│ │ <p style={{ color: "..." }}>...</p>│ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Created Entity Display (optional)    │ │
+│ │ <h2>Created [entity]</h2>           │ │
+│ │ <pre>{JSON.stringify(...)}</pre>   │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays "Create new [entity]"
+- **PageBackButtonRow:** Required, links back to dashboard
+- **PageMeta:** Not present (no metadata needed)
+- **CmsSection:** Not present (form fields are direct children of form)
+- **PageActions:** Required, single submit button at bottom of form
+- **Status Messages:** Appear after form, before created entity display
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>Create new [entity]</h1></div>`
+- PageBackButtonRow: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><BackButton /></div>`
+- PageActions: `<Button type="submit">Create [entity]</Button>` inside form, at bottom
+
+**Variations:**
+- `new-slide-ai`: Includes conditional form fields based on slide type
+- All pages: May show created entity JSON after successful creation
+
+---
+
+### Archetype 3: Form Edit
+
+**Purpose:** Edit existing entities with multiple sections for different aspects of the entity.
+
+**Pages:**
+- `app/edit-lesson/[lessonId]/page.tsx`
+- `app/edit-module/[moduleId]/page.tsx`
+- `app/edit-group/[groupId]/page.tsx`
+- `app/edit-slide/[slideId]/page.tsx`
+- `app/edit-slide-ai/page.tsx`
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>Edit [entity]</h1>             │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageBackButtonRow                       │
+│ ┌─────────────────────────────────────┐ │
+│ │ <BackButton title="Back to ..." /> │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer (maxWidth: "md" or 720)   │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageMeta                            │ │
+│ │ <p>URL [entity] id: <code>...</code>│ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Loading/Error State                 │ │
+│ │ (if status === "loading" | "error") │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Basic Info)              │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "Slide Type" or "Details"│ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Form fields                  │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Placement/Relations)    │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "Placement"              │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Group selection               │ │ │
+│ │ │ - Order index                   │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Type-Specific Editor)    │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "[type] editor"          │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Type-specific form fields     │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionFooter                   │ │ │
+│ │ │ <Button type="submit">          │ │ │
+│ │ │   Save changes                  │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Raw JSON - Optional)    │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Toggle button                 │ │ │
+│ │ │ - Textarea (if expanded)        │ │ │
+│ │ │ - SectionFooter: "Save JSON"     │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageActions (Alternative Pattern)    │ │
+│ │ (if no SectionFooter)                │ │
+│ │ <Button type="submit">Save changes</>│ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays "Edit [entity]"
+- **PageBackButtonRow:** Required, links back to dashboard
+- **PageMeta:** Required, shows entity ID (e.g., "URL slide id: slide-123")
+- **CmsSection:** Repeating (2-4 sections typical), each with distinct purpose
+- **PageActions OR SectionActions:** 
+  - Pattern A: SectionActions in each CmsSection (edit-slide pattern)
+  - Pattern B: Single PageActions at bottom (edit-lesson, edit-module pattern)
+- **Loading/Error States:** Shown before sections, replace content when present
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>Edit [entity]</h1></div>`
+- PageBackButtonRow: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><BackButton /></div>`
+- PageMeta: `<p>URL [entity] id: <code>{id}</code></p>`
+- CmsSection: `SectionCard` component with `title` prop
+- SectionActions: `<Button type="submit">Save changes</Button>` in SectionFooter
+- PageActions: `<Button type="submit">Save changes</Button>` at bottom of PageContainer
+
+**Variations:**
+- `edit-slide`: Uses SectionActions pattern (save button in each section)
+- `edit-lesson`, `edit-module`, `edit-group`: Use PageActions pattern (single save at bottom)
+- `edit-slide`: Includes optional Raw JSON section with toggle
+- All pages: May show status messages after actions
+
+---
+
+### Archetype 4: List/Management
+
+**Purpose:** Manage collections of related entities with inline actions and hierarchical display.
+
+**Pages:**
+- `app/lesson-slides/[lessonId]/page.tsx`
+- `app/modules-browser/page.tsx`
+- `app/slides-browser/page.tsx`
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>[Page Title]</h1>              │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageBackButtonRow                       │
+│ ┌─────────────────────────────────────┐ │
+│ │ <BackButton title="Back to ..." /> │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer (maxWidth: "lg" or none)  │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageMeta (Optional)                  │ │
+│ │ <h2>{entity.title}</h2>             │ │
+│ │ <p>Entity id: <code>...</code></p>  │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageActions (Top-Level Actions)      │ │
+│ │ <Button>+ Add group</Button>        │ │
+│ │ <a>Preview in Player</a>            │ │
+│ │ (Note: Currently violates rules)     │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Group/Collection 1)     │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "{group.title}"          │ │ │
+│ │ │ Actions: "Rename", "+ Add slide" │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - List of items                │ │ │
+│ │ │   - Each item with InlineActions│ │ │
+│ │ │     "Edit", "Delete"            │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Group/Collection 2)     │ │
+│ │ ... (same structure)                │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Ungrouped Items)        │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "Ungrouped [items]"      │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - List with InlineActions       │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays page title
+- **PageBackButtonRow:** Required, links back to dashboard
+- **PageMeta:** Optional, shows entity context (title, ID)
+- **PageActions:** Present but currently violates placement rules (should be at bottom or in header)
+- **CmsSection:** Repeating (one per group/collection), contains lists with InlineActions
+- **InlineActions:** Right-aligned in list rows ("Edit", "Delete", "Rename", "+ Add slide")
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>[Title]</h1></div>`
+- PageBackButtonRow: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><BackButton /></div>`
+- PageMeta: `<h2>{title}</h2><p>Entity id: <code>{id}</code></p>`
+- CmsSection: `SectionCard` or `<section>` with border, contains group/collection
+- InlineActions: Links and buttons in flex container, right-aligned in rows
+
+**Variations:**
+- `lesson-slides`: Groups slides by lesson groups, shows ungrouped slides separately
+- `modules-browser`: Shows modules with nested lessons (simpler hierarchy)
+- `slides-browser`: Shows lessons → groups → slides (deepest hierarchy)
+- All pages: May show loading/error states before sections
+
+**Known Violations:**
+- `lesson-slides`: "+ Add group" and "Preview in Player" buttons at top (should be PageActions at bottom or InlineActions in header)
+
+---
+
+### Archetype 5: Preview/Display
+
+**Purpose:** Display entity data in read-only format, typically for debugging or preview purposes.
+
+**Pages:**
+- `app/lesson-preview/[lessonId]/page.tsx`
+- `app/real-slide/page.tsx`
+- `app/mock-slide/[slide]/page.tsx`
+- `app/db-slide-test/page.tsx`
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>[Page Title]</h1>              │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageBackButtonRow                       │
+│ ┌─────────────────────────────────────┐ │
+│ │ <BackButton /> or <BackLink />     │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer (maxWidth: varies)        │
+│ ┌─────────────────────────────────────┐ │
+│ │ PageMeta                            │ │
+│ │ <p>Entity id: <code>...</code></p> │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ Loading/Error State                 │ │
+│ │ (if status === "loading" | "error") │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Content Display)        │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "{entity.title}"         │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ - Formatted content             │ │ │
+│ │ │ - Lists, paragraphs              │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │ CmsSection (Raw JSON)               │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionHeader                   │ │ │
+│ │ │ Title: "Raw JSON" or "Raw data" │ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ │ ┌─────────────────────────────────┐ │ │
+│ │ │ SectionBody                    │ │ │
+│ │ │ <pre>{JSON.stringify(...)}</pre>│ │ │
+│ │ └─────────────────────────────────┘ │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ (No PageActions - read-only)             │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays page title
+- **PageBackButtonRow:** Required, links back to dashboard
+- **PageMeta:** Required, shows entity ID or context
+- **CmsSection:** 1-2 sections typical (content display, raw JSON)
+- **PageActions:** Not present (read-only pages)
+- **Loading/Error States:** Shown before content sections
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>[Title]</h1></div>`
+- PageBackButtonRow: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><BackButton /></div>` or `<BackLink />`
+- PageMeta: `<p>Entity id: <code>{id}</code></p>` or similar
+- CmsSection: `SectionCard` or `<section>` with border, contains formatted display
+- Raw JSON: `<pre style={{ fontSize: 12 }}>{JSON.stringify(...)}</pre>`
+
+**Variations:**
+- `lesson-preview`: Shows full lesson JSON structure
+- `real-slide`, `mock-slide`: Shows formatted slide content + raw JSON
+- `db-slide-test`: Shows validation result + formatted content + raw DB data
+- All pages: May show validation errors in error state
+
+---
+
+### Archetype 6: Debug/Test
+
+**Purpose:** Development and diagnostic pages for testing database connections and data structures.
+
+**Pages:**
+- `app/debug-tables/page.tsx`
+- `app/test-db/page.tsx`
+- `app/db-slide-rename/page.tsx`
+
+**Standard Layout Order:**
+
+```
+┌─────────────────────────────────────────┐
+│ PageHeader                              │
+│ ┌─────────────────────────────────────┐ │
+│ │ <h1>[Page Title]</h1>              │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageBackButtonRow                       │
+│ ┌─────────────────────────────────────┐ │
+│ │ <BackButton /> or <BackLink />     │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ PageContainer                           │
+│ ┌─────────────────────────────────────┐ │
+│ │ Minimal Content                     │ │
+│ │ - Simple text                       │ │
+│ │ - Error messages                    │ │
+│ │ - Raw data display                  │ │
+│ │ - Diagnostic information            │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ (No PageMeta, CmsSection, or PageActions│
+│  - minimal structure for dev tools)     │
+└─────────────────────────────────────────┘
+```
+
+**Key Characteristics:**
+- **PageHeader:** Required, displays page title
+- **PageBackButtonRow:** Required, links back to dashboard
+- **PageMeta:** Not present (minimal structure)
+- **CmsSection:** Not present (direct content in PageContainer)
+- **PageActions:** Not present (no user actions)
+- **Content:** Minimal, diagnostic-focused (text, errors, raw data)
+
+**Component Mapping:**
+- PageHeader: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1>[Title]</h1></div>`
+- PageBackButtonRow: `<div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><BackButton /></div>` or `<BackLink />`
+- Content: Direct children of PageContainer (no sections)
+
+**Variations:**
+- `debug-tables`: Placeholder page ("OK")
+- `test-db`: Shows Supabase connection test results (success/error)
+- `db-slide-rename`: May include form for renaming (if implemented)
+
+---
+
+### Archetype Assignment Summary
+
+| Page | Archetype | Notes |
+|------|-----------|-------|
+| `app/page.tsx` | Dashboard/Grid View | Entry point, no back button |
+| `app/new-lesson/page.tsx` | Form Create | Standard create form |
+| `app/new-module/page.tsx` | Form Create | Standard create form |
+| `app/new-group/page.tsx` | Form Create | Standard create form |
+| `app/new-slide/page.tsx` | Form Create | Standard create form |
+| `app/new-slide-ai/page.tsx` | Form Create | Conditional fields |
+| `app/edit-lesson/[lessonId]/page.tsx` | Form Edit | PageActions pattern |
+| `app/edit-module/[moduleId]/page.tsx` | Form Edit | PageActions pattern |
+| `app/edit-group/[groupId]/page.tsx` | Form Edit | PageActions pattern |
+| `app/edit-slide/[slideId]/page.tsx` | Form Edit | SectionActions pattern, multiple sections |
+| `app/edit-slide-ai/page.tsx` | Form Edit | Simplified edit form |
+| `app/lesson-slides/[lessonId]/page.tsx` | List/Management | Groups slides, has violations |
+| `app/modules-browser/page.tsx` | List/Management | Simple module/lesson list |
+| `app/slides-browser/page.tsx` | List/Management | Deep hierarchy display |
+| `app/lesson-preview/[lessonId]/page.tsx` | Preview/Display | JSON preview |
+| `app/real-slide/page.tsx` | Preview/Display | Formatted + raw display |
+| `app/mock-slide/[slide]/page.tsx` | Preview/Display | Mock data display |
+| `app/db-slide-test/page.tsx` | Preview/Display | Validation + display |
+| `app/debug-tables/page.tsx` | Debug/Test | Minimal placeholder |
+| `app/test-db/page.tsx` | Debug/Test | Connection test |
+| `app/db-slide-rename/page.tsx` | Debug/Test | Diagnostic tool |
+
+---
+
 ## Notes
 
 - Most primitives use consistent spacing values: 8px, 12px, 16px, 24px

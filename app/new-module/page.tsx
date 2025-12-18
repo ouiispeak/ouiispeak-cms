@@ -3,8 +3,13 @@
 import { useState, FormEvent, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Textarea from "../../components/ui/Textarea";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 function slugify(input: string) {
   return input
@@ -74,123 +79,70 @@ function NewModuleForm() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Create module</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="md">
-      <p style={{ fontSize: 12, opacity: 0.7 }}>
-  SUPABASE URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}
-</p>
+    <PageShell title="Create module" maxWidth="md">
+      <CmsSection>
+        <form onSubmit={handleCreate}>
+          <FormField label="Title" required>
+            <Input value={title} onChange={(e) => autoSlugFromTitle(e.target.value)} />
+          </FormField>
 
-
-      <form onSubmit={handleCreate} style={{ marginTop: 16 }}>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-            Title
-          </label>
-          <input
-            value={title}
-            onChange={(e) => autoSlugFromTitle(e.target.value)}
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-            Slug
-          </label>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc" }}
-          />
-          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-            Example: <code>module-1</code> or <code>alphabet-basics</code>
-          </p>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-            Level
-          </label>
-          <input
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-            Order index
-          </label>
-          <input
-            type="number"
-            value={orderIndex}
-            onChange={(e) => setOrderIndex(Number(e.target.value))}
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-            Description (optional)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            style={{ width: "100%", padding: 8, border: "1px solid #ccc" }}
-          />
-        </div>
-
-        <button
-          disabled={saving}
-          style={{
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            borderRadius: 6,
-            border: "1px solid #2563eb",
-            backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-            border: "1px solid #9bbfb2",
-            fontWeight: 400,
-              color: "#222326",
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-          onMouseOver={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#8aaea1";
+          <FormField
+            label="Slug"
+            required
+            helper={
+              <>
+                Example: <code className="codeText">module-1</code> or <code className="codeText">alphabet-basics</code>
+              </>
             }
-          }}
-          onMouseOut={(e) => {
-            if (!saving) {
-              e.currentTarget.style.backgroundColor = "#9bbfb2";
-            }
-          }}
-        >
-          {saving ? "Creating…" : "Create module"}
-        </button>
-      </form>
+          >
+            <Input value={slug} onChange={(e) => setSlug(e.target.value)} />
+          </FormField>
+
+          <FormField label="Level" required>
+            <Input value={level} onChange={(e) => setLevel(e.target.value)} />
+          </FormField>
+
+          <FormField label="Order index" required>
+            <Input
+              type="number"
+              value={orderIndex}
+              onChange={(e) => setOrderIndex(Number(e.target.value))}
+            />
+          </FormField>
+
+          <FormField label="Description (optional)">
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+            />
+          </FormField>
+
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating…" : "Create module"}
+            </Button>
+          </div>
+        </form>
+      </CmsSection>
 
       {message && (
-        <p style={{ marginTop: 16, color: message.includes("error") ? "red" : "green" }}>
+        <p
+          style={{
+            marginTop: uiTokens.space.md,
+            color: message.includes("error") ? uiTokens.color.danger : "green",
+          }}
+        >
           {message}
         </p>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }
 
 export default function NewModulePage() {
   return (
-    <Suspense fallback={<><div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}><h1 style={{ margin: 0 }}>Create module</h1></div><PageContainer maxWidth="md"><p>Loading...</p></PageContainer></>}>
+    <Suspense fallback={<PageShell title="Create module" maxWidth="md"><p>Loading...</p></PageShell>}>
       <NewModuleForm />
     </Suspense>
   );

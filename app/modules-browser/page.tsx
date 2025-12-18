@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { BackButton } from "../../components/BackButton";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import { uiTokens } from "../../lib/uiTokens";
 
 type ModuleRow = {
   id: string;
@@ -53,31 +55,9 @@ export default function ModulesBrowserPage() {
     load();
   }, []);
 
-  if (error) {
-    return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>Modules Browser</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackButton title="Back to Dashboard" />
-        </div>
-        <PageContainer>
-          <p style={{ color: "red" }}>{error}</p>
-        </PageContainer>
-      </>
-    );
-  }
-
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Modules Browser</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer>
+    <PageShell title="Modules Browser">
+      {error && <p style={{ color: uiTokens.color.danger }}>{error}</p>}
 
       {modules.map((module) => {
         const moduleLessons = lessons.filter(
@@ -85,38 +65,30 @@ export default function ModulesBrowserPage() {
         );
 
         return (
-          <section
+          <CmsSection
             key={module.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 16,
-              marginTop: 16,
-            }}
+            title={
+              <>
+                {module.title}{" "}
+                <span className="metaText">({module.slug})</span>
+              </>
+            }
           >
-            <h2>
-              {module.title}{" "}
-              <small style={{ opacity: 0.6 }}>({module.slug})</small>
-            </h2>
-
             {moduleLessons.length === 0 && (
               <p>No lessons in this module yet.</p>
             )}
 
-            <ul>
+            <ul style={{ paddingLeft: uiTokens.space.md, margin: 0 }}>
               {moduleLessons.map((lesson) => (
-                <li key={lesson.id}>
+                <li key={lesson.id} style={{ marginBottom: uiTokens.space.xs }}>
                   {lesson.order_index}. {lesson.title}{" "}
-                  <small style={{ opacity: 0.6 }}>
-                    ({lesson.slug})
-                  </small>
+                  <span className="metaText">({lesson.slug})</span>
                 </li>
               ))}
             </ul>
-          </section>
+          </CmsSection>
         );
       })}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

@@ -1,17 +1,11 @@
-import Link from "next/link";
 import slide1Raw from "../../../mock-data/slide1.json";
 import slide2Raw from "../../../mock-data/slide2.json";
 import { slideSchema, type Slide } from "../../../lib/slideSchema";
-import PageContainer from "../../../components/ui/PageContainer";
+import PageShell from "../../../components/ui/PageShell";
+import CmsSection from "../../../components/ui/CmsSection";
+import { uiTokens } from "../../../lib/uiTokens";
 
 export const dynamic = "force-dynamic";
-
-const BackLink = () => (
-  <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", textDecoration: "none", color: "#222326", fontSize: 14 }}>
-    <span style={{ fontSize: 18 }}>←</span>
-    <span>Back to Dashboard</span>
-  </Link>
-);
 
 export default async function MockSlidePage({
   params,
@@ -29,67 +23,60 @@ export default async function MockSlidePage({
 
   if (!result.success) {
     return (
-      <>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <h1 style={{ margin: 0 }}>Mock Slide</h1>
-        </div>
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-          <BackLink />
-        </div>
-        <PageContainer>
-          <h2 style={{ color: "red" }}>Validation failed</h2>
-          <pre>{JSON.stringify(result.error.format(), null, 2)}</pre>
-        </PageContainer>
-      </>
+      <PageShell title="Mock Slide">
+        <CmsSection title="Validation failed" description="Slide data does not match schema">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+            {JSON.stringify(result.error.format(), null, 2)}
+          </pre>
+        </CmsSection>
+      </PageShell>
     );
   }
 
   const validatedSlide: Slide = result.data;
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Mock Slide</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackLink />
-      </div>
-      <PageContainer>
-      <p>
-        Currently showing:{" "}
-        <strong>{slideParam === "2" ? "Slide 2" : "Slide 1"}</strong>
-      </p>
-
-      <h2>{validatedSlide.title}</h2>
-      <p>{validatedSlide.instructions}</p>
-
-      {validatedSlide.slideType === "text" && (
+    <PageShell
+      title="Mock Slide"
+      meta={
         <>
-          <h3>Lines</h3>
-          <ul>
-            {validatedSlide.props.lines.map((line: string, index: number) => (
-              <li key={index}>{line}</li>
-            ))}
-          </ul>
+          Currently showing: <strong>{slideParam === "2" ? "Slide 2" : "Slide 1"}</strong>
         </>
-      )}
+      }
+    >
+      <CmsSection title={validatedSlide.title}>
+        <p>{validatedSlide.instructions}</p>
 
-      {validatedSlide.slideType === "speak" && (
-        <>
-          <h3>Transcript</h3>
-          <p>{validatedSlide.props.transcript}</p>
+        {validatedSlide.slideType === "text" && (
+          <>
+            <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: uiTokens.space.md }}>Lines</h3>
+            <ul style={{ paddingLeft: uiTokens.space.md }}>
+              {validatedSlide.props.lines.map((line: string, index: number) => (
+                <li key={index} style={{ marginBottom: uiTokens.space.xs }}>{line}</li>
+              ))}
+            </ul>
+          </>
+        )}
 
-          <h3>Prompt audio ID</h3>
-          <p>{validatedSlide.props.promptAudioId}</p>
+        {validatedSlide.slideType === "speak" && (
+          <>
+            <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: uiTokens.space.md }}>Transcript</h3>
+            <p>{validatedSlide.props.transcript}</p>
 
-          <h3>Attempts allowed</h3>
-          <p>{validatedSlide.props.attemptsAllowed}</p>
-        </>
-      )}
+            <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: uiTokens.space.md }}>Prompt audio ID</h3>
+            <p>{validatedSlide.props.promptAudioId}</p>
 
-      <h3>Raw JSON</h3>
-      <pre>{JSON.stringify(validatedSlide, null, 2)}</pre>
-      </PageContainer>
-    </>
+            <h3 style={{ fontSize: uiTokens.font.label.size, fontWeight: uiTokens.font.label.weight, marginTop: uiTokens.space.md }}>Attempts allowed</h3>
+            <p>{validatedSlide.props.attemptsAllowed}</p>
+          </>
+        )}
+      </CmsSection>
+
+      <CmsSection title="Raw JSON">
+        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+          {JSON.stringify(validatedSlide, null, 2)}
+        </pre>
+      </CmsSection>
+    </PageShell>
   );
 }

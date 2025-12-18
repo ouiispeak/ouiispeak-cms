@@ -6,8 +6,12 @@ import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 type LoadState =
   | { status: "idle" }
@@ -130,101 +134,57 @@ export default function EditSlideAiPage() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Edit ai-speak-repeat slide</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="sm">
-      <p>
-        Editing slide with id: <code>slide-ai-001</code> from Supabase.
-      </p>
-
+    <PageShell
+      title="Edit ai-speak-repeat slide"
+      maxWidth="sm"
+      meta={
+        <>
+          Editing slide with id: <code className="codeText">slide-ai-001</code> from Supabase.
+        </>
+      }
+    >
       {loadState.status === "loading" && <p>Loading slide…</p>}
 
       {loadState.status === "error" && (
-        <>
-          <h2 style={{ color: "red" }}>Error</h2>
-          <p>{loadState.message}</p>
-        </>
+        <CmsSection title="Error" description={loadState.message}>
+          <p style={{ color: uiTokens.color.danger }}>{loadState.message}</p>
+        </CmsSection>
       )}
 
       {loadState.status === "ready" && (
         <>
-          <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="title"
-                style={{ display: "block", marginBottom: 8, fontWeight: 600 }}
-              >
-                Slide title
-              </label>
-              <input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  fontSize: 14,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
+          <CmsSection title="Slide Title">
+            <form onSubmit={handleSubmit}>
+              <FormField label="Slide title" required>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </FormField>
 
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                padding: "8px 16px",
-                fontSize: 16,
-                fontWeight: 500,
-                borderRadius: 6,
-                border: "1px solid #2563eb",
-                backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-                border: "1px solid #9bbfb2",
-                fontWeight: 400,
-                color: "#222326",
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.7 : 1,
-              }}
-              onMouseOver={(e) => {
-                if (!saving) {
-                  e.currentTarget.style.backgroundColor = "#8aaea1";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!saving) {
-                  e.currentTarget.style.backgroundColor = "#9bbfb2";
-                }
-              }}
-            >
-              {saving ? "Saving..." : "Save title"}
-            </button>
-          </form>
+              <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving..." : "Save title"}
+                </Button>
+              </div>
+            </form>
+          </CmsSection>
 
           {saveMessage && (
             <p
               style={{
-                marginTop: 16,
-                color: saveMessage.includes("error") ? "red" : "green",
+                marginTop: uiTokens.space.md,
+                color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
               }}
             >
               {saveMessage}
             </p>
           )}
 
-          <h2 style={{ marginTop: 32 }}>Current slide data</h2>
-          <pre style={{ fontSize: 12 }}>
-            {JSON.stringify(loadState.slide, null, 2)}
-          </pre>
+          <CmsSection title="Current slide data">
+            <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
+              {JSON.stringify(loadState.slide, null, 2)}
+            </pre>
+          </CmsSection>
         </>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }

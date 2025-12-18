@@ -6,8 +6,14 @@ import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
 } from "../../lib/realSlideSchema";
-import { BackButton } from "../../components/BackButton";
-import PageContainer from "../../components/ui/PageContainer";
+import PageShell from "../../components/ui/PageShell";
+import CmsSection from "../../components/ui/CmsSection";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
+import Textarea from "../../components/ui/Textarea";
+import { Button } from "../../components/Button";
+import { uiTokens } from "../../lib/uiTokens";
 
 type LessonRow = {
   id: string;
@@ -214,60 +220,40 @@ export default function NewSlideAiPage() {
   }
 
   return (
-    <>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <h1 style={{ margin: 0 }}>Create ai-speak-repeat slide</h1>
-      </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid #ddd" }}>
-        <BackButton title="Back to Dashboard" />
-      </div>
-      <PageContainer maxWidth="md">
-      <p>
-        This will create a new <code>ai-speak-repeat</code> slide in{" "}
-        <code>slides_authoring</code>, attached to a lesson group.
-      </p>
-
+    <PageShell
+      title="Create ai-speak-repeat slide"
+      maxWidth="md"
+      meta={
+        <>
+          This will create a new <code className="codeText">ai-speak-repeat</code> slide in{" "}
+          <code className="codeText">slides_authoring</code>, attached to a lesson group.
+        </>
+      }
+    >
       {loadingMeta && <p>Loading lessons and groups…</p>}
 
       {metaError && (
-        <p style={{ color: "red" }}>Error loading metadata: {metaError}</p>
+        <CmsSection title="Error" description="Failed to load metadata">
+          <p style={{ color: uiTokens.color.danger }}>Error loading metadata: {metaError}</p>
+        </CmsSection>
       )}
 
       {!loadingMeta && !metaError && lessons.length === 0 && (
-        <p>No lessons found. Create a lesson first at /new-lesson.</p>
+        <CmsSection>
+          <p>No lessons found. Create a lesson first at /new-lesson.</p>
+        </CmsSection>
       )}
 
       {!loadingMeta && !metaError && lessons.length > 0 && (
-        <form onSubmit={handleSubmit} style={{ marginTop: 24 }}>
-          <fieldset
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 24,
-            }}
-          >
-            <legend>Where does this slide go?</legend>
+        <form onSubmit={handleSubmit}>
+          <CmsSection title="Where does this slide go?">
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="lesson"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Lesson
-              </label>
-              <select
-                id="lesson"
+            <FormField label="Lesson" required>
+              <Select
                 value={selectedLessonId}
                 onChange={(e) => {
                   setSelectedLessonId(e.target.value);
                   setSelectedGroupId("");
-                }}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
                 }}
               >
                 <option value="">-- Select a lesson --</option>
@@ -276,26 +262,13 @@ export default function NewSlideAiPage() {
                     {lesson.title} ({lesson.lesson_slug})
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="group"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Group
-              </label>
-              <select
-                id="group"
+            <FormField label="Group" required>
+              <Select
                 value={selectedGroupId}
                 onChange={(e) => setSelectedGroupId(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
                 disabled={!selectedLessonId || filteredGroups.length === 0}
               >
                 <option value="">
@@ -308,190 +281,64 @@ export default function NewSlideAiPage() {
                     Group {group.order_index}: {group.title}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="orderIndex"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Slide order index
-              </label>
-              <input
-                id="orderIndex"
+            <FormField label="Slide order index" required>
+              <Input
                 type="number"
                 min={1}
                 value={orderIndex}
                 onChange={(e) => setOrderIndex(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
               />
-            </div>
-          </fieldset>
+            </FormField>
+          </CmsSection>
 
-          <fieldset
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 16,
-              marginBottom: 24,
-            }}
-          >
-            <legend>Slide content</legend>
+          <CmsSection title="Slide content">
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="title"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Slide title
-              </label>
-              <input
-                id="title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
+            <FormField label="Slide title" required>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="subtitle"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Subtitle (optional)
-              </label>
-              <input
-                id="subtitle"
-                type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
+            <FormField label="Subtitle (optional)">
+              <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="note"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Note (optional)
-              </label>
-              <input
-                id="note"
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
+            <FormField label="Note (optional)">
+              <Input value={note} onChange={(e) => setNote(e.target.value)} />
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="defaultLang"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Default language (e.g. en, fr)
-              </label>
-              <input
-                id="defaultLang"
-                type="text"
-                value={defaultLang}
-                onChange={(e) => setDefaultLang(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                }}
-              />
-            </div>
+            <FormField label="Default language (e.g. en, fr)" required>
+              <Input value={defaultLang} onChange={(e) => setDefaultLang(e.target.value)} />
+            </FormField>
 
-            <div style={{ marginBottom: 16 }}>
-              <label
-                htmlFor="phrases"
-                style={{ display: "block", marginBottom: 4, fontWeight: 600 }}
-              >
-                Phrases (one per line)
-              </label>
-              <textarea
-                id="phrases"
+            <FormField
+              label="Phrases (one per line)"
+              required
+              helper="Each line becomes a button/cell. For now, all phrases are in a single row."
+            >
+              <Textarea
                 value={phrasesText}
                 onChange={(e) => setPhrasesText(e.target.value)}
                 rows={6}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 4,
-                  border: "1px solid #ccc",
-                  fontFamily: "monospace",
-                }}
+                style={{ fontFamily: "monospace" }}
               />
-              <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-                Each line becomes a button/cell. For now, all phrases are in a
-                single row.
-              </p>
-            </div>
-          </fieldset>
+            </FormField>
+          </CmsSection>
 
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              padding: "8px 16px",
-              fontSize: 14,
-              fontWeight: 500,
-              borderRadius: 6,
-              border: "1px solid #2563eb",
-              backgroundColor: saving ? "#9bbfb2" : "#9bbfb2",
-              border: "1px solid #9bbfb2",
-              fontWeight: 400,
-              color: "#222326",
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving ? 0.7 : 1,
-            }}
-            onMouseOver={(e) => {
-              if (!saving) {
-                e.currentTarget.style.backgroundColor = "#8aaea1";
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!saving) {
-                e.currentTarget.style.backgroundColor = "#9bbfb2";
-              }
-            }}
-          >
-            {saving ? "Creating..." : "Create slide"}
-          </button>
+          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating..." : "Create slide"}
+            </Button>
+          </div>
         </form>
       )}
 
       {message && (
         <p
           style={{
-            marginTop: 16,
-            color: message.toLowerCase().includes("error") ? "red" : "green",
+            marginTop: uiTokens.space.md,
+            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
           }}
         >
           {message}
@@ -499,14 +346,12 @@ export default function NewSlideAiPage() {
       )}
 
       {createdSlide && (
-        <>
-          <h2 style={{ marginTop: 24 }}>Created slide (DB row)</h2>
-          <pre style={{ fontSize: 12 }}>
+        <CmsSection title="Created slide (DB row)">
+          <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
             {JSON.stringify(createdSlide, null, 2)}
           </pre>
-        </>
+        </CmsSection>
       )}
-      </PageContainer>
-    </>
+    </PageShell>
   );
 }
