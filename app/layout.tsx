@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import TopNav from "../components/cms/TopNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,48 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <nav
-          style={{
-            borderBottom: "1px solid #ddd",
-            padding: "12px 24px",
-            backgroundColor: "#2b3640",
-            display: "flex",
-            gap: 0,
-            alignItems: "center",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontSize: 14,
-              fontWeight: 400,
-              textDecoration: "none",
-              color: "#ffffff",
-              padding: "0 16px",
-            }}
-          >
-            CMS Dashboard
-          </Link>
-          <div
-            style={{
-              width: 1,
-              height: 16,
-              backgroundColor: "rgba(255, 255, 255, 0.3)",
-            }}
-          />
-          <Link
-            href="/modules-browser"
-            style={{
-              fontSize: 14,
-              fontWeight: 400,
-              textDecoration: "none",
-              color: "#ffffff",
-              padding: "0 16px",
-            }}
-          >
-            Modules Browser
-          </Link>
-        </nav>
+        <TopNav />
         {children}
       </body>
     </html>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
-import PageShell from "../../../components/ui/PageShell";
+import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
 import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
@@ -11,57 +11,26 @@ import Textarea from "../../../components/ui/Textarea";
 import Select from "../../../components/ui/Select";
 import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
-
-type ModuleRow = {
-  id: string;
-  slug: string;
-  title: string;
-};
+import { slugify, nullIfEmpty } from "../../../lib/utils/string";
+import StatusMessage from "../../../components/ui/StatusMessage";
+import { updateLessonSchema } from "../../../lib/schemas/lessonSchema";
+import { updateLesson, loadLessonById } from "../../../lib/data/lessons";
+import { loadModules } from "../../../lib/data/modules";
+import type { Module } from "../../../lib/domain/module";
+import type { Lesson } from "../../../lib/domain/lesson";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | {
-      status: "ready";
-      lesson: {
-        id: string;
-        module_id: string;
-        title: string;
-        slug: string;
-        order_index: number | null;
-        short_summary_admin: string | null;
-        short_summary_student: string | null;
-        course_organization_group: string | null;
-        slide_contents: string | null;
-        grouping_strategy_summary: string | null;
-        activity_types: string[] | null;
-        activity_description: string | null;
-        signature_metaphors: string | null;
-        main_grammar_topics: string | null;
-        pronunciation_focus: string | null;
-        vocabulary_theme: string | null;
-        l1_l2_issues: string | null;
-        prerequisites: string | null;
-        learning_objectives: string | null;
-        notes_for_teacher_or_ai: string | null;
-      };
-    };
-
-function slugify(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+  | { status: "ready"; lesson: Lesson };
 
 export default function EditLessonPage() {
   const params = useParams<{ lessonId: string }>();
   const lessonId = params?.lessonId;
 
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
-  const [modules, setModules] = useState<ModuleRow[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [moduleId, setModuleId] = useState("");
   const [lessonSlugPart, setLessonSlugPart] = useState("");
   const [title, setTitle] = useState("");
@@ -92,23 +61,91 @@ export default function EditLessonPage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const initialDataRef = useRef<{
+    moduleId: string;
+    lessonSlugPart: string;
+    title: string;
+    orderIndex: number;
+    shortSummaryAdmin: string;
+    shortSummaryStudent: string;
+    courseOrganizationGroup: string;
+    slideContents: string;
+    groupingStrategySummary: string;
+    activityTypes: string;
+    activityDescription: string;
+    signatureMetaphors: string;
+    mainGrammarTopics: string;
+    pronunciationFocus: string;
+    vocabularyTheme: string;
+    l1L2Issues: string;
+    prerequisites: string;
+    learningObjectives: string;
+    notesForTeacherOrAI: string;
+  } | null>(null);
+
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      moduleId !== initial.moduleId ||
+      lessonSlugPart !== initial.lessonSlugPart ||
+      title !== initial.title ||
+      orderIndex !== initial.orderIndex ||
+      shortSummaryAdmin !== initial.shortSummaryAdmin ||
+      shortSummaryStudent !== initial.shortSummaryStudent ||
+      courseOrganizationGroup !== initial.courseOrganizationGroup ||
+      slideContents !== initial.slideContents ||
+      groupingStrategySummary !== initial.groupingStrategySummary ||
+      activityTypes !== initial.activityTypes ||
+      activityDescription !== initial.activityDescription ||
+      signatureMetaphors !== initial.signatureMetaphors ||
+      mainGrammarTopics !== initial.mainGrammarTopics ||
+      pronunciationFocus !== initial.pronunciationFocus ||
+      vocabularyTheme !== initial.vocabularyTheme ||
+      l1L2Issues !== initial.l1L2Issues ||
+      prerequisites !== initial.prerequisites ||
+      learningObjectives !== initial.learningObjectives ||
+      notesForTeacherOrAI !== initial.notesForTeacherOrAI
+    );
+  }, [
+    moduleId,
+    lessonSlugPart,
+    title,
+    orderIndex,
+    shortSummaryAdmin,
+    shortSummaryStudent,
+    courseOrganizationGroup,
+    slideContents,
+    groupingStrategySummary,
+    activityTypes,
+    activityDescription,
+    signatureMetaphors,
+    mainGrammarTopics,
+    pronunciationFocus,
+    vocabularyTheme,
+    l1L2Issues,
+    prerequisites,
+    learningObjectives,
+    notesForTeacherOrAI,
+  ]);
+
+  // Warn before navigation
+  useUnsavedChangesWarning(hasUnsavedChanges);
 
   useEffect(() => {
-    async function loadModules() {
-      const { data, error } = await supabase
-        .from("modules")
-        .select("id, slug, title, order_index")
-        .order("order_index", { ascending: true });
+    async function loadModulesData() {
+      const { data, error } = await loadModules();
 
       if (error) {
-        setLoadState({ status: "error", message: `Supabase error loading modules: ${error.message}` });
+        setLoadState({ status: "error", message: `Error loading modules: ${error}` });
         return;
       }
 
-      setModules((data ?? []) as ModuleRow[]);
+      setModules(data ?? []);
     }
 
-    loadModules();
+    loadModulesData();
   }, []);
 
   useEffect(() => {
@@ -120,16 +157,10 @@ export default function EditLessonPage() {
     async function load() {
       setLoadState({ status: "loading" });
 
-      const { data, error } = await supabase
-        .from("lessons")
-        .select(
-          "id, module_id, title, slug, order_index, short_summary_admin, short_summary_student, course_organization_group, slide_contents, grouping_strategy_summary, activity_types, activity_description, signature_metaphors, main_grammar_topics, pronunciation_focus, vocabulary_theme, l1_l2_issues, prerequisites, learning_objectives, notes_for_teacher_or_ai"
-        )
-        .eq("id", lessonId)
-        .maybeSingle();
+      const { data, error } = await loadLessonById(lessonId);
 
       if (error) {
-        setLoadState({ status: "error", message: `Supabase error: ${error.message}` });
+        setLoadState({ status: "error", message: `Error: ${error}` });
         return;
       }
 
@@ -138,39 +169,61 @@ export default function EditLessonPage() {
         return;
       }
 
-      setModuleId(data.module_id);
-      const selectedModule = modules.find((m) => m.id === data.module_id);
-      if (selectedModule) {
-        const slugPart = data.slug.replace(`${selectedModule.slug}/`, "");
-        setLessonSlugPart(slugPart);
-      } else {
-        setLessonSlugPart(data.slug);
-      }
+      setModuleId(data.moduleId ?? "");
+      const selectedModule = modules.find((m) => m.id === data.moduleId);
+      const slugPart = selectedModule && data.slug
+        ? data.slug.replace(`${selectedModule.slug}/`, "")
+        : data.slug ?? "";
+      setLessonSlugPart(slugPart);
       setTitle(data.title);
-      setOrderIndex(data.order_index ?? 1);
+      setOrderIndex(data.orderIndex ?? 1);
 
       // Summaries
-      setShortSummaryAdmin(data.short_summary_admin ?? "");
-      setShortSummaryStudent(data.short_summary_student ?? "");
+      setShortSummaryAdmin(data.shortSummaryAdmin ?? "");
+      setShortSummaryStudent(data.shortSummaryStudent ?? "");
 
       // Lesson structure
-      setCourseOrganizationGroup(data.course_organization_group ?? "");
-      setSlideContents(data.slide_contents ?? "");
-      setGroupingStrategySummary(data.grouping_strategy_summary ?? "");
+      setCourseOrganizationGroup(data.courseOrganizationGroup ?? "");
+      setSlideContents(data.slideContents ?? "");
+      setGroupingStrategySummary(data.groupingStrategySummary ?? "");
 
-      // Activities
-      setActivityTypes(data.activity_types ? data.activity_types.join(", ") : "");
-      setActivityDescription(data.activity_description ?? "");
+      // Activities - activityTypes is a string (comma-separated) in domain model
+      setActivityTypes(data.activityTypes ?? "");
+      setActivityDescription(data.activityDescription ?? "");
 
       // Pedagogy
-      setSignatureMetaphors(data.signature_metaphors ?? "");
-      setMainGrammarTopics(data.main_grammar_topics ?? "");
-      setPronunciationFocus(data.pronunciation_focus ?? "");
-      setVocabularyTheme(data.vocabulary_theme ?? "");
-      setL1L2Issues(data.l1_l2_issues ?? "");
+      setSignatureMetaphors(data.signatureMetaphors ?? "");
+      setMainGrammarTopics(data.mainGrammarTopics ?? "");
+      setPronunciationFocus(data.pronunciationFocus ?? "");
+      setVocabularyTheme(data.vocabularyTheme ?? "");
+      setL1L2Issues(data.l1L2Issues ?? "");
       setPrerequisites(data.prerequisites ?? "");
-      setLearningObjectives(data.learning_objectives ?? "");
-      setNotesForTeacherOrAI(data.notes_for_teacher_or_ai ?? "");
+      setLearningObjectives(data.learningObjectives ?? "");
+      setNotesForTeacherOrAI(data.notesForTeacherOrAI ?? "");
+
+      // Store initial values for comparison
+      
+      initialDataRef.current = {
+        moduleId: data.moduleId ?? "",
+        lessonSlugPart: slugPart,
+        title: data.title,
+        orderIndex: data.orderIndex ?? 1,
+        shortSummaryAdmin: data.shortSummaryAdmin ?? "",
+        shortSummaryStudent: data.shortSummaryStudent ?? "",
+        courseOrganizationGroup: data.courseOrganizationGroup ?? "",
+        slideContents: data.slideContents ?? "",
+        groupingStrategySummary: data.groupingStrategySummary ?? "",
+        activityTypes: data.activityTypes ?? "",
+        activityDescription: data.activityDescription ?? "",
+        signatureMetaphors: data.signatureMetaphors ?? "",
+        mainGrammarTopics: data.mainGrammarTopics ?? "",
+        pronunciationFocus: data.pronunciationFocus ?? "",
+        vocabularyTheme: data.vocabularyTheme ?? "",
+        l1L2Issues: data.l1L2Issues ?? "",
+        prerequisites: data.prerequisites ?? "",
+        learningObjectives: data.learningObjectives ?? "",
+        notesForTeacherOrAI: data.notesForTeacherOrAI ?? "",
+      };
 
       setLoadState({ status: "ready", lesson: data });
     }
@@ -184,11 +237,6 @@ export default function EditLessonPage() {
     e.preventDefault();
     setMessage(null);
 
-    if (!moduleId || !lessonSlugPart || !title) {
-      setMessage("Module, lesson slug, and title are required.");
-      return;
-    }
-
     const selectedModule = modules.find((m) => m.id === moduleId);
     if (!selectedModule) {
       setMessage("Selected module not found.");
@@ -197,76 +245,140 @@ export default function EditLessonPage() {
 
     const fullSlug = `${selectedModule.slug}/${slugify(lessonSlugPart)}`;
 
-    // Parse activity_types: split by comma, trim, remove empty items
-    const activityTypesArray = activityTypes
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    const finalActivityTypes = activityTypesArray.length > 0 ? activityTypesArray : null;
+    // Validate using schema
+    const result = updateLessonSchema.safeParse({
+      module_id: moduleId,
+      slug: fullSlug,
+      title,
+      order_index: orderIndex,
+      short_summary_admin: shortSummaryAdmin || null,
+      short_summary_student: shortSummaryStudent || null,
+      course_organization_group: courseOrganizationGroup || null,
+      slide_contents: slideContents || null,
+      grouping_strategy_summary: groupingStrategySummary || null,
+      activity_types: activityTypes || null,
+      activity_description: activityDescription || null,
+      signature_metaphors: signatureMetaphors || null,
+      main_grammar_topics: mainGrammarTopics || null,
+      pronunciation_focus: pronunciationFocus || null,
+      vocabulary_theme: vocabularyTheme || null,
+      l1_l2_issues: l1L2Issues || null,
+      prerequisites: prerequisites || null,
+      learning_objectives: learningObjectives || null,
+      notes_for_teacher_or_ai: notesForTeacherOrAI || null,
+    });
 
-    // Helper function to convert empty string to null
-    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
+      return;
+    }
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("lessons")
-        .update({
-          module_id: moduleId,
-          slug: fullSlug,
-          title: title.trim(),
-          order_index: orderIndex,
-          short_summary_admin: nullIfEmpty(shortSummaryAdmin),
-          short_summary_student: nullIfEmpty(shortSummaryStudent),
-          course_organization_group: nullIfEmpty(courseOrganizationGroup),
-          slide_contents: nullIfEmpty(slideContents),
-          grouping_strategy_summary: nullIfEmpty(groupingStrategySummary),
-          activity_types: finalActivityTypes,
-          activity_description: nullIfEmpty(activityDescription),
-          signature_metaphors: nullIfEmpty(signatureMetaphors),
-          main_grammar_topics: nullIfEmpty(mainGrammarTopics),
-          pronunciation_focus: nullIfEmpty(pronunciationFocus),
-          vocabulary_theme: nullIfEmpty(vocabularyTheme),
-          l1_l2_issues: nullIfEmpty(l1L2Issues),
-          prerequisites: nullIfEmpty(prerequisites),
-          learning_objectives: nullIfEmpty(learningObjectives),
-          notes_for_teacher_or_ai: nullIfEmpty(notesForTeacherOrAI),
-        })
-        .eq("id", lessonId);
+      // Convert activity_types array back to comma-separated string for data layer
+      const activityTypesStr = Array.isArray(result.data.activity_types)
+        ? result.data.activity_types.join(",")
+        : result.data.activity_types;
+
+      const { error } = await updateLesson(lessonId, {
+        module_id: result.data.module_id,
+        slug: result.data.slug,
+        title: result.data.title,
+        order_index: result.data.order_index,
+        short_summary_admin: result.data.short_summary_admin,
+        short_summary_student: result.data.short_summary_student,
+        course_organization_group: result.data.course_organization_group,
+        slide_contents: result.data.slide_contents,
+        grouping_strategy_summary: result.data.grouping_strategy_summary,
+        activity_types: activityTypesStr ?? null,
+        activity_description: result.data.activity_description,
+        signature_metaphors: result.data.signature_metaphors,
+        main_grammar_topics: result.data.main_grammar_topics,
+        pronunciation_focus: result.data.pronunciation_focus,
+        vocabulary_theme: result.data.vocabulary_theme,
+        l1_l2_issues: result.data.l1_l2_issues,
+        prerequisites: result.data.prerequisites,
+        learning_objectives: result.data.learning_objectives,
+        notes_for_teacher_or_ai: result.data.notes_for_teacher_or_ai,
+      });
 
       if (error) {
-        setMessage(`Supabase error: ${error.message}`);
+        setMessage(`Error: ${error}`);
         return;
       }
 
       setMessage("Lesson updated successfully!");
+      
+      // Update initial data ref after successful save
+      if (initialDataRef.current) {
+        initialDataRef.current = {
+          moduleId,
+          lessonSlugPart,
+          title,
+          orderIndex,
+          shortSummaryAdmin,
+          shortSummaryStudent,
+          courseOrganizationGroup,
+          slideContents,
+          groupingStrategySummary,
+          activityTypes,
+          activityDescription,
+          signatureMetaphors,
+          mainGrammarTopics,
+          pronunciationFocus,
+          vocabularyTheme,
+          l1L2Issues,
+          prerequisites,
+          learningObjectives,
+          notesForTeacherOrAI,
+        };
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <PageShell
+    <CmsPageShell
       title="Edit lesson"
-      maxWidth="md"
-      meta={
-        <>
-          Lesson id: <code className="codeText">{lessonId}</code>
-        </>
-      }
     >
       {loadState.status === "loading" && <p>Loading lesson…</p>}
 
       {loadState.status === "error" && (
-        <CmsSection title="Error" description={loadState.message}>
+        <CmsSection title="Error" description={loadState.message} backgroundColor="#ecd7cf" borderColor="#deb4a5">
           <p style={{ color: uiTokens.color.danger }}>{loadState.message}</p>
         </CmsSection>
       )}
 
       {loadState.status === "ready" && (
-        <form onSubmit={handleSave}>
-          <CmsSection title="Lesson Details">
-            <FormField label="Module" required>
+        <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+          {/* Left column - outline view */}
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #deb4a5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+            <CmsOutlineView currentLessonId={lessonId} hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
+          
+          {/* Right column - form */}
+          <div style={{ flex: 1 }}>
+            {hasUnsavedChanges && (
+              <div style={{ 
+                padding: uiTokens.space.sm, 
+                marginBottom: uiTokens.space.md, 
+                backgroundColor: "#fff3cd", 
+                border: "1px solid #ffc107",
+                borderRadius: uiTokens.radius.md,
+                color: uiTokens.color.text
+              }}>
+                ⚠️ You have unsaved changes
+              </div>
+            )}
+            <form onSubmit={handleSave}>
+          <CmsSection title="Lesson Details" backgroundColor="#ecd7cf" borderColor="#deb4a5">
+            <FormField label="Lesson ID" borderColor="#deb4a5">
+              <Input value={lessonId || ""} disabled readOnly />
+            </FormField>
+
+            <FormField label="Module" required borderColor="#deb4a5">
               <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
                 <option value="">Select a module…</option>
                 {modules.map((m) => (
@@ -280,6 +392,7 @@ export default function EditLessonPage() {
             <FormField
               label="Lesson slug (just the lesson part)"
               required
+              borderColor="#deb4a5"
               helper={
                 <>
                   Full slug will become:{" "}
@@ -298,11 +411,11 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Lesson title" required>
+            <FormField label="Lesson title" required borderColor="#deb4a5">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Order index" required>
+            <FormField label="Order index" required borderColor="#deb4a5">
               <Input
                 type="number"
                 value={orderIndex}
@@ -311,8 +424,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Summaries">
-            <FormField label="Short Summary (Admin)">
+          <CmsSection title="Summaries" backgroundColor="#ecd7cf" borderColor="#deb4a5">
+            <FormField label="Short Summary (Admin)" borderColor="#deb4a5">
               <Textarea
                 value={shortSummaryAdmin}
                 onChange={(e) => setShortSummaryAdmin(e.target.value)}
@@ -320,7 +433,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Short Summary (Student)">
+            <FormField label="Short Summary (Student)" borderColor="#deb4a5">
               <Textarea
                 value={shortSummaryStudent}
                 onChange={(e) => setShortSummaryStudent(e.target.value)}
@@ -329,8 +442,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Lesson Structure">
-            <FormField label="Course Organization Group">
+          <CmsSection title="Lesson Structure" backgroundColor="#ecd7cf" borderColor="#deb4a5">
+            <FormField label="Course Organization Group" borderColor="#deb4a5">
               <Input
                 value={courseOrganizationGroup}
                 onChange={(e) => setCourseOrganizationGroup(e.target.value)}
@@ -340,6 +453,7 @@ export default function EditLessonPage() {
 
             <FormField
               label="Slide Contents"
+              borderColor="#deb4a5"
               helper="Use semicolons. Example: Intro; 3 Text; …"
             >
               <Textarea
@@ -349,7 +463,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Grouping Strategy Summary">
+            <FormField label="Grouping Strategy Summary" borderColor="#deb4a5">
               <Textarea
                 value={groupingStrategySummary}
                 onChange={(e) => setGroupingStrategySummary(e.target.value)}
@@ -358,9 +472,10 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Activities">
+          <CmsSection title="Activities" backgroundColor="#ecd7cf" borderColor="#deb4a5">
             <FormField
               label="Activity Types"
+              borderColor="#deb4a5"
               helper="Example: AISpeak, AISpeakStudentRepeat, AISpeakStudentChoose"
             >
               <Input
@@ -370,7 +485,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Activity Description">
+            <FormField label="Activity Description" borderColor="#deb4a5">
               <Textarea
                 value={activityDescription}
                 onChange={(e) => setActivityDescription(e.target.value)}
@@ -379,8 +494,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Pedagogy">
-            <FormField label="Signature Metaphors">
+          <CmsSection title="Pedagogy" backgroundColor="#ecd7cf" borderColor="#deb4a5">
+            <FormField label="Signature Metaphors" borderColor="#deb4a5">
               <Textarea
                 value={signatureMetaphors}
                 onChange={(e) => setSignatureMetaphors(e.target.value)}
@@ -388,7 +503,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Main Grammar Topics">
+            <FormField label="Main Grammar Topics" borderColor="#deb4a5">
               <Textarea
                 value={mainGrammarTopics}
                 onChange={(e) => setMainGrammarTopics(e.target.value)}
@@ -396,7 +511,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Pronunciation Focus">
+            <FormField label="Pronunciation Focus" borderColor="#deb4a5">
               <Textarea
                 value={pronunciationFocus}
                 onChange={(e) => setPronunciationFocus(e.target.value)}
@@ -404,14 +519,14 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Vocabulary Theme">
+            <FormField label="Vocabulary Theme" borderColor="#deb4a5">
               <Input
                 value={vocabularyTheme}
                 onChange={(e) => setVocabularyTheme(e.target.value)}
               />
             </FormField>
 
-            <FormField label="L1>L2 Issues">
+            <FormField label="L1>L2 Issues" borderColor="#deb4a5">
               <Textarea
                 value={l1L2Issues}
                 onChange={(e) => setL1L2Issues(e.target.value)}
@@ -419,7 +534,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Prerequisites">
+            <FormField label="Prerequisites" borderColor="#deb4a5">
               <Textarea
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
@@ -427,7 +542,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Learning Objectives">
+            <FormField label="Learning Objectives" borderColor="#deb4a5">
               <Textarea
                 value={learningObjectives}
                 onChange={(e) => setLearningObjectives(e.target.value)}
@@ -435,7 +550,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Notes for Teacher or AI">
+            <FormField label="Notes for Teacher or AI" borderColor="#deb4a5">
               <Textarea
                 value={notesForTeacherOrAI}
                 onChange={(e) => setNotesForTeacherOrAI(e.target.value)}
@@ -449,20 +564,19 @@ export default function EditLessonPage() {
               {saving ? "Saving…" : "Save changes"}
             </Button>
           </div>
-        </form>
+            </form>
+          </div>
+        </div>
       )}
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
-          }}
+        <StatusMessage
+          variant={message.toLowerCase().includes("error") ? "error" : "success"}
         >
           {message}
-        </p>
+        </StatusMessage>
       )}
-    </PageShell>
+    </CmsPageShell>
   );
 }
 

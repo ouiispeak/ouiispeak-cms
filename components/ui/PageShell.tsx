@@ -8,7 +8,7 @@ import { uiTokens } from "../../lib/uiTokens";
 type MaxWidthPreset = "sm" | "md" | "lg";
 
 interface PageShellProps {
-  title: string;
+  title?: string;
   showBack?: boolean;
   backLabel?: string;
   meta?: ReactNode;
@@ -19,7 +19,7 @@ interface PageShellProps {
 
 export default function PageShell({
   title,
-  showBack = true,
+  showBack = false,
   backLabel,
   meta,
   actions,
@@ -28,31 +28,22 @@ export default function PageShell({
 }: PageShellProps) {
   return (
     <>
-      {/* Page Header */}
-      <div
-        style={{
-          padding: `${uiTokens.space.md}px ${uiTokens.space.lg}px`,
-          borderBottom: `1px solid ${uiTokens.color.border}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <h1
+      {/* Page Header - Only show if actions are provided */}
+      {actions && (
+        <div
           style={{
-            fontSize: uiTokens.font.pageTitle.size,
-            fontWeight: uiTokens.font.pageTitle.weight,
-            margin: 0,
+            padding: `${uiTokens.space.md}px ${uiTokens.space.lg}px`,
+            borderBottom: `1px solid ${uiTokens.color.border}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
-          {title}
-        </h1>
-        {actions && (
           <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
             {actions}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Back Button Row */}
       {showBack && (

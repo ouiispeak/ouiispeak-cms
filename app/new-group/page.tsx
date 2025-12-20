@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
-import PageShell from "../../components/ui/PageShell";
+import { FormEvent, useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import CmsPageShell from "../../components/cms/CmsPageShell";
 import CmsSection from "../../components/ui/CmsSection";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
@@ -10,12 +10,12 @@ import Textarea from "../../components/ui/Textarea";
 import Select from "../../components/ui/Select";
 import { Button } from "../../components/Button";
 import { uiTokens } from "../../lib/uiTokens";
-
-type LessonRow = {
-  id: string;
-  slug: string;
-  title: string;
-};
+import { nullIfEmpty } from "../../lib/utils/string";
+import StatusMessage from "../../components/ui/StatusMessage";
+import { loadLessons } from "../../lib/data/lessons";
+import type { LessonMinimal } from "../../lib/domain/lesson";
+import { createGroup } from "../../lib/data/groups";
+import { createGroupSchema } from "../../lib/schemas/groupSchema";
 
 type CreatedGroup = {
   id: string;
@@ -24,11 +24,14 @@ type CreatedGroup = {
   title: string;
 };
 
-export default function NewGroupPage() {
-  const [lessons, setLessons] = useState<LessonRow[]>([]);
+function NewGroupForm() {
+  const searchParams = useSearchParams();
+  const lessonIdParam = searchParams?.get("lesson_id");
+
+  const [lessons, setLessons] = useState<LessonMinimal[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [lessonId, setLessonId] = useState("");
+  const [lessonId, setLessonId] = useState(lessonIdParam || "");
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [title, setTitle] = useState("");
 
@@ -45,83 +48,95 @@ export default function NewGroupPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [createdGroup, setCreatedGroup] = useState<CreatedGroup | null>(null);
 
+  // Determine if lesson is prefilled from query param
+  const isLessonPrefilled = !!lessonIdParam;
+
   useEffect(() => {
-    async function loadLessons() {
+    async function loadLessonsData() {
       setLoadError(null);
 
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("id, slug, title")
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const { data, error } = await loadLessons();
 
       if (error) {
-        setLoadError(`Supabase error loading lessons: ${error.message}`);
+        setLoadError(`Error loading lessons: ${error}`);
         return;
       }
 
-      setLessons((data ?? []) as LessonRow[]);
+      setLessons(data ?? []);
+
+      // If lesson_id param is provided, ensure it's set
+      if (lessonIdParam && !lessonId) {
+        setLessonId(lessonIdParam);
+      }
     }
 
-    loadLessons();
+    loadLessonsData();
   }, []);
+
+  // Sync lessonId with param when param changes
+  useEffect(() => {
+    if (lessonIdParam && lessonIdParam !== lessonId) {
+      setLessonId(lessonIdParam);
+    }
+  }, [lessonIdParam]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setMessage(null);
     setCreatedGroup(null);
 
-    if (!lessonId || !title) {
-      setMessage("Lesson and title are required.");
+    // Validate using schema
+    const result = createGroupSchema.safeParse({
+      lesson_id: lessonId,
+      title,
+      order_index: orderIndex,
+      group_code: groupCode || null,
+      short_summary: shortSummary || null,
+      group_type: groupType || null,
+      group_summary: null,
+      group_slides_plan: null,
+      group_goal: null,
+      prerequisites: null,
+      is_required_to_pass: isRequiredToPass,
+      passing_score_type: passingScoreType || null,
+      passing_score_value: passingScoreValue,
+      max_score_value: maxScoreValue,
+      extra_practice_notes: null,
+      l1_l2: null,
+      media_used_ids: null,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
       return;
     }
-
-    // Validate group_type
-    const validGroupTypes = ["title", "intro", "practice", "test", "wrap-up", "finale"];
-    if (groupType && !validGroupTypes.includes(groupType)) {
-      setMessage(`Invalid group type. Must be one of: ${validGroupTypes.join(", ")}`);
-      return;
-    }
-
-    // Validate passing_score_type
-    const validPassingScoreTypes = ["percent", "raw", "none"];
-    if (passingScoreType && !validPassingScoreTypes.includes(passingScoreType)) {
-      setMessage(`Invalid passing score type. Must be one of: ${validPassingScoreTypes.join(", ")}`);
-      return;
-    }
-
-    // Helper function to convert empty string to null
-    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
 
     setSaving(true);
 
     try {
-      const { data, error } = await supabase
-        .from("lesson_groups")
-        .insert({
-          lesson_id: lessonId,
-          order_index: orderIndex,
-          title: title.trim(),
-          group_code: nullIfEmpty(groupCode),
-          short_summary: nullIfEmpty(shortSummary),
-          group_type: nullIfEmpty(groupType),
-          group_summary: null,
-          group_slides: null,
-          group_goal: null,
-          prerequisites: null,
-          is_required_to_pass: isRequiredToPass,
-          passing_score_type: nullIfEmpty(passingScoreType),
-          passing_score_value: passingScoreValue,
-          max_score_value: maxScoreValue,
-          extra_practice_notes: null,
-          l1_l2: null,
-          media_used_ids: null,
-        })
-        .select("id, lesson_id, order_index, title")
-        .maybeSingle();
+      const { data, error } = await createGroup({
+        lesson_id: result.data.lesson_id,
+        order_index: result.data.order_index,
+        title: result.data.title,
+        group_code: result.data.group_code,
+        short_summary: result.data.short_summary,
+        group_type: result.data.group_type,
+        group_summary: result.data.group_summary,
+        group_slides_plan: result.data.group_slides_plan,
+        group_goal: result.data.group_goal,
+        prerequisites: result.data.prerequisites,
+        is_required_to_pass: result.data.is_required_to_pass,
+        passing_score_type: result.data.passing_score_type,
+        passing_score_value: result.data.passing_score_value,
+        max_score_value: result.data.max_score_value,
+        extra_practice_notes: result.data.extra_practice_notes,
+        l1_l2: result.data.l1_l2,
+        media_used_ids: result.data.media_used_ids,
+      });
 
       if (error) {
-        setMessage(`Supabase error: ${error.message}`);
+        setMessage(error);
         return;
       }
 
@@ -130,7 +145,13 @@ export default function NewGroupPage() {
         return;
       }
 
-      setCreatedGroup(data as CreatedGroup);
+      // Map GroupMinimal to CreatedGroup
+      setCreatedGroup({
+        id: data.id,
+        lesson_id: data.lessonId ?? "",
+        order_index: data.orderIndex ?? 1,
+        title: data.title,
+      });
       setMessage("Group created successfully.");
     } finally {
       setSaving(false);
@@ -138,21 +159,37 @@ export default function NewGroupPage() {
   }
 
   return (
-    <PageShell title="Create new group" maxWidth="md">
+    <CmsPageShell title="Create new group" maxWidth="md">
       {loadError && <p style={{ color: uiTokens.color.danger }}>{loadError}</p>}
 
       <CmsSection>
         <form onSubmit={handleSubmit}>
-          <FormField label="Lesson" required>
-            <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
-              <option value="">Select a lesson…</option>
-              {lessons.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title} ({l.slug})
-                </option>
-              ))}
-            </Select>
-          </FormField>
+          {isLessonPrefilled ? (
+            <FormField label="Lesson" required>
+              <div style={{ 
+                padding: uiTokens.space.xs, 
+                backgroundColor: uiTokens.color.bgAlt,
+                borderRadius: uiTokens.radius.sm,
+                border: `1px solid ${uiTokens.color.border}`,
+                fontSize: uiTokens.font.label.size,
+                color: uiTokens.color.text,
+              }}>
+                {lessons.find((l) => l.id === lessonId)?.title || lessonId || "Loading..."}
+              </div>
+              <input type="hidden" value={lessonId} />
+            </FormField>
+          ) : (
+            <FormField label="Lesson" required>
+              <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
+                <option value="">Select a lesson…</option>
+                {lessons.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.title} ({l.slug})
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          )}
 
           <FormField label="Order index" required>
             <Input
@@ -236,14 +273,11 @@ export default function NewGroupPage() {
       </CmsSection>
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
-          }}
+        <StatusMessage
+          variant={message.toLowerCase().includes("error") ? "error" : "success"}
         >
           {message}
-        </p>
+        </StatusMessage>
       )}
 
       {createdGroup && (
@@ -253,6 +287,14 @@ export default function NewGroupPage() {
           </pre>
         </CmsSection>
       )}
-    </PageShell>
+    </CmsPageShell>
+  );
+}
+
+export default function NewGroupPage() {
+  return (
+    <Suspense fallback={<CmsPageShell title="Create new group" maxWidth="md"><p>Loading...</p></CmsPageShell>}>
+      <NewGroupForm />
+    </Suspense>
   );
 }

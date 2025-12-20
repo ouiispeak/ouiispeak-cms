@@ -2,17 +2,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #edeae7;
-  --foreground: #222326;
+  /* Locked MVP palette - base layer tokens */
+  --cms-bg: #f6f5f3;
+  --cms-surface: #edeae7;
+  --cms-text: #192026;
+  --cms-text-muted: #595852;
+  --cms-border: #d9d3cc;
   
-  /* UI Tokens */
-  --ui-border: #d9d3c7;
-  --ui-bg: #edeae7;
-  --ui-bg-alt: #f6f5f3;
-  --ui-primary: #9bbfb2;
-  --ui-primary-hover: #85a6a0;
-  --ui-danger: #bf6f6f;
-  --ui-danger-hover: #bf1736;
+  /* Locked MVP palette - semantic tokens */
+  --cms-primary: #0c9599;
+  --cms-success: #548c87;
+  --cms-danger: #bf1736;
+  --cms-focus: #247368;
+  
+  /* Utility tokens for accessibility */
+  --cms-text-on-dark: var(--cms-bg);
+  
+  /* Legacy compatibility */
+  --background: var(--cms-bg);
+  --foreground: var(--cms-text);
+  --ui-border: var(--cms-border);
+  --ui-bg: var(--cms-surface);
+  --ui-bg-alt: var(--cms-bg);
+  --ui-primary: var(--cms-primary);
+  --ui-primary-hover: var(--cms-primary);
+  --ui-danger: var(--cms-danger);
+  --ui-danger-hover: var(--cms-danger);
   --ui-secondary: #a6a198;
   --ui-secondary-hover: #b8bcb7;
 }
@@ -25,8 +40,8 @@
 }
 
 body {
-  background: #edeae7;
-  color: #222326;
+  background: var(--cms-bg);
+  color: var(--cms-text);
   font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
   font-weight: 400;
   margin: 0;
@@ -34,11 +49,11 @@ body {
 }
 
 * {
-  color: #222326;
+  color: var(--cms-text);
 }
 
 a {
-  color: #0c9599;
+  color: var(--cms-focus);
   font-size: 14px;
   font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
   font-weight: 400;
@@ -48,19 +63,19 @@ button {
   font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
   font-weight: 400;
   font-size: 14px;
-  color: #222326;
+  color: var(--cms-text);
 }
 
 button[data-variant="danger"],
 button.danger,
 .variant-danger {
-  background-color: #bf6f6f !important;
-  color: #222326 !important;
+  background-color: var(--cms-danger) !important;
+  color: var(--cms-text-on-dark) !important;
 }
 
 button:not([data-variant="danger"]):not(.danger):not(.variant-danger) {
-  background-color: #9bbfb2;
-  color: #222326;
+  background-color: var(--cms-primary);
+  color: var(--cms-text-on-dark);
 }
 
 h1 {
@@ -84,7 +99,7 @@ h3 {
 .metaText {
   font-size: 13px;
   font-weight: 400;
-  color: #595852;
+  color: var(--cms-text-muted);
 }
 
 .codeText {
@@ -96,7 +111,9 @@ h3 {
 input,
 select,
 textarea {
-  background-color: #edeae7;
+  background-color: var(--cms-surface);
+  border-color: var(--cms-border);
+  color: var(--cms-text);
 }
 
 input[type="checkbox"],

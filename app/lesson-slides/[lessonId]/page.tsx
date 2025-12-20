@@ -2,41 +2,34 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
+import { useParams } from "next/navigation";
 import { Button } from "../../../components/Button";
-import PageShell from "../../../components/ui/PageShell";
+import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
 import LinkButton from "../../../components/ui/LinkButton";
 import Select from "../../../components/ui/Select";
+import ConfirmDialog from "../../../components/ui/ConfirmDialog";
 import { uiTokens } from "../../../lib/uiTokens";
-
-type SlideRow = {
-  id: string;
-  type: string;
-  props_json: any;
-  order_index: number | null;
-  group_id: string | null;
-};
-
-type GroupRow = {
-  id: string;
-  title: string;
-  order_index: number | null;
-};
+import type { GroupMinimal } from "../../../lib/domain/group";
+import type { LessonManagementSlide } from "../../../lib/data/lessonManagement";
+import { useLessonManager } from "../../../lib/hooks/useLessonManager";
+import { loadLessonManagement } from "../../../lib/data/lessonManagement";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; slides: SlideRow[]; groups: GroupRow[]; slideTypes: string[]; lessonTitle: string };
+  | { status: "ready"; slides: LessonManagementSlide[]; groups: GroupMinimal[]; slideTypes: string[]; lessonTitle: string };
 
 export default function LessonSlidesPage() {
   const params = useParams<{ lessonId: string }>();
   const lessonId = params?.lessonId;
-  const router = useRouter();
 
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [busySlideId, setBusySlideId] = useState<string | null>(null);
+  const [deleteSlideId, setDeleteSlideId] = useState<string | null>(null);
+
+  const manager = useLessonManager(lessonId);
 
   async function load() {
     if (!lessonId) {
@@ -46,70 +39,24 @@ export default function LessonSlidesPage() {
 
     setState({ status: "loading" });
 
-    const [
-      { data: lesson, error: lessonError },
-      { data: slides, error: slidesError },
-      { data: groups, error: groupsError },
-      { data: allSlides, error: allSlidesError },
-    ] = await Promise.all([
-      supabase
-        .from("lessons")
-        .select("title")
-        .eq("id", lessonId)
-        .maybeSingle(),
-      supabase
-        .from("slides")
-        .select("id, type, props_json, order_index, group_id")
-        .eq("lesson_id", lessonId)
-        .order("order_index", { ascending: true }),
-      supabase
-        .from("lesson_groups")
-        .select("id, title, order_index")
-        .eq("lesson_id", lessonId)
-        .order("order_index", { ascending: true }),
-      // Get all distinct slide types from the entire database
-      supabase
-        .from("slides")
-        .select("type")
-        .not("type", "is", null),
-    ]);
+    const { data, error } = await loadLessonManagement(lessonId);
 
-    if (lessonError) {
-      setState({ status: "error", message: lessonError.message });
-      return;
-    }
-    if (!lesson) {
-      setState({ status: "error", message: "Lesson not found" });
-      return;
-    }
-    if (slidesError) {
-      setState({ status: "error", message: slidesError.message });
-      return;
-    }
-    if (groupsError) {
-      setState({ status: "error", message: groupsError.message });
-      return;
-    }
-    if (allSlidesError) {
-      setState({ status: "error", message: allSlidesError.message });
+    if (error) {
+      setState({ status: "error", message: error });
       return;
     }
 
-    // Extract unique slide types, trim whitespace, and filter out empty strings
-    const uniqueTypes = Array.from(
-      new Set(
-        (allSlides ?? [])
-          .map((s: any) => (s.type || "").trim())
-          .filter((t: string) => t.length > 0)
-      )
-    ).sort();
+    if (!data) {
+      setState({ status: "error", message: "No data returned" });
+      return;
+    }
 
     setState({
       status: "ready",
-      slides: (slides ?? []) as SlideRow[],
-      groups: (groups ?? []) as GroupRow[],
-      slideTypes: uniqueTypes,
-      lessonTitle: lesson.title,
+      slides: data.slides,
+      groups: data.groups,
+      slideTypes: data.slideTypes,
+      lessonTitle: data.lesson.title,
     });
   }
 
@@ -117,42 +64,6 @@ export default function LessonSlidesPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId]);
-
-  function defaultPropsForType(type: string): any {
-    const trimmedType = type.trim();
-    switch (trimmedType) {
-      case "title-slide":
-        return { title: "New title slide", subtitle: "" };
-      case "text-slide":
-        return { title: "New text", body: "…" };
-      case "ai-speak-repeat":
-        return {
-          title: "New ai-speak-repeat slide",
-          lines: [
-            [
-              {
-                label: "Hello",
-                speech: { mode: "tts", lang: "en", text: "Hello" },
-              },
-            ],
-          ],
-        };
-      case "ai-speak-student-repeat":
-        return {
-          title: "New ai-speak-student-repeat slide",
-          lines: [
-            [
-              {
-                label: "Hello",
-                speech: { mode: "tts", lang: "en", text: "Hello" },
-              },
-            ],
-          ],
-        };
-      default:
-        return { title: `New ${trimmedType} slide` };
-    }
-  }
 
   async function insertSlide({
     lessonId: lid,
@@ -166,174 +77,29 @@ export default function LessonSlidesPage() {
     if (!lid) return;
     if (state.status !== "ready") return;
 
-    const trimmedType = type.trim();
-    const normalizedType = trimmedType;
-    const defaultProps = defaultPropsForType(trimmedType);
-
-    // Compute next slide order_index (whole-lesson)
-    const maxOrder = state.slides.reduce((max, s) => {
-      const v = typeof s.order_index === "number" ? s.order_index : 0;
-      return v > max ? v : max;
-    }, 0);
-
-    const nextOrderIndex = maxOrder + 1;
-
-    // Insert slide
-    const { data: slideData, error: slideInsertError } = await supabase
-      .from("slides")
-      .insert({
-        lesson_id: lid,
-        group_id: groupId,
-        type: normalizedType,
-        order_index: nextOrderIndex,
-        aid_hook: null,
-        props_json: defaultProps,
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (slideInsertError) {
-      alert("Slide insert error: " + slideInsertError.message);
-      return;
-    }
-
-    if (!slideData?.id) {
-      alert("Slide insert succeeded but no id returned.");
-      return;
-    }
-
-    router.push(`/edit-slide/${slideData.id}`);
-  }
-
-  async function addAiSpeakRepeatSlide() {
-    if (!lessonId) return;
-    if (state.status !== "ready") return;
-
-    // 1) Fetch earliest group for this lesson
-    const { data: groupData, error: groupLookupError } = await supabase
-      .from("lesson_groups")
-      .select("id")
-      .eq("lesson_id", lessonId)
-      .order("order_index", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (groupLookupError) {
-      alert("Group lookup error: " + groupLookupError.message);
-      return;
-    }
-
-    let groupId = groupData?.id ?? null;
-
-    // 2) If no group exists, create default Intro group
-    if (!groupId) {
-      const { data: newGroupData, error: groupInsertError } = await supabase
-        .from("lesson_groups")
-        .insert({
-          lesson_id: lessonId,
-          order_index: 1,
-          title: "Intro",
-        })
-        .select("id")
-        .maybeSingle();
-
-      if (groupInsertError) {
-        alert("Group insert error: " + groupInsertError.message);
-        return;
-      }
-
-      if (!newGroupData?.id) {
-        alert("Group insert succeeded but no id returned.");
-        return;
-      }
-
-      groupId = newGroupData.id;
-    }
-
-    // 3) Insert slide using helper
-    await insertSlide({
-      lessonId,
+    const result = await manager.addSlide({
+      lessonId: lid,
       groupId,
-      type: "ai-speak-repeat",
+      type,
     });
-  }
 
-  async function addTextSlide() {
-    if (!lessonId) return;
-    if (state.status !== "ready") return;
-
-    // 1) Fetch earliest group for this lesson
-    const { data: groupData, error: groupLookupError } = await supabase
-      .from("lesson_groups")
-      .select("id")
-      .eq("lesson_id", lessonId)
-      .order("order_index", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (groupLookupError) {
-      alert("Group lookup error: " + groupLookupError.message);
+    if (!result.success) {
+      alert(result.error ?? "Failed to create slide");
       return;
     }
 
-    let groupId = groupData?.id ?? null;
-
-    // 2) If no group exists, create default Intro group
-    if (!groupId) {
-      const { data: newGroupData, error: groupInsertError } = await supabase
-        .from("lesson_groups")
-        .insert({
-          lesson_id: lessonId,
-          order_index: 1,
-          title: "Intro",
-        })
-        .select("id")
-        .maybeSingle();
-
-      if (groupInsertError) {
-        alert("Group insert error: " + groupInsertError.message);
-        return;
-      }
-
-      if (!newGroupData?.id) {
-        alert("Group insert succeeded but no id returned.");
-        return;
-      }
-
-      groupId = newGroupData.id;
-    }
-
-    // 3) Insert slide using helper
-    await insertSlide({
-      lessonId,
-      groupId,
-      type: "text-slide",
-    });
+    // Reload data after successful creation (navigation happens in hook)
+    await load();
   }
 
   async function addGroup() {
     if (!lessonId) return;
     if (state.status !== "ready") return;
 
-    // Compute next order_index
-    const maxOrder = state.groups.reduce((max, g) => {
-      const v = typeof g.order_index === "number" ? g.order_index : 0;
-      return v > max ? v : max;
-    }, 0);
+    const result = await manager.addGroup();
 
-    const nextOrderIndex = maxOrder + 1;
-
-    // Insert new group
-    const { error: groupInsertError } = await supabase
-      .from("lesson_groups")
-      .insert({
-        lesson_id: lessonId,
-        title: "New group",
-        order_index: nextOrderIndex,
-      });
-
-    if (groupInsertError) {
-      alert("Group insert error: " + groupInsertError.message);
+    if (!result.success) {
+      alert(result.error ?? "Failed to create group");
       return;
     }
 
@@ -345,18 +111,11 @@ export default function LessonSlidesPage() {
     const newTitle = window.prompt("Rename group:", currentTitle);
     
     if (newTitle === null) return; // User cancelled
-    if (newTitle.trim() === "") {
-      alert("Group title cannot be empty.");
-      return;
-    }
 
-    const { error: updateError } = await supabase
-      .from("lesson_groups")
-      .update({ title: newTitle.trim() })
-      .eq("id", groupId);
+    const result = await manager.renameGroup(groupId, newTitle);
 
-    if (updateError) {
-      alert("Update error: " + updateError.message);
+    if (!result.success) {
+      alert(result.error ?? "Failed to rename group");
       return;
     }
 
@@ -364,29 +123,33 @@ export default function LessonSlidesPage() {
     await load();
   }
 
-  async function deleteSlide(slideId: string) {
+  function handleDeleteClick(slideId: string) {
     if (busySlideId) return;
+    setDeleteSlideId(slideId);
+  }
 
-    const confirmText = window.prompt(
-      `Delete this slide?\n\nslide_id:\n${slideId}\n\nType DELETE to confirm.`
-    );
+  async function handleDeleteConfirm() {
+    if (!deleteSlideId) return;
 
-    if (confirmText !== "DELETE") return;
-
-    setBusySlideId(slideId);
+    setBusySlideId(deleteSlideId);
     try {
-      const { error } = await supabase.from("slides").delete().eq("id", slideId);
+      const result = await manager.deleteSlide(deleteSlideId);
 
-      if (error) {
-        alert("Delete error: " + error.message);
+      if (!result.success) {
+        alert(result.error ?? "Failed to delete slide");
         return;
       }
 
       // refresh the list
       await load();
+      setDeleteSlideId(null);
     } finally {
       setBusySlideId(null);
     }
+  }
+
+  function handleDeleteCancel() {
+    setDeleteSlideId(null);
   }
 
   const grouped = useMemo(() => {
@@ -395,14 +158,14 @@ export default function LessonSlidesPage() {
     const groupOrder = new Map<string, number>();
     state.groups.forEach((g, idx) => groupOrder.set(g.id, idx));
 
-    const byGroup = new Map<string, SlideRow[]>();
-    const ungrouped: SlideRow[] = [];
+    const byGroup = new Map<string, LessonManagementSlide[]>();
+    const ungrouped: LessonManagementSlide[] = [];
 
     for (const s of state.slides) {
-      if (s.group_id) {
-        const arr = byGroup.get(s.group_id) ?? [];
+      if (s.groupId) {
+        const arr = byGroup.get(s.groupId) ?? [];
         arr.push(s);
-        byGroup.set(s.group_id, arr);
+        byGroup.set(s.groupId, arr);
       } else {
         ungrouped.push(s);
       }
@@ -410,8 +173,8 @@ export default function LessonSlidesPage() {
 
     for (const [gid, arr] of byGroup.entries()) {
       arr.sort((a, b) => {
-        const ao = a.order_index ?? 0;
-        const bo = b.order_index ?? 0;
+        const ao = a.orderIndex ?? 0;
+        const bo = b.orderIndex ?? 0;
         if (ao !== bo) return ao - bo;
         return a.id.localeCompare(b.id);
       });
@@ -419,8 +182,8 @@ export default function LessonSlidesPage() {
     }
 
     ungrouped.sort((a, b) => {
-      const ao = a.order_index ?? 0;
-      const bo = b.order_index ?? 0;
+      const ao = a.orderIndex ?? 0;
+      const bo = b.orderIndex ?? 0;
       if (ao !== bo) return ao - bo;
       return a.id.localeCompare(b.id);
     });
@@ -434,7 +197,7 @@ export default function LessonSlidesPage() {
     extraGroupIds.sort();
 
     const extraGroups = extraGroupIds.map((gid) => ({
-      group: { id: gid, title: "Unknown group", order_index: null } as GroupRow,
+      group: { id: gid, title: "Unknown group", orderIndex: null, lessonId: null } as GroupMinimal,
       slides: byGroup.get(gid) ?? [],
     }));
 
@@ -442,50 +205,54 @@ export default function LessonSlidesPage() {
   }, [state]);
 
   return (
-    <PageShell
-      title="Lesson Slides"
-      maxWidth="lg"
-      meta={
-        state.status === "ready" ? (
-          <>
-            {state.lessonTitle}
-            <br />
-            <span className="metaText">
-              Lesson id: <code className="codeText">{lessonId}</code>
-            </span>
-          </>
-        ) : undefined
-      }
-      actions={
+    <>
+      <ConfirmDialog
+        open={deleteSlideId !== null}
+        title="Delete Slide"
+        description={
+          deleteSlideId ? (
+            <>
+              Are you sure you want to delete this slide?
+              <br />
+              <code className="codeText" style={{ fontSize: uiTokens.font.meta.size }}>
+                slide_id: {deleteSlideId}
+              </code>
+            </>
+          ) : null
+        }
+        danger={true}
+        requireText="DELETE SLIDE"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+      <CmsPageShell
+        title="Lesson Slides"
+        meta={
+          state.status === "ready" ? (
+            <>
+              {state.lessonTitle}
+              <br />
+              <span className="metaText">
+                Lesson id: <code className="codeText">{lessonId}</code>
+              </span>
+            </>
+          ) : undefined
+        }
+        actions={
         <>
           <Button size="sm" onClick={addGroup}>
             + Add group
           </Button>
           {lessonId && (
-            <a
+            <LinkButton
               href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lessonId}`}
+              variant="secondary"
+              size="sm"
               target="_blank"
               rel="noreferrer"
-              style={{
-                padding: "6px 12px",
-                borderRadius: uiTokens.radius.md,
-                border: `1px solid ${uiTokens.color.secondary}`,
-                backgroundColor: uiTokens.color.secondary,
-                color: uiTokens.color.secondaryText,
-                textDecoration: "none",
-                fontSize: uiTokens.font.meta.size,
-                fontWeight: 400,
-                display: "inline-block",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = uiTokens.color.secondaryHover;
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = uiTokens.color.secondary;
-              }}
             >
-              Preview in Player
-            </a>
+              Open in Lesson Player
+            </LinkButton>
           )}
         </>
       }
@@ -494,10 +261,18 @@ export default function LessonSlidesPage() {
       {state.status === "error" && <p style={{ color: uiTokens.color.danger }}>Error: {state.message}</p>}
 
       {state.status === "ready" && grouped && (
-        <>
-          {grouped.orderedGroups.map(({ group, slides }) => (
+        <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+          {/* Left column - outline view */}
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #deb4a5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+            <CmsOutlineView currentLessonId={lessonId} />
+          </div>
+          
+          {/* Right column - content */}
+          <div style={{ flex: 1 }}>
+            {grouped.orderedGroups.map(({ group, slides }) => (
             <CmsSection
               key={group.id}
+              backgroundColor="#ecd7cf"
               title={
                 <>
                   {group.title}{" "}
@@ -539,8 +314,8 @@ export default function LessonSlidesPage() {
                 <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                   {slides.map((s) => {
                     const title =
-                      s?.props_json && typeof s.props_json === "object"
-                        ? (s.props_json as any).title
+                      s?.propsJson && typeof s.propsJson === "object"
+                        ? (s.propsJson as any).title
                         : undefined;
 
                     const isBusy = busySlideId === s.id;
@@ -566,32 +341,24 @@ export default function LessonSlidesPage() {
                         </div>
 
                         <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
-                          <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
-                            Edit
+                          <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost" style={{ border: "none" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#192026" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
                           </LinkButton>
                           <Button
                             variant="danger"
                             size="sm"
-                            onClick={() => deleteSlide(s.id)}
+                            onClick={() => handleDeleteClick(s.id)}
                             disabled={!!busySlideId}
                             title={isBusy ? "Deleting…" : "Delete"}
+                            style={{ border: "none" }}
                           >
                             {isBusy ? (
                               "Deleting…"
                             ) : (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M3 6h18" />
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#f8f0ed" style={{ width: 16, height: 16 }}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                               </svg>
                             )}
                           </Button>
@@ -605,7 +372,7 @@ export default function LessonSlidesPage() {
           ))}
 
           {grouped.extraGroups.length > 0 && (
-            <CmsSection title="Unknown groups">
+            <CmsSection title="Unknown groups" backgroundColor="#ecd7cf">
               {grouped.extraGroups.map(({ group, slides }) => (
                 <div key={group.id} style={{ marginBottom: 14 }}>
                   <div style={{ opacity: 0.7, fontSize: 13, marginBottom: 6 }}>
@@ -640,7 +407,7 @@ export default function LessonSlidesPage() {
                             <Button
                               variant="danger"
                               size="sm"
-                              onClick={() => deleteSlide(s.id)}
+                              onClick={() => handleDeleteClick(s.id)}
                               disabled={!!busySlideId}
                               title={isBusy ? "Deleting…" : "Delete"}
                             >
@@ -674,7 +441,7 @@ export default function LessonSlidesPage() {
           )}
 
           {grouped.ungrouped.length > 0 && (
-            <CmsSection title="Ungrouped slides">
+            <CmsSection title="Ungrouped slides" backgroundColor="#ecd7cf">
               <ul style={{ paddingLeft: 0, listStyle: "none" }}>
                 {grouped.ungrouped.map((s) => {
                   const isBusy = busySlideId === s.id;
@@ -704,7 +471,7 @@ export default function LessonSlidesPage() {
                         <Button
                           variant="danger"
                           size="sm"
-                          onClick={() => deleteSlide(s.id)}
+                          onClick={() => handleDeleteClick(s.id)}
                           disabled={!!busySlideId}
                           title={isBusy ? "Deleting…" : "Delete"}
                         >
@@ -734,8 +501,10 @@ export default function LessonSlidesPage() {
               </ul>
             </CmsSection>
           )}
-        </>
+          </div>
+        </div>
       )}
-    </PageShell>
+    </CmsPageShell>
+    </>
   );
 }

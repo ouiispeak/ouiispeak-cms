@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
-import PageShell from "../../../components/ui/PageShell";
+import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
 import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
@@ -11,25 +11,18 @@ import Select from "../../../components/ui/Select";
 import Textarea from "../../../components/ui/Textarea";
 import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
+import StatusMessage from "../../../components/ui/StatusMessage";
+import { loadModuleById, updateModule } from "../../../lib/data/modules";
+import type { Module } from "../../../lib/domain/module";
+import { updateModuleSchema } from "../../../lib/schemas/moduleSchema";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | {
       status: "ready";
-      module: {
-        id: string;
-        title: string;
-        slug: string;
-        level: string;
-        order_index: number | null;
-        description: string | null;
-        status: string | null;
-        visibility: string | null;
-        module_goal: string | null;
-        core_topics: string | null;
-        author_notes: string | null;
-      };
+      module: Module;
     };
 
 export default function EditModulePage() {
@@ -50,6 +43,39 @@ export default function EditModulePage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const initialDataRef = useRef<{
+    title: string;
+    slug: string;
+    level: string;
+    orderIndex: number;
+    description: string;
+    status: "draft" | "published" | "archived";
+    visibility: "private" | "beta" | "public";
+    moduleGoal: string;
+    coreTopics: string;
+    authorNotes: string;
+  } | null>(null);
+
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      title !== initial.title ||
+      slug !== initial.slug ||
+      level !== initial.level ||
+      orderIndex !== initial.orderIndex ||
+      description !== initial.description ||
+      status !== initial.status ||
+      visibility !== initial.visibility ||
+      moduleGoal !== initial.moduleGoal ||
+      coreTopics !== initial.coreTopics ||
+      authorNotes !== initial.authorNotes
+    );
+  }, [title, slug, level, orderIndex, description, status, visibility, moduleGoal, coreTopics, authorNotes]);
+
+  // Warn before navigation
+  useUnsavedChangesWarning(hasUnsavedChanges);
 
   useEffect(() => {
     if (!moduleId) {
@@ -60,14 +86,10 @@ export default function EditModulePage() {
     async function load() {
       setLoadState({ status: "loading" });
 
-      const { data, error } = await supabase
-        .from("modules")
-        .select("id, title, slug, level, order_index, description, status, visibility, module_goal, core_topics, author_notes")
-        .eq("id", moduleId)
-        .maybeSingle();
+      const { data, error } = await loadModuleById(moduleId);
 
       if (error) {
-        setLoadState({ status: "error", message: `Supabase error: ${error.message}` });
+        setLoadState({ status: "error", message: error });
         return;
       }
 
@@ -79,13 +101,27 @@ export default function EditModulePage() {
       setTitle(data.title);
       setSlug(data.slug);
       setLevel(data.level || "");
-      setOrderIndex(data.order_index ?? 1);
+      setOrderIndex(data.orderIndex ?? 1);
       setDescription(data.description || "");
       setStatus((data.status as "draft" | "published" | "archived") || "draft");
       setVisibility((data.visibility as "private" | "beta" | "public") || "private");
-      setModuleGoal(data.module_goal || "");
-      setCoreTopics(data.core_topics || "");
-      setAuthorNotes(data.author_notes || "");
+      setModuleGoal(data.moduleGoal || "");
+      setCoreTopics(data.coreTopics || "");
+      setAuthorNotes(data.authorNotes || "");
+
+      // Store initial values for comparison
+      initialDataRef.current = {
+        title: data.title,
+        slug: data.slug,
+        level: data.level || "",
+        orderIndex: data.orderIndex ?? 1,
+        description: data.description || "",
+        status: (data.status as "draft" | "published" | "archived") || "draft",
+        visibility: (data.visibility as "private" | "beta" | "public") || "private",
+        moduleGoal: data.moduleGoal || "",
+        coreTopics: data.coreTopics || "",
+        authorNotes: data.authorNotes || "",
+      };
 
       setLoadState({ status: "ready", module: data });
     }
@@ -97,61 +133,60 @@ export default function EditModulePage() {
     e.preventDefault();
     setMessage(null);
 
-    if (!title.trim()) {
-      setMessage("Title is required.");
-      return;
-    }
+    // Validate using schema
+    const result = updateModuleSchema.safeParse({
+      title,
+      slug,
+      level,
+      order_index: orderIndex,
+      description: description || null,
+      status: status || null,
+      visibility: visibility || null,
+      module_goal: moduleGoal || null,
+      core_topics: coreTopics || null,
+      author_notes: authorNotes || null,
+    });
 
-    // Validate status
-    if (!["draft", "published", "archived"].includes(status)) {
-      setMessage("Status must be one of: draft, published, archived");
-      return;
-    }
-
-    // Validate visibility
-    if (!["private", "beta", "public"].includes(visibility)) {
-      setMessage("Visibility must be one of: private, beta, public");
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
       return;
     }
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("modules")
-        .update({
-          title: title.trim(),
-          slug: slug.trim(),
-          level: level.trim(),
-          order_index: orderIndex,
-          description: description.trim() || null,
-          status: status,
-          visibility: visibility,
-          module_goal: moduleGoal.trim() || null,
-          core_topics: coreTopics.trim() || null,
-          author_notes: authorNotes.trim() || null,
-        })
-        .eq("id", moduleId);
+      const { error } = await updateModule(moduleId, result.data);
 
       if (error) {
-        setMessage("Supabase error: " + error.message);
+        setMessage(error);
         return;
       }
 
       setMessage("Module updated successfully!");
+      
+      // Update initial data ref after successful save
+      if (initialDataRef.current) {
+        initialDataRef.current = {
+          title,
+          slug,
+          level,
+          orderIndex,
+          description,
+          status,
+          visibility,
+          moduleGoal,
+          coreTopics,
+          authorNotes,
+        };
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <PageShell
+    <CmsPageShell
       title="Edit module"
-      maxWidth="md"
-      meta={
-        <>
-          Module id: <code className="codeText">{moduleId}</code>
-        </>
-      }
     >
       {loadState.status === "loading" && <p>Loading module…</p>}
 
@@ -162,21 +197,45 @@ export default function EditModulePage() {
       )}
 
       {loadState.status === "ready" && (
-        <CmsSection title="Module Details">
-          <form onSubmit={handleSave}>
-            <FormField label="Title" required>
+        <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+          {/* Left column - outline view */}
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #d7a592", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+            <CmsOutlineView currentModuleId={moduleId} hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
+          
+          {/* Right column - form */}
+          <div style={{ flex: 1 }}>
+            {hasUnsavedChanges && (
+              <div style={{ 
+                padding: uiTokens.space.sm, 
+                marginBottom: uiTokens.space.md, 
+                backgroundColor: "#fff3cd", 
+                border: "1px solid #ffc107",
+                borderRadius: uiTokens.radius.md,
+                color: uiTokens.color.text
+              }}>
+                ⚠️ You have unsaved changes
+              </div>
+            )}
+            <CmsSection title="Module Details" backgroundColor="#e3c3b9" borderColor="#d7a592">
+              <form onSubmit={handleSave}>
+            <FormField label="Module ID" borderColor="#d7a592">
+              <Input value={moduleId || ""} disabled readOnly />
+            </FormField>
+
+            <FormField label="Title" required borderColor="#d7a592">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Slug" required>
+            <FormField label="Slug" required borderColor="#d7a592">
               <Input value={slug} onChange={(e) => setSlug(e.target.value)} />
             </FormField>
 
-            <FormField label="Level" required>
+            <FormField label="Level" required borderColor="#d7a592">
               <Input value={level} onChange={(e) => setLevel(e.target.value)} />
             </FormField>
 
-            <FormField label="Order index" required>
+            <FormField label="Order index" required borderColor="#d7a592">
               <Input
                 type="number"
                 value={orderIndex}
@@ -184,7 +243,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Description (optional)">
+            <FormField label="Description (optional)" borderColor="#d7a592">
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -192,7 +251,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Status" required>
+            <FormField label="Status" required borderColor="#d7a592">
               <Select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "draft" | "published" | "archived")}
@@ -203,7 +262,7 @@ export default function EditModulePage() {
               </Select>
             </FormField>
 
-            <FormField label="Visibility" required>
+            <FormField label="Visibility" required borderColor="#d7a592">
               <Select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value as "private" | "beta" | "public")}
@@ -214,7 +273,7 @@ export default function EditModulePage() {
               </Select>
             </FormField>
 
-            <FormField label="Module goal (optional)">
+            <FormField label="Module goal (optional)" borderColor="#d7a592">
               <Textarea
                 value={moduleGoal}
                 onChange={(e) => setModuleGoal(e.target.value)}
@@ -222,7 +281,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Core topics (optional)" helper="Comma-separated list of topics">
+            <FormField label="Core topics (optional)" helper="Comma-separated list of topics" borderColor="#d7a592">
               <Input
                 value={coreTopics}
                 onChange={(e) => setCoreTopics(e.target.value)}
@@ -230,7 +289,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Author notes (optional)">
+            <FormField label="Author notes (optional)" borderColor="#d7a592">
               <Textarea
                 value={authorNotes}
                 onChange={(e) => setAuthorNotes(e.target.value)}
@@ -243,21 +302,18 @@ export default function EditModulePage() {
                 {saving ? "Saving…" : "Save changes"}
               </Button>
             </div>
-          </form>
-        </CmsSection>
+              </form>
+            </CmsSection>
+          </div>
+        </div>
       )}
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.includes("error") ? uiTokens.color.danger : "green",
-          }}
-        >
+        <StatusMessage variant={message.includes("error") ? "error" : "success"}>
           {message}
-        </p>
+        </StatusMessage>
       )}
-    </PageShell>
+    </CmsPageShell>
   );
 }
 

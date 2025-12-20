@@ -2,23 +2,17 @@
 
 import { useState, FormEvent, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "../../lib/supabase";
-import PageShell from "../../components/ui/PageShell";
+import CmsPageShell from "../../components/cms/CmsPageShell";
 import CmsSection from "../../components/ui/CmsSection";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import Textarea from "../../components/ui/Textarea";
 import { Button } from "../../components/Button";
 import { uiTokens } from "../../lib/uiTokens";
-
-function slugify(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+import { slugify } from "../../lib/utils/string";
+import StatusMessage from "../../components/ui/StatusMessage";
+import { createModuleSchema } from "../../lib/schemas/moduleSchema";
+import { createModule } from "../../lib/data/modules";
 
 function NewModuleForm() {
   const searchParams = useSearchParams();
@@ -49,21 +43,34 @@ function NewModuleForm() {
     setMessage(null);
 
     const finalSlug = slugify(slug || title);
-    if (!title.trim()) return setMessage("Title is required.");
-    if (!finalSlug) return setMessage("Slug is required.");
+    
+    // Validate using schema
+    const result = createModuleSchema.safeParse({
+      title,
+      slug: finalSlug,
+      level,
+      order_index: orderIndex,
+      description: description || null,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
+      return;
+    }
 
     setSaving(true);
     try {
-        const { error } = await supabase.schema("public").from("modules").insert({
-        title: title.trim(),
-        slug: finalSlug,
-        level: level.trim(),
-        order_index: orderIndex,
-        description: description.trim() || null,
+      const { data, error } = await createModule({
+        title: result.data.title,
+        slug: result.data.slug,
+        level: result.data.level,
+        order_index: result.data.order_index,
+        description: result.data.description,
       });
 
       if (error) {
-        setMessage("Supabase error: " + error.message);
+        setMessage("Error: " + error);
         return;
       }
 
@@ -79,7 +86,7 @@ function NewModuleForm() {
   }
 
   return (
-    <PageShell title="Create module" maxWidth="md">
+    <CmsPageShell title="Create module" maxWidth="md">
       <CmsSection>
         <form onSubmit={handleCreate}>
           <FormField label="Title" required>
@@ -127,22 +134,17 @@ function NewModuleForm() {
       </CmsSection>
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.includes("error") ? uiTokens.color.danger : "green",
-          }}
-        >
+        <StatusMessage variant={message.includes("error") ? "error" : "success"}>
           {message}
-        </p>
+        </StatusMessage>
       )}
-    </PageShell>
+    </CmsPageShell>
   );
 }
 
 export default function NewModulePage() {
   return (
-    <Suspense fallback={<PageShell title="Create module" maxWidth="md"><p>Loading...</p></PageShell>}>
+    <Suspense fallback={<CmsPageShell title="Create module" maxWidth="md"><p>Loading...</p></CmsPageShell>}>
       <NewModuleForm />
     </Suspense>
   );

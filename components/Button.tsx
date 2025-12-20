@@ -26,7 +26,7 @@ export function Button({
       return {
         backgroundColor: uiTokens.color.primary,
         borderColor: uiTokens.color.primary,
-        color: uiTokens.color.primaryText,
+        color: uiTokens.color.textOnDark,
         opacity: 0.7,
       };
     }
@@ -36,7 +36,7 @@ export function Button({
         return {
           backgroundColor: uiTokens.color.danger,
           borderColor: uiTokens.color.danger,
-          color: uiTokens.color.dangerText,
+          color: uiTokens.color.textOnDark,
         };
       case "secondary":
         return {
@@ -55,7 +55,7 @@ export function Button({
         return {
           backgroundColor: uiTokens.color.primary,
           borderColor: uiTokens.color.primary,
-          color: uiTokens.color.primaryText,
+          color: uiTokens.color.textOnDark,
         };
     }
   };

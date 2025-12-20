@@ -2,39 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import PageShell from "../../components/ui/PageShell";
+import CmsPageShell from "../../components/cms/CmsPageShell";
 import CmsSection from "../../components/ui/CmsSection";
 import { uiTokens } from "../../lib/uiTokens";
-
-type ModuleRow = {
-  id: string;
-  slug: string;
-  title: string;
-  order_index: number;
-};
-
-type LessonRow = {
-  id: string;
-  module_id: string;
-  slug: string;
-  title: string;
-  order_index: number;
-};
+import type { LessonRow } from "../../lib/types/db";
+import { loadModules } from "../../lib/data/modules";
+import type { Module } from "../../lib/domain/module";
 
 export default function ModulesBrowserPage() {
-  const [modules, setModules] = useState<ModuleRow[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const { data: modulesData, error: modulesError } = await supabase
-        .from("modules")
-        .select("id, slug, title, order_index")
-        .order("order_index", { ascending: true });
+      const { data: modulesData, error: modulesError } = await loadModules();
 
       if (modulesError) {
-        setError(modulesError.message);
+        setError(modulesError);
         return;
       }
 
@@ -49,14 +34,14 @@ export default function ModulesBrowserPage() {
       }
 
       setModules(modulesData ?? []);
-      setLessons(lessonsData ?? []);
+      setLessons((lessonsData ?? []) as LessonRow[]);
     }
 
     load();
   }, []);
 
   return (
-    <PageShell title="Modules Browser">
+    <CmsPageShell title="Modules Browser">
       {error && <p style={{ color: uiTokens.color.danger }}>{error}</p>}
 
       {modules.map((module) => {
@@ -89,6 +74,6 @@ export default function ModulesBrowserPage() {
           </CmsSection>
         );
       })}
-    </PageShell>
+    </CmsPageShell>
   );
 }

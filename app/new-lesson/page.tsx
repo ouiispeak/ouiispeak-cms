@@ -2,8 +2,7 @@
 
 import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "../../lib/supabase";
-import PageShell from "../../components/ui/PageShell";
+import CmsPageShell from "../../components/cms/CmsPageShell";
 import CmsSection from "../../components/ui/CmsSection";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
@@ -11,13 +10,12 @@ import Textarea from "../../components/ui/Textarea";
 import Select from "../../components/ui/Select";
 import { Button } from "../../components/Button";
 import { uiTokens } from "../../lib/uiTokens";
-
-type ModuleRow = {
-  id: string;
-  slug: string;
-  title: string;
-  order_index: number | null;
-};
+import { slugify, nullIfEmpty } from "../../lib/utils/string";
+import StatusMessage from "../../components/ui/StatusMessage";
+import { createLesson } from "../../lib/data/lessons";
+import { loadModules } from "../../lib/data/modules";
+import type { Module } from "../../lib/domain/module";
+import { createLessonSchema } from "../../lib/schemas/lessonSchema";
 
 type CreatedLesson = {
   id: string;
@@ -27,20 +25,11 @@ type CreatedLesson = {
   order_index: number;
 };
 
-function slugify(input: string) {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function NewLessonForm() {
   const searchParams = useSearchParams();
   const moduleIdParam = searchParams?.get("module_id");
   
-  const [modules, setModules] = useState<ModuleRow[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [moduleId, setModuleId] = useState(moduleIdParam || "");
@@ -57,23 +46,20 @@ function NewLessonForm() {
   const [createdLesson, setCreatedLesson] = useState<CreatedLesson | null>(null);
 
   useEffect(() => {
-    async function loadModules() {
+    async function loadModulesData() {
       setLoadError(null);
 
-      const { data, error } = await supabase
-        .from("modules")
-        .select("id, slug, title, order_index")
-        .order("order_index", { ascending: true });
+      const { data, error } = await loadModules();
 
       if (error) {
-        setLoadError(`Supabase error loading modules: ${error.message}`);
+        setLoadError(`Error loading modules: ${error}`);
         return;
       }
 
-      setModules((data ?? []) as ModuleRow[]);
+      setModules(data ?? []);
     }
 
-    loadModules();
+    loadModulesData();
   }, []);
 
   useEffect(() => {
@@ -87,11 +73,6 @@ function NewLessonForm() {
     setMessage(null);
     setCreatedLesson(null);
 
-    if (!moduleId || !lessonSlugPart || !title) {
-      setMessage("Module, lesson slug, and title are required.");
-      return;
-    }
-
     const selectedModule = modules.find((m) => m.id === moduleId);
     if (!selectedModule) {
       setMessage("Selected module not found. Refresh and try again.");
@@ -100,44 +81,70 @@ function NewLessonForm() {
 
     const fullSlug = `${selectedModule.slug}/${slugify(lessonSlugPart)}`;
 
-    // Helper function to convert empty string to null
-    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
+    // Validate using schema
+    const result = createLessonSchema.safeParse({
+      module_id: moduleId,
+      slug: fullSlug,
+      title,
+      order_index: orderIndex,
+      estimated_minutes: estimatedMinutes || null,
+      required_score: null,
+      content: null,
+      short_summary_student: shortSummaryStudent || null,
+      learning_objectives: learningObjectives || null,
+      notes_for_teacher_or_ai: notesForTeacherOrAI || null,
+      short_summary_admin: null,
+      course_organization_group: null,
+      slide_contents: null,
+      grouping_strategy_summary: null,
+      activity_types: null,
+      activity_description: null,
+      signature_metaphors: null,
+      main_grammar_topics: null,
+      pronunciation_focus: null,
+      vocabulary_theme: null,
+      l1_l2_issues: null,
+      prerequisites: null,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
+      return;
+    }
 
     setSaving(true);
 
     try {
-      const { data, error } = await supabase
-        .from("lessons")
-        .insert({
-          module_id: moduleId,
-          slug: fullSlug,
-          title: title.trim(),
-          order_index: orderIndex,
-          estimated_minutes: estimatedMinutes,
-          required_score: null,
-          content: null,
-          short_summary_student: nullIfEmpty(shortSummaryStudent),
-          learning_objectives: nullIfEmpty(learningObjectives),
-          notes_for_teacher_or_ai: nullIfEmpty(notesForTeacherOrAI),
-          // Set all other new fields to null
-          short_summary_admin: null,
-          course_organization_group: null,
-          slide_contents: null,
-          grouping_strategy_summary: null,
-          activity_types: null,
-          activity_description: null,
-          signature_metaphors: null,
-          main_grammar_topics: null,
-          pronunciation_focus: null,
-          vocabulary_theme: null,
-          l1_l2_issues: null,
-          prerequisites: null,
-        })
-        .select("id, module_id, slug, title, order_index")
-        .maybeSingle();
+      const { data, error } = await createLesson({
+        module_id: result.data.module_id,
+        slug: result.data.slug,
+        title: result.data.title,
+        order_index: result.data.order_index,
+        estimated_minutes: result.data.estimated_minutes,
+        required_score: result.data.required_score,
+        content: result.data.content,
+        short_summary_student: result.data.short_summary_student,
+        learning_objectives: result.data.learning_objectives,
+        notes_for_teacher_or_ai: result.data.notes_for_teacher_or_ai,
+        short_summary_admin: result.data.short_summary_admin,
+        course_organization_group: result.data.course_organization_group,
+        slide_contents: result.data.slide_contents,
+        grouping_strategy_summary: result.data.grouping_strategy_summary,
+        activity_types: Array.isArray(result.data.activity_types) 
+          ? result.data.activity_types.join(",") 
+          : result.data.activity_types,
+        activity_description: result.data.activity_description,
+        signature_metaphors: result.data.signature_metaphors,
+        main_grammar_topics: result.data.main_grammar_topics,
+        pronunciation_focus: result.data.pronunciation_focus,
+        vocabulary_theme: result.data.vocabulary_theme,
+        l1_l2_issues: result.data.l1_l2_issues,
+        prerequisites: result.data.prerequisites,
+      });
 
       if (error) {
-        setMessage(`Supabase error: ${error.message}`);
+        setMessage(error);
         return;
       }
 
@@ -146,7 +153,14 @@ function NewLessonForm() {
         return;
       }
 
-      setCreatedLesson(data as CreatedLesson);
+      // Map LessonDataMinimal to CreatedLesson
+      setCreatedLesson({
+        id: data.id,
+        module_id: moduleId,
+        slug: data.slug ?? "",
+        title: data.title,
+        order_index: orderIndex,
+      });
       setMessage("Lesson created successfully.");
     } finally {
       setSaving(false);
@@ -154,7 +168,7 @@ function NewLessonForm() {
   }
 
   return (
-    <PageShell title="Create new lesson" maxWidth="md">
+    <CmsPageShell title="Create new lesson" maxWidth="md">
       {loadError && (
         <p style={{ color: "red", marginTop: uiTokens.space.sm }}>
           {loadError}
@@ -249,14 +263,11 @@ function NewLessonForm() {
       </CmsSection>
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
-          }}
+        <StatusMessage
+          variant={message.toLowerCase().includes("error") ? "error" : "success"}
         >
           {message}
-        </p>
+        </StatusMessage>
       )}
 
       {createdLesson && (
@@ -266,13 +277,13 @@ function NewLessonForm() {
           </pre>
         </CmsSection>
       )}
-    </PageShell>
+    </CmsPageShell>
   );
 }
 
 export default function NewLessonPage() {
   return (
-    <Suspense fallback={<PageShell title="Create new lesson" maxWidth="md"><p>Loading...</p></PageShell>}>
+    <Suspense fallback={<CmsPageShell title="Create new lesson" maxWidth="md"><p>Loading...</p></CmsPageShell>}>
       <NewLessonForm />
     </Suspense>
   );

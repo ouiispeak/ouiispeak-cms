@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
-import PageShell from "../../../components/ui/PageShell";
+import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
 import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
@@ -11,38 +11,21 @@ import Textarea from "../../../components/ui/Textarea";
 import Select from "../../../components/ui/Select";
 import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
-
-type LessonRow = {
-  id: string;
-  slug: string;
-  title: string;
-};
+import { nullIfEmpty } from "../../../lib/utils/string";
+import StatusMessage from "../../../components/ui/StatusMessage";
+import { updateGroupSchema } from "../../../lib/schemas/groupSchema";
+import { loadGroupById, updateGroup } from "../../../lib/data/groups";
+import type { Group } from "../../../lib/domain/group";
+import type { LessonMinimal } from "../../../lib/domain/lesson";
+import { loadLessons } from "../../../lib/data/lessons";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | {
       status: "ready";
-      group: {
-        id: string;
-        lesson_id: string;
-        title: string;
-        order_index: number | null;
-        group_code: string | null;
-        short_summary: string | null;
-        group_type: string | null;
-        group_summary: string | null;
-        group_goal: string | null;
-        prerequisites: string | null;
-        is_required_to_pass: boolean | null;
-        passing_score_type: string | null;
-        passing_score_value: number | null;
-        max_score_value: number | null;
-        extra_practice_notes: string | null;
-        l1_l2: string | null;
-        media_used_ids: string | null;
-        group_slides_plan: any | null;
-      };
+      group: Group;
     };
 
 export default function EditGroupPage() {
@@ -50,7 +33,7 @@ export default function EditGroupPage() {
   const groupId = params?.groupId;
 
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
-  const [lessons, setLessons] = useState<LessonRow[]>([]);
+  const [lessons, setLessons] = useState<LessonMinimal[]>([]);
   const [lessonId, setLessonId] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [title, setTitle] = useState("");
@@ -73,24 +56,85 @@ export default function EditGroupPage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const initialDataRef = useRef<{
+    lessonId: string;
+    orderIndex: number;
+    title: string;
+    groupCode: string;
+    shortSummary: string;
+    groupType: string;
+    groupSummary: string;
+    groupGoal: string;
+    prerequisites: string;
+    isRequiredToPass: boolean;
+    passingScoreType: string;
+    passingScoreValue: number | null;
+    maxScoreValue: number | null;
+    extraPracticeNotes: string;
+    l1L2: string;
+    mediaUsedIds: string;
+    groupSlidesPlan: string;
+  } | null>(null);
+
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      lessonId !== initial.lessonId ||
+      orderIndex !== initial.orderIndex ||
+      title !== initial.title ||
+      groupCode !== initial.groupCode ||
+      shortSummary !== initial.shortSummary ||
+      groupType !== initial.groupType ||
+      groupSummary !== initial.groupSummary ||
+      groupGoal !== initial.groupGoal ||
+      prerequisites !== initial.prerequisites ||
+      isRequiredToPass !== initial.isRequiredToPass ||
+      passingScoreType !== initial.passingScoreType ||
+      passingScoreValue !== initial.passingScoreValue ||
+      maxScoreValue !== initial.maxScoreValue ||
+      extraPracticeNotes !== initial.extraPracticeNotes ||
+      l1L2 !== initial.l1L2 ||
+      mediaUsedIds !== initial.mediaUsedIds ||
+      groupSlidesPlan !== initial.groupSlidesPlan
+    );
+  }, [
+    lessonId,
+    orderIndex,
+    title,
+    groupCode,
+    shortSummary,
+    groupType,
+    groupSummary,
+    groupGoal,
+    prerequisites,
+    isRequiredToPass,
+    passingScoreType,
+    passingScoreValue,
+    maxScoreValue,
+    extraPracticeNotes,
+    l1L2,
+    mediaUsedIds,
+    groupSlidesPlan,
+  ]);
+
+  // Warn before navigation
+  useUnsavedChangesWarning(hasUnsavedChanges);
 
   useEffect(() => {
-    async function loadLessons() {
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("id, slug, title")
-        .order("created_at", { ascending: false })
-        .limit(50);
+    async function loadLessonsData() {
+      const { data, error } = await loadLessons();
 
       if (error) {
-        setLoadState({ status: "error", message: `Supabase error loading lessons: ${error.message}` });
+        setLoadState({ status: "error", message: `Error loading lessons: ${error}` });
         return;
       }
 
-      setLessons((data ?? []) as LessonRow[]);
+      setLessons(data ?? []);
     }
 
-    loadLessons();
+    loadLessonsData();
   }, []);
 
   useEffect(() => {
@@ -102,16 +146,10 @@ export default function EditGroupPage() {
     async function load() {
       setLoadState({ status: "loading" });
 
-      const { data, error } = await supabase
-        .from("lesson_groups")
-        .select(
-          "id, lesson_id, title, order_index, group_code, short_summary, group_type, group_summary, group_goal, prerequisites, is_required_to_pass, passing_score_type, passing_score_value, max_score_value, extra_practice_notes, l1_l2, media_used_ids, group_slides_plan"
-        )
-        .eq("id", groupId)
-        .maybeSingle();
+      const { data, error } = await loadGroupById(groupId);
 
       if (error) {
-        setLoadState({ status: "error", message: `Supabase error: ${error.message}` });
+        setLoadState({ status: "error", message: error });
         return;
       }
 
@@ -120,27 +158,49 @@ export default function EditGroupPage() {
         return;
       }
 
-      setLessonId(data.lesson_id);
-      setOrderIndex(data.order_index ?? 1);
+      setLessonId(data.lessonId ?? "");
+      setOrderIndex(data.orderIndex ?? 1);
       setTitle(data.title);
 
       // New fields
-      setGroupCode(data.group_code ?? "");
-      setShortSummary(data.short_summary ?? "");
-      setGroupType(data.group_type ?? "");
-      setGroupSummary(data.group_summary ?? "");
-      setGroupGoal(data.group_goal ?? "");
+      setGroupCode(data.groupCode ?? "");
+      setShortSummary(data.shortSummary ?? "");
+      setGroupType(data.groupType ?? "");
+      setGroupSummary(data.groupSummary ?? "");
+      setGroupGoal(data.groupGoal ?? "");
       setPrerequisites(data.prerequisites ?? "");
-      setIsRequiredToPass(data.is_required_to_pass ?? false);
-      setPassingScoreType(data.passing_score_type ?? "");
-      setPassingScoreValue(data.passing_score_value ?? null);
-      setMaxScoreValue(data.max_score_value ?? null);
-      setExtraPracticeNotes(data.extra_practice_notes ?? "");
-      setL1L2(data.l1_l2 ?? "");
-      setMediaUsedIds(data.media_used_ids ?? "");
-      setGroupSlidesPlan(
-        data.group_slides_plan ? JSON.stringify(data.group_slides_plan, null, 2) : ""
-      );
+      setIsRequiredToPass(data.isRequiredToPass ?? false);
+      setPassingScoreType(data.passingScoreType ?? "");
+      setPassingScoreValue(data.passingScoreValue ?? null);
+      setMaxScoreValue(data.maxScoreValue ?? null);
+      setExtraPracticeNotes(data.extraPracticeNotes ?? "");
+      setL1L2(data.l1L2 ?? "");
+      setMediaUsedIds(data.mediaUsedIds ?? "");
+      const groupSlidesPlanStr = data.groupSlidesPlan
+        ? JSON.stringify(data.groupSlidesPlan, null, 2)
+        : "";
+      setGroupSlidesPlan(groupSlidesPlanStr);
+
+      // Store initial values for comparison
+      initialDataRef.current = {
+        lessonId: data.lessonId ?? "",
+        orderIndex: data.orderIndex ?? 1,
+        title: data.title,
+        groupCode: data.groupCode ?? "",
+        shortSummary: data.shortSummary ?? "",
+        groupType: data.groupType ?? "",
+        groupSummary: data.groupSummary ?? "",
+        groupGoal: data.groupGoal ?? "",
+        prerequisites: data.prerequisites ?? "",
+        isRequiredToPass: data.isRequiredToPass ?? false,
+        passingScoreType: data.passingScoreType ?? "",
+        passingScoreValue: data.passingScoreValue ?? null,
+        maxScoreValue: data.maxScoreValue ?? null,
+        extraPracticeNotes: data.extraPracticeNotes ?? "",
+        l1L2: data.l1L2 ?? "",
+        mediaUsedIds: data.mediaUsedIds ?? "",
+        groupSlidesPlan: groupSlidesPlanStr,
+      };
 
       setLoadState({ status: "ready", group: data });
     }
@@ -154,93 +214,92 @@ export default function EditGroupPage() {
     e.preventDefault();
     setMessage(null);
 
-    if (!lessonId || !title) {
-      setMessage("Lesson and title are required.");
+    // Validate using schema
+    const result = updateGroupSchema.safeParse({
+      lesson_id: lessonId,
+      title,
+      order_index: orderIndex,
+      group_code: groupCode || null,
+      short_summary: shortSummary || null,
+      group_type: groupType || null,
+      group_summary: groupSummary || null,
+      group_goal: groupGoal || null,
+      prerequisites: prerequisites || null,
+      is_required_to_pass: isRequiredToPass,
+      passing_score_type: passingScoreType || null,
+      passing_score_value: passingScoreValue,
+      max_score_value: maxScoreValue,
+      extra_practice_notes: extraPracticeNotes || null,
+      l1_l2: l1L2 || null,
+      media_used_ids: mediaUsedIds || null,
+      group_slides_plan: groupSlidesPlan || null,
+    });
+
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      setMessage(firstError.message);
       return;
     }
-
-    // Validate group_type
-    const validGroupTypes = ["title", "intro", "practice", "test", "wrap-up", "finale"];
-    if (groupType && !validGroupTypes.includes(groupType)) {
-      setMessage(`Invalid group type. Must be one of: ${validGroupTypes.join(", ")}`);
-      return;
-    }
-
-    // Validate passing_score_type
-    const validPassingScoreTypes = ["percent", "raw", "none"];
-    if (passingScoreType && !validPassingScoreTypes.includes(passingScoreType)) {
-      setMessage(`Invalid passing score type. Must be one of: ${validPassingScoreTypes.join(", ")}`);
-      return;
-    }
-
-    // Validate and parse group_slides_plan
-    let parsedGroupSlidesPlan: any = null;
-    if (groupSlidesPlan.trim() !== "") {
-      try {
-        parsedGroupSlidesPlan = JSON.parse(groupSlidesPlan.trim());
-        // Validate it is an array of strings
-        if (!Array.isArray(parsedGroupSlidesPlan)) {
-          setMessage("Planned slide sequence must be a JSON array.");
-          return;
-        }
-        if (!parsedGroupSlidesPlan.every((item) => typeof item === "string")) {
-          setMessage("Planned slide sequence must be an array of strings.");
-          return;
-        }
-      } catch (parseError) {
-        setMessage("Invalid JSON in planned slide sequence. Please check the format.");
-        return;
-      }
-    }
-
-    // Helper function to convert empty string to null
-    const nullIfEmpty = (s: string) => (s.trim() === "" ? null : s.trim());
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("lesson_groups")
-        .update({
-          lesson_id: lessonId,
-          order_index: orderIndex,
-          title: title.trim(),
-          group_code: nullIfEmpty(groupCode),
-          short_summary: nullIfEmpty(shortSummary),
-          group_type: nullIfEmpty(groupType),
-          group_summary: nullIfEmpty(groupSummary),
-          group_goal: nullIfEmpty(groupGoal),
-          prerequisites: nullIfEmpty(prerequisites),
-          is_required_to_pass: isRequiredToPass,
-          passing_score_type: nullIfEmpty(passingScoreType),
-          passing_score_value: passingScoreValue,
-          max_score_value: maxScoreValue,
-          extra_practice_notes: nullIfEmpty(extraPracticeNotes),
-          l1_l2: nullIfEmpty(l1L2),
-          media_used_ids: nullIfEmpty(mediaUsedIds),
-          group_slides_plan: parsedGroupSlidesPlan,
-        })
-        .eq("id", groupId);
+      const { error } = await updateGroup(groupId, {
+        lesson_id: result.data.lesson_id,
+        order_index: result.data.order_index,
+        title: result.data.title,
+        group_code: result.data.group_code,
+        short_summary: result.data.short_summary,
+        group_type: result.data.group_type,
+        group_summary: result.data.group_summary,
+        group_goal: result.data.group_goal,
+        prerequisites: result.data.prerequisites,
+        is_required_to_pass: result.data.is_required_to_pass,
+        passing_score_type: result.data.passing_score_type,
+        passing_score_value: result.data.passing_score_value,
+        max_score_value: result.data.max_score_value,
+        extra_practice_notes: result.data.extra_practice_notes,
+        l1_l2: result.data.l1_l2,
+        media_used_ids: result.data.media_used_ids,
+        group_slides_plan: result.data.group_slides_plan,
+      });
 
       if (error) {
-        setMessage(`Supabase error: ${error.message}`);
+        setMessage(`Error: ${error}`);
         return;
       }
 
       setMessage("Group updated successfully!");
+      
+      // Update initial data ref after successful save
+      if (initialDataRef.current) {
+        initialDataRef.current = {
+          lessonId,
+          orderIndex,
+          title,
+          groupCode,
+          shortSummary,
+          groupType,
+          groupSummary,
+          groupGoal,
+          prerequisites,
+          isRequiredToPass,
+          passingScoreType,
+          passingScoreValue,
+          maxScoreValue,
+          extraPracticeNotes,
+          l1L2,
+          mediaUsedIds,
+          groupSlidesPlan,
+        };
+      }
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <PageShell
+    <CmsPageShell
       title="Edit group"
-      maxWidth="md"
-      meta={
-        <>
-          Group id: <code className="codeText">{groupId}</code>
-        </>
-      }
     >
       {loadState.status === "loading" && <p>Loading group…</p>}
 
@@ -251,9 +310,33 @@ export default function EditGroupPage() {
       )}
 
       {loadState.status === "ready" && (
-        <form onSubmit={handleSave}>
-          <CmsSection title="Group Details">
-            <FormField label="Lesson" required>
+        <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+          {/* Left column - outline view */}
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #e4c3b7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+            <CmsOutlineView currentGroupId={groupId} hasUnsavedChanges={hasUnsavedChanges} />
+          </div>
+          
+          {/* Right column - form */}
+          <div style={{ flex: 1 }}>
+            {hasUnsavedChanges && (
+              <div style={{ 
+                padding: uiTokens.space.sm, 
+                marginBottom: uiTokens.space.md, 
+                backgroundColor: "#fff3cd", 
+                border: "1px solid #ffc107",
+                borderRadius: uiTokens.radius.md,
+                color: uiTokens.color.text
+              }}>
+                ⚠️ You have unsaved changes
+              </div>
+            )}
+            <form onSubmit={handleSave}>
+          <CmsSection title="Group Details" backgroundColor="#f2e4de" borderColor="#e4c3b7">
+            <FormField label="Group ID" borderColor="#e4c3b7">
+              <Input value={groupId || ""} disabled readOnly />
+            </FormField>
+
+            <FormField label="Lesson" required borderColor="#e4c3b7">
               <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
                 <option value="">Select a lesson…</option>
                 {lessons.map((l) => (
@@ -264,7 +347,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Order index" required>
+            <FormField label="Order index" required borderColor="#e4c3b7">
               <Input
                 type="number"
                 value={orderIndex}
@@ -272,15 +355,15 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group title" required>
+            <FormField label="Group title" required borderColor="#e4c3b7">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Group code">
+            <FormField label="Group code" borderColor="#e4c3b7">
               <Input value={groupCode} onChange={(e) => setGroupCode(e.target.value)} />
             </FormField>
 
-            <FormField label="Short summary">
+            <FormField label="Short summary" borderColor="#e4c3b7">
               <Textarea
                 value={shortSummary}
                 onChange={(e) => setShortSummary(e.target.value)}
@@ -288,7 +371,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group summary">
+            <FormField label="Group summary" borderColor="#e4c3b7">
               <Textarea
                 value={groupSummary}
                 onChange={(e) => setGroupSummary(e.target.value)}
@@ -296,7 +379,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group goal">
+            <FormField label="Group goal" borderColor="#e4c3b7">
               <Textarea
                 value={groupGoal}
                 onChange={(e) => setGroupGoal(e.target.value)}
@@ -304,7 +387,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Prerequisites">
+            <FormField label="Prerequisites" borderColor="#e4c3b7">
               <Textarea
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
@@ -326,7 +409,7 @@ export default function EditGroupPage() {
               Group structure
             </h2>
 
-            <FormField label="Group type">
+            <FormField label="Group type" borderColor="#e4c3b7">
               <Select value={groupType} onChange={(e) => setGroupType(e.target.value)}>
                 <option value="">Select a type…</option>
                 <option value="title">Title</option>
@@ -338,7 +421,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Is required to pass">
+            <FormField label="Is required to pass" borderColor="#e4c3b7">
               <label style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
                 <input
                   type="checkbox"
@@ -350,7 +433,7 @@ export default function EditGroupPage() {
               </label>
             </FormField>
 
-            <FormField label="Passing score type">
+            <FormField label="Passing score type" borderColor="#e4c3b7">
               <Select value={passingScoreType} onChange={(e) => setPassingScoreType(e.target.value)}>
                 <option value="">Select a type…</option>
                 <option value="percent">percent</option>
@@ -359,7 +442,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Passing score value">
+            <FormField label="Passing score value" borderColor="#e4c3b7">
               <Input
                 type="number"
                 value={passingScoreValue ?? ""}
@@ -367,7 +450,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Max score value">
+            <FormField label="Max score value" borderColor="#e4c3b7">
               <Input
                 type="number"
                 value={maxScoreValue ?? ""}
@@ -377,6 +460,7 @@ export default function EditGroupPage() {
 
             <FormField
               label="Planned slide sequence (structure only)"
+              borderColor="#e4c3b7"
               helper='This is the intended slide structure for this group. It is used for planning and validation. Actual slides are created separately. For example: ["title-slide", "text-slide", "ai-speak-repeat"]'
             >
               <Textarea
@@ -386,7 +470,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Extra practice notes">
+            <FormField label="Extra practice notes" borderColor="#e4c3b7">
               <Textarea
                 value={extraPracticeNotes}
                 onChange={(e) => setExtraPracticeNotes(e.target.value)}
@@ -394,7 +478,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="L1 > L2 issues">
+            <FormField label="L1 > L2 issues" borderColor="#e4c3b7">
               <Textarea
                 value={l1L2}
                 onChange={(e) => setL1L2(e.target.value)}
@@ -404,6 +488,7 @@ export default function EditGroupPage() {
 
             <FormField
               label="Media used ids"
+              borderColor="#e4c3b7"
               helper="Comma-separated IDs or paths"
             >
               <Input
@@ -418,20 +503,19 @@ export default function EditGroupPage() {
               </Button>
             </div>
           </CmsSection>
-        </form>
+            </form>
+          </div>
+        </div>
       )}
 
       {message && (
-        <p
-          style={{
-            marginTop: uiTokens.space.md,
-            color: message.toLowerCase().includes("error") ? uiTokens.color.danger : "green",
-          }}
+        <StatusMessage
+          variant={message.toLowerCase().includes("error") ? "error" : "success"}
         >
           {message}
-        </p>
+        </StatusMessage>
       )}
-    </PageShell>
+    </CmsPageShell>
   );
 }
 

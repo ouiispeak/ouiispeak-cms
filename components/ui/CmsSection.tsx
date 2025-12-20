@@ -6,6 +6,8 @@ interface CmsSectionProps {
   description?: string | ReactNode;
   actions?: ReactNode;
   footer?: ReactNode;
+  backgroundColor?: string;
+  borderColor?: string;
   children: ReactNode;
 }
 
@@ -14,16 +16,18 @@ export default function CmsSection({
   description,
   actions,
   footer,
+  backgroundColor,
+  borderColor,
   children,
 }: CmsSectionProps) {
   return (
     <div
       style={{
-        border: `1px solid ${uiTokens.color.border}`,
         borderRadius: uiTokens.radius.lg,
         padding: uiTokens.space.md,
         marginBottom: uiTokens.space.lg,
-        background: "transparent",
+        background: backgroundColor || uiTokens.color.surface,
+        border: borderColor ? `1px solid ${borderColor}` : undefined,
       }}
     >
       {/* Section Header */}
@@ -83,7 +87,6 @@ export default function CmsSection({
             justifyContent: "flex-end",
             gap: uiTokens.space.xs,
             paddingTop: uiTokens.space.md,
-            borderTop: `1px solid ${uiTokens.color.borderSubtle}`,
           }}
         >
           {footer}

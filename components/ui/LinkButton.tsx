@@ -18,15 +18,18 @@ export default function LinkButton({
   size = "md",
   children,
   style,
+  target,
+  rel,
   ...props
 }: LinkButtonProps) {
+  const isExternal = href.startsWith("http://") || href.startsWith("https://") || target === "_blank";
   const getVariantStyles = () => {
     switch (variant) {
       case "danger":
         return {
           backgroundColor: uiTokens.color.danger,
           borderColor: uiTokens.color.danger,
-          color: uiTokens.color.dangerText,
+          color: uiTokens.color.textOnDark,
         };
       case "secondary":
         return {
@@ -45,7 +48,7 @@ export default function LinkButton({
         return {
           backgroundColor: uiTokens.color.primary,
           borderColor: uiTokens.color.primary,
-          color: uiTokens.color.primaryText,
+          color: uiTokens.color.textOnDark,
         };
     }
   };
@@ -90,6 +93,10 @@ export default function LinkButton({
     } else {
       e.currentTarget.style.backgroundColor = uiTokens.color.primaryHover;
     }
+    // Change text color to #a95f43 on hover for grid links
+    if (variant === "secondary" || variant === "ghost") {
+      e.currentTarget.style.color = "#a95f43";
+    }
     props.onMouseOver?.(e);
   };
 
@@ -98,13 +105,31 @@ export default function LinkButton({
       e.currentTarget.style.backgroundColor = uiTokens.color.danger;
     } else if (variant === "secondary") {
       e.currentTarget.style.backgroundColor = uiTokens.color.secondary;
+      e.currentTarget.style.color = uiTokens.color.secondaryText;
     } else if (variant === "ghost") {
       e.currentTarget.style.backgroundColor = "transparent";
+      e.currentTarget.style.color = uiTokens.color.text;
     } else {
       e.currentTarget.style.backgroundColor = uiTokens.color.primary;
     }
     props.onMouseOut?.(e);
   };
+
+  if (isExternal) {
+    return (
+      <a
+        href={href}
+        style={baseStyle}
+        onMouseOver={handleMouseOver}
+        onMouseOut={handleMouseOut}
+        target={target}
+        rel={rel || (target === "_blank" ? "noreferrer" : undefined)}
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  }
 
   return (
     <Link
