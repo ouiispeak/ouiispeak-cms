@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { Button } from "../Button";
 import CmsSection from "../ui/CmsSection";
 import FormField from "../ui/FormField";
@@ -17,6 +17,7 @@ export default function RawJsonEditor({
   slideType,
   onSaveSuccess,
   saveSlide,
+  onUnsavedChangesChange,
 }: SlideEditorProps) {
   const [jsonText, setJsonText] = useState(() => {
     try {
@@ -37,6 +38,77 @@ export default function RawJsonEditor({
     maxScoreValue: row.maxScoreValue ?? null,
     passRequiredForNext: row.passRequiredForNext || false,
   });
+  
+  const initialDataRef = useRef<{
+    jsonText: string;
+    metadata: AuthoringMetadataState;
+  } | null>(null);
+  
+  // Initialize initial data when row changes
+  useEffect(() => {
+    const initialJson = (() => {
+      try {
+        return JSON.stringify(row.propsJson, null, 2);
+      } catch {
+        return String(row.propsJson ?? "");
+      }
+    })();
+    
+    initialDataRef.current = {
+      jsonText: initialJson,
+      metadata: {
+        code: row.code || "",
+        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
+        activityName: ((row.metaJson as any) || {}).activityName || "",
+        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
+        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+        isActivity: row.isActivity || false,
+        scoreType: row.scoreType || "none",
+        passingScoreValue: row.passingScoreValue ?? null,
+        maxScoreValue: row.maxScoreValue ?? null,
+        passRequiredForNext: row.passRequiredForNext || false,
+      },
+    };
+    setJsonText(initialJson);
+    setMetadata({
+      code: row.code || "",
+      slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
+      activityName: ((row.metaJson as any) || {}).activityName || "",
+      requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
+      buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+      isActivity: row.isActivity || false,
+      scoreType: row.scoreType || "none",
+      passingScoreValue: row.passingScoreValue ?? null,
+      maxScoreValue: row.maxScoreValue ?? null,
+      passRequiredForNext: row.passRequiredForNext || false,
+    });
+  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]); // Reset when slide data changes
+  
+  // Check for unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      jsonText !== initial.jsonText ||
+      metadata.code !== initial.metadata.code ||
+      metadata.slideGoal !== initial.metadata.slideGoal ||
+      metadata.activityName !== initial.metadata.activityName ||
+      metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
+      JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
+      metadata.isActivity !== initial.metadata.isActivity ||
+      metadata.scoreType !== initial.metadata.scoreType ||
+      metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
+      metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
+      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
+    );
+  }, [jsonText, metadata]);
+  
+  // Notify parent of unsaved changes
+  useEffect(() => {
+    if (onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -103,6 +175,18 @@ export default function RawJsonEditor({
       }
 
       setSaveMessage("Saved successfully!");
+      
+      // Update initial data ref after successful save
+      initialDataRef.current = {
+        jsonText,
+        metadata: { ...metadata },
+      };
+      
+      // Explicitly notify parent that there are no unsaved changes
+      if (onUnsavedChangesChange) {
+        onUnsavedChangesChange(false);
+      }
+      
       onSaveSuccess();
     } finally {
       setSaving(false);
@@ -143,11 +227,6 @@ export default function RawJsonEditor({
             </p>
           )}
 
-          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
         </form>
 
         {saveMessage && (

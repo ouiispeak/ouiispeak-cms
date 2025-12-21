@@ -20,7 +20,14 @@ export function useSlideEditor(slideId: string | undefined) {
     orderIndex: number;
     selectedGroupId: string;
     slideType: string;
-    slideContent: string;
+    propsJson: string;
+    metaJson: string;
+    code: string | null;
+    isActivity: boolean | null;
+    scoreType: string | null;
+    passingScoreValue: number | null;
+    maxScoreValue: number | null;
+    passRequiredForNext: boolean | null;
   } | null>(null);
 
   useEffect(() => {
@@ -81,7 +88,14 @@ export function useSlideEditor(slideId: string | undefined) {
         orderIndex: slide.orderIndex ?? 1,
         selectedGroupId: slide.groupId ?? "",
         slideType: slide.type ?? "",
-        slideContent: JSON.stringify(slide.content || {}),
+        propsJson: JSON.stringify(slide.propsJson || {}),
+        metaJson: JSON.stringify(slide.metaJson || {}),
+        code: slide.code,
+        isActivity: slide.isActivity,
+        scoreType: slide.scoreType,
+        passingScoreValue: slide.passingScoreValue,
+        maxScoreValue: slide.maxScoreValue,
+        passRequiredForNext: slide.passRequiredForNext,
       };
 
       setLoadState({
@@ -112,7 +126,14 @@ export function useSlideEditor(slideId: string | undefined) {
           orderIndex: slide.orderIndex ?? 1,
           selectedGroupId: slide.groupId ?? "",
           slideType: slide.type ?? "",
-          slideContent: JSON.stringify(slide.content || {}),
+          propsJson: JSON.stringify(slide.propsJson || {}),
+          metaJson: JSON.stringify(slide.metaJson || {}),
+          code: slide.code,
+          isActivity: slide.isActivity,
+          scoreType: slide.scoreType,
+          passingScoreValue: slide.passingScoreValue,
+          maxScoreValue: slide.maxScoreValue,
+          passRequiredForNext: slide.passRequiredForNext,
         };
       }
       
@@ -147,7 +168,14 @@ export function useSlideEditor(slideId: string | undefined) {
         orderIndex !== initialDataRef.current.orderIndex ||
         selectedGroupId !== initialDataRef.current.selectedGroupId ||
         slideType !== initialDataRef.current.slideType ||
-        JSON.stringify(loadState.row.content || {}) !== initialDataRef.current.slideContent
+        JSON.stringify(loadState.row.propsJson || {}) !== initialDataRef.current.propsJson ||
+        JSON.stringify(loadState.row.metaJson || {}) !== initialDataRef.current.metaJson ||
+        loadState.row.code !== initialDataRef.current.code ||
+        loadState.row.isActivity !== initialDataRef.current.isActivity ||
+        loadState.row.scoreType !== initialDataRef.current.scoreType ||
+        loadState.row.passingScoreValue !== initialDataRef.current.passingScoreValue ||
+        loadState.row.maxScoreValue !== initialDataRef.current.maxScoreValue ||
+        loadState.row.passRequiredForNext !== initialDataRef.current.passRequiredForNext
       )
     : false;
 

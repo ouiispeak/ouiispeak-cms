@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
 import { Button } from "../Button";
 import CmsSection from "../ui/CmsSection";
 import FormField from "../ui/FormField";
@@ -18,6 +18,7 @@ export default function TextSlideEditor({
   slideType,
   onSaveSuccess,
   saveSlide,
+  onUnsavedChangesChange,
 }: SlideEditorProps) {
   const props = (row.propsJson as any) || {};
   const [title, setTitle] = useState(props.title || "");
@@ -38,6 +39,77 @@ export default function TextSlideEditor({
     maxScoreValue: row.maxScoreValue ?? null,
     passRequiredForNext: row.passRequiredForNext || false,
   });
+  
+  const initialDataRef = useRef<{
+    title: string;
+    subtitle: string;
+    body: string;
+    metadata: AuthoringMetadataState;
+  } | null>(null);
+  
+  // Initialize initial data when row changes
+  useEffect(() => {
+    initialDataRef.current = {
+      title: props.title || "",
+      subtitle: props.subtitle || "",
+      body: initialBody,
+      metadata: {
+        code: row.code || "",
+        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
+        activityName: ((row.metaJson as any) || {}).activityName || "",
+        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
+        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+        isActivity: row.isActivity || false,
+        scoreType: row.scoreType || "none",
+        passingScoreValue: row.passingScoreValue ?? null,
+        maxScoreValue: row.maxScoreValue ?? null,
+        passRequiredForNext: row.passRequiredForNext || false,
+      },
+    };
+    setTitle(props.title || "");
+    setSubtitle(props.subtitle || "");
+    setBody(initialBody);
+    setMetadata({
+      code: row.code || "",
+      slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
+      activityName: ((row.metaJson as any) || {}).activityName || "",
+      requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
+      buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+      isActivity: row.isActivity || false,
+      scoreType: row.scoreType || "none",
+      passingScoreValue: row.passingScoreValue ?? null,
+      maxScoreValue: row.maxScoreValue ?? null,
+      passRequiredForNext: row.passRequiredForNext || false,
+    });
+  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]); // Reset when slide data changes
+  
+  // Check for unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current) return false;
+    const initial = initialDataRef.current;
+    return (
+      title !== initial.title ||
+      subtitle !== initial.subtitle ||
+      body !== initial.body ||
+      metadata.code !== initial.metadata.code ||
+      metadata.slideGoal !== initial.metadata.slideGoal ||
+      metadata.activityName !== initial.metadata.activityName ||
+      metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
+      JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
+      metadata.isActivity !== initial.metadata.isActivity ||
+      metadata.scoreType !== initial.metadata.scoreType ||
+      metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
+      metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
+      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
+    );
+  }, [title, subtitle, body, metadata]);
+  
+  // Notify parent of unsaved changes
+  useEffect(() => {
+    if (onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
@@ -102,6 +174,20 @@ export default function TextSlideEditor({
       }
 
       setSaveMessage("Saved successfully!");
+      
+      // Update initial data ref after successful save
+      initialDataRef.current = {
+        title: title.trim(),
+        subtitle: subtitle.trim(),
+        body: body.trim(),
+        metadata: { ...metadata },
+      };
+      
+      // Explicitly notify parent that there are no unsaved changes
+      if (onUnsavedChangesChange) {
+        onUnsavedChangesChange(false);
+      }
+      
       onSaveSuccess();
     } finally {
       setSaving(false);
@@ -122,7 +208,11 @@ export default function TextSlideEditor({
         }
       >
         <form onSubmit={handleSave}>
-          <FormField label="Title (optional)" borderColor="#f2e1db">
+          <FormField 
+            label="Title (optional)" 
+            borderColor="#f2e1db"
+            infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
+          >
             <Input
               type="text"
               value={title}
@@ -130,7 +220,11 @@ export default function TextSlideEditor({
             />
           </FormField>
 
-          <FormField label="Subtitle (optional)" borderColor="#f2e1db">
+          <FormField 
+            label="Subtitle (optional)" 
+            borderColor="#f2e1db"
+            infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
+          >
             <Input
               type="text"
               value={subtitle}
@@ -146,11 +240,6 @@ export default function TextSlideEditor({
             />
           </FormField>
 
-          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
         </form>
 
         {saveMessage && (

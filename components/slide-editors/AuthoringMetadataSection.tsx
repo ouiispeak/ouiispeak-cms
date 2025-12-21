@@ -81,7 +81,11 @@ export default function AuthoringMetadataSection({
 
   return (
     <CmsSection title="Authoring metadata" backgroundColor="#f8f0ed" borderColor="#f2e1db">
-      <FormField label="Code" borderColor="#f2e1db">
+      <FormField 
+        label="Code" 
+        borderColor="#f2e1db"
+        infoTooltip="Internal shorthand name for the slide. Used by authors and developers to quickly identify the slide's purpose. Not shown to students."
+      >
         <Input
           type="text"
           value={code}
@@ -89,7 +93,11 @@ export default function AuthoringMetadataSection({
         />
       </FormField>
 
-      <FormField label="Slide goal" borderColor="#f2e1db">
+      <FormField 
+        label="Slide goal" 
+        borderColor="#f2e1db"
+        infoTooltip="What the learner should achieve by completing this slide. Write in outcome-focused language (understand, practice, notice, produce)."
+      >
         <Textarea
           value={slideGoal}
           onChange={(e) => setSlideGoal(e.target.value)}
@@ -97,7 +105,11 @@ export default function AuthoringMetadataSection({
         />
       </FormField>
 
-      <FormField label="Activity name" borderColor="#f2e1db">
+      <FormField 
+        label="Activity name" 
+        borderColor="#f2e1db"
+        infoTooltip='Human-readable name of the activity pattern. Used for analytics, reuse, and reporting (e.g. "Listen & Repeat", "Choose the Correct Form").'
+      >
         <Input
           type="text"
           value={activityName}
@@ -105,7 +117,11 @@ export default function AuthoringMetadataSection({
         />
       </FormField>
 
-      <FormField label="Requires external TTS" borderColor="#f2e1db">
+      <FormField 
+        label="Requires external TTS" 
+        borderColor="#f2e1db"
+        infoTooltip="Indicates whether this slide depends on external text-to-speech generation. TRUE if audio is generated dynamically. FALSE if audio is pre-recorded or not needed."
+      >
         <label
           style={{
             display: "flex",
@@ -128,7 +144,11 @@ export default function AuthoringMetadataSection({
         </label>
       </FormField>
 
-      <FormField label="Buttons (comma-separated)" borderColor="#f2e1db">
+      <FormField 
+        label="Buttons (comma-separated)" 
+        borderColor="#f2e1db"
+        infoTooltip="Defines which action buttons appear on this slide. Example: next, replay, hint. Controls UI only, not logic."
+      >
         <Input
           type="text"
           value={buttonsText}
@@ -137,7 +157,11 @@ export default function AuthoringMetadataSection({
         />
       </FormField>
 
-      <FormField label="Is activity" borderColor="#f2e1db">
+      <FormField 
+        label="Is activity" 
+        borderColor="#f2e1db"
+        infoTooltip="Marks whether this slide counts as an interactive activity. TRUE if the learner must perform an action to proceed. FALSE for passive or informational slides."
+      >
         <label
           style={{
             display: "flex",

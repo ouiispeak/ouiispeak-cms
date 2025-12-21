@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useMemo, useRef } from "react";
 import {
   aiSpeakRepeatSlideSchema,
   type RealAiSpeakRepeatSlide,
@@ -22,6 +22,7 @@ export default function AiSpeakRepeatEditor({
   slideType,
   onSaveSuccess,
   saveSlide,
+  onUnsavedChangesChange,
 }: SlideEditorProps) {
   const [innerState, setInnerState] = useState<
     | { status: "loading" }
@@ -46,6 +47,15 @@ export default function AiSpeakRepeatEditor({
     maxScoreValue: row.maxScoreValue ?? null,
     passRequiredForNext: row.passRequiredForNext || false,
   });
+
+  const initialDataRef = useRef<{
+    title: string;
+    subtitle: string;
+    note: string;
+    defaultLang: string;
+    phrasesText: string;
+    metadata: AuthoringMetadataState;
+  } | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -90,9 +100,60 @@ export default function AiSpeakRepeatEditor({
       .map((cell) => cell.label)
       .join("\n");
     setPhrasesText(flatPhrases);
+    
+    // Store initial values for comparison
+    initialDataRef.current = {
+      title: slide.props.title,
+      subtitle: slide.props.subtitle ?? "",
+      note: slide.props.note ?? "",
+      defaultLang: slide.props.defaultLang ?? "en",
+      phrasesText: flatPhrases,
+      metadata: {
+        code: row.code || "",
+        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
+        activityName: ((row.metaJson as any) || {}).activityName || "",
+        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
+        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+        isActivity: row.isActivity || false,
+        scoreType: row.scoreType || "none",
+        passingScoreValue: row.passingScoreValue ?? null,
+        maxScoreValue: row.maxScoreValue ?? null,
+        passRequiredForNext: row.passRequiredForNext || false,
+      },
+    };
 
     setInnerState({ status: "ready", slide });
-  }, [row]);
+  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]); // Reset when slide data changes
+  
+  // Check for unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialDataRef.current || innerState.status !== "ready") return false;
+    const initial = initialDataRef.current;
+    return (
+      title !== initial.title ||
+      subtitle !== initial.subtitle ||
+      note !== initial.note ||
+      defaultLang !== initial.defaultLang ||
+      phrasesText !== initial.phrasesText ||
+      metadata.code !== initial.metadata.code ||
+      metadata.slideGoal !== initial.metadata.slideGoal ||
+      metadata.activityName !== initial.metadata.activityName ||
+      metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
+      JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
+      metadata.isActivity !== initial.metadata.isActivity ||
+      metadata.scoreType !== initial.metadata.scoreType ||
+      metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
+      metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
+      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
+    );
+  }, [title, subtitle, note, defaultLang, phrasesText, metadata, innerState.status]);
+  
+  // Notify parent of unsaved changes
+  useEffect(() => {
+    if (onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasUnsavedChanges);
+    }
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -185,6 +246,22 @@ export default function AiSpeakRepeatEditor({
 
       setInnerState({ status: "ready", slide: validated });
       setSaveMessage("Saved successfully!");
+      
+      // Update initial data ref after successful save
+      initialDataRef.current = {
+        title,
+        subtitle,
+        note,
+        defaultLang,
+        phrasesText,
+        metadata: { ...metadata },
+      };
+      
+      // Explicitly notify parent that there are no unsaved changes
+      if (onUnsavedChangesChange) {
+        onUnsavedChangesChange(false);
+      }
+      
       onSaveSuccess();
     } finally {
       setSaving(false);
@@ -219,7 +296,12 @@ export default function AiSpeakRepeatEditor({
         }
       >
         <form onSubmit={handleSave}>
-          <FormField label="Slide title" required borderColor="#f2e1db">
+          <FormField 
+            label="Slide title" 
+            required 
+            borderColor="#f2e1db"
+            infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
+          >
             <Input
               type="text"
               value={title}
@@ -227,7 +309,11 @@ export default function AiSpeakRepeatEditor({
             />
           </FormField>
 
-          <FormField label="Subtitle" borderColor="#f2e1db">
+          <FormField 
+            label="Subtitle" 
+            borderColor="#f2e1db"
+            infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
+          >
             <Input
               type="text"
               value={subtitle}
@@ -260,11 +346,6 @@ export default function AiSpeakRepeatEditor({
             />
           </FormField>
 
-          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
         </form>
 
         {saveMessage && (
@@ -407,4 +488,3 @@ export default function AiSpeakRepeatEditor({
     </>
   );
 }
-
