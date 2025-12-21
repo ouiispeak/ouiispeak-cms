@@ -18,6 +18,7 @@ export default function TitleSlideEditor({
   onSaveSuccess,
   saveSlide,
   onUnsavedChangesChange,
+  onSavingChange,
 }: SlideEditorProps) {
   const props = (row.propsJson as any) || {};
   const [title, setTitle] = useState(props.title || "");
@@ -114,6 +115,7 @@ export default function TitleSlideEditor({
     e.preventDefault();
     setSaveMessage(null);
     setSaving(true);
+    onSavingChange?.(true);
 
     try {
       const newProps: any = { title };
@@ -173,6 +175,7 @@ export default function TitleSlideEditor({
       onSaveSuccess();
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -274,6 +277,7 @@ export default function TitleSlideEditor({
                   setRawJsonParseError(null);
                   setRawJsonSaveMessage(null);
                   setRawJsonSaving(true);
+                  onSavingChange?.(true);
 
                   try {
                     let parsedJson: unknown;
@@ -322,6 +326,7 @@ export default function TitleSlideEditor({
                     setRawJsonText(JSON.stringify(parsedJson, null, 2));
                   } finally {
                     setRawJsonSaving(false);
+                    onSavingChange?.(false);
                   }
                 }}
                 disabled={rawJsonSaving}
@@ -352,4 +357,3 @@ export default function TitleSlideEditor({
     </>
   );
 }
-

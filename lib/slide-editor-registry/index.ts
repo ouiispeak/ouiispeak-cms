@@ -2,26 +2,10 @@ import AiSpeakRepeatEditor from "../../components/slide-editors/AiSpeakRepeatEdi
 import DefaultSlideEditor from "../../components/slide-editors/DefaultSlideEditor";
 import TextSlideEditor from "../../components/slide-editors/TextSlideEditor";
 import TitleSlideEditor from "../../components/slide-editors/TitleSlideEditor";
+import RawJsonEditor from "../../components/slide-editors/RawJsonEditor";
+import { DEFAULT_SLIDE_FIELDS } from "./defaultFields";
+import { getVisibleFieldsForType } from "./presets";
 import type { EditorSchema, SlideEditorDefinition } from "./types";
-
-const defaultEditorSchema: EditorSchema = {
-  fields: [
-    {
-      key: "props_json",
-      label: "Props JSON",
-      helpText: "Raw JSON payload for slide props.",
-      required: true,
-      uiType: "json",
-    },
-    {
-      key: "metadata",
-      label: "Authoring metadata",
-      helpText: "Code, goals, activity flags, buttons, and scoring settings.",
-      required: false,
-      uiType: "metadata",
-    },
-  ],
-};
 
 const aiSpeakRepeatSchema: EditorSchema = {
   fields: [
@@ -81,7 +65,39 @@ const textSlideSchema: EditorSchema = {
   ],
 };
 
+export const defaultSlideEditorDefinition: SlideEditorDefinition = {
+  type: "default",
+  label: "Default",
+  editorComponent: DefaultSlideEditor,
+  schema: textSlideSchema,
+};
+
+export const rawJsonEditorDefinition: SlideEditorDefinition = {
+  type: "raw-json",
+  label: "Raw JSON",
+  editorComponent: RawJsonEditor,
+  schema: {
+    fields: [
+      {
+        key: "props_json",
+        label: "Props JSON",
+        helpText: "Raw JSON payload for slide props.",
+        required: true,
+        uiType: "json",
+      },
+      {
+        key: "metadata",
+        label: "Authoring metadata",
+        helpText: "Code, goals, activity flags, buttons, and scoring settings.",
+        required: false,
+        uiType: "metadata",
+      },
+    ],
+  },
+};
+
 const slideEditorRegistry: Record<string, SlideEditorDefinition> = {
+  default: defaultSlideEditorDefinition,
   "ai-speak-repeat": {
     type: "ai-speak-repeat",
     label: "AI Speak Repeat",
@@ -104,29 +120,33 @@ const slideEditorRegistry: Record<string, SlideEditorDefinition> = {
 
 const slideEditorAliases: Record<string, SlideEditorDefinition> = {
   title: slideEditorRegistry["title-slide"],
-};
-
-export const defaultSlideEditorDefinition: SlideEditorDefinition = {
-  type: "default",
-  label: "Default (raw JSON)",
-  editorComponent: DefaultSlideEditor,
-  schema: defaultEditorSchema,
+  text: defaultSlideEditorDefinition,
 };
 
 export function getSlideEditorDefinition(type?: string | null): SlideEditorDefinition {
-  if (!type) {
+  if (!type || !type.trim()) {
     return defaultSlideEditorDefinition;
   }
 
   const normalizedType = type.trim();
 
+  if (normalizedType === "text-slide" || normalizedType === "text") {
+    return defaultSlideEditorDefinition;
+  }
+
   return (
     slideEditorRegistry[normalizedType] ??
     slideEditorAliases[normalizedType] ??
-    defaultSlideEditorDefinition
+    rawJsonEditorDefinition
   );
 }
 
 export function listSlideEditorDefinitions(): SlideEditorDefinition[] {
   return Object.values(slideEditorRegistry);
 }
+
+export function getVisibleSchemaForType(type?: string | null): EditorSchema {
+  return { fields: getVisibleFieldsForType(type) };
+}
+
+export { DEFAULT_SLIDE_FIELDS };

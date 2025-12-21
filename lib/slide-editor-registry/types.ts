@@ -25,6 +25,7 @@ export interface SlideEditorProps {
   onSaveSuccess: () => void;
   saveSlide: (input: UpdateSlideInput) => Promise<{ success: boolean; error?: string }>;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
+  onSavingChange?: (isSaving: boolean) => void;
 }
 
 export type SlideEditorComponent = ComponentType<SlideEditorProps>;

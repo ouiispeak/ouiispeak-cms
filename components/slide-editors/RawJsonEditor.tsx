@@ -123,6 +123,7 @@ export default function RawJsonEditor({
     setSaveMessage(null);
     setParseError(null);
     setSaving(true);
+    onSavingChange?.(true);
 
     try {
       let parsedJson: unknown;
@@ -190,6 +191,7 @@ export default function RawJsonEditor({
       onSaveSuccess();
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -285,6 +287,7 @@ export default function RawJsonEditor({
                   setRawJsonParseError(null);
                   setRawJsonSaveMessage(null);
                   setRawJsonSaving(true);
+                  onSavingChange?.(true);
 
                   try {
                     let parsedJson: unknown;
@@ -333,6 +336,7 @@ export default function RawJsonEditor({
                     setRawJsonText(JSON.stringify(parsedJson, null, 2));
                   } finally {
                     setRawJsonSaving(false);
+                    onSavingChange?.(false);
                   }
                 }}
                 disabled={rawJsonSaving}
@@ -363,4 +367,3 @@ export default function RawJsonEditor({
     </>
   );
 }
-

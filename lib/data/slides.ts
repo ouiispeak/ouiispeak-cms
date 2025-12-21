@@ -147,7 +147,7 @@ export function defaultIsActivity(slideType: string, providedValue: boolean | nu
     return providedValue;
   }
   // Default: most slides are activities, except title and text slides
-  const nonActivityTypes = ["title-slide", "title", "text-slide", "text"];
+const nonActivityTypes = ["default", "title-slide", "title", "text-slide", "text"];
   return !nonActivityTypes.includes(slideType.toLowerCase().trim());
 }
 
@@ -275,4 +275,3 @@ export async function deleteSlide(id: string): Promise<SlideResult<void>> {
 
   return { data: null, error: null };
 }
-

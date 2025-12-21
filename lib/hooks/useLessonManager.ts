@@ -11,10 +11,12 @@ import { loadSlidesByLesson } from "../data/slides";
 function defaultPropsForType(type: string): any {
   const trimmedType = type.trim();
   switch (trimmedType) {
+    case "default":
     case "title-slide":
       return { title: "New title slide", subtitle: "" };
     case "text-slide":
-      return { title: "New text", body: "…" };
+    case "text":
+      return { title: "New text", subtitle: "", body: "…" };
     case "ai-speak-repeat":
       return {
         title: "New ai-speak-repeat slide",
@@ -191,7 +193,7 @@ export function useLessonManager(lessonId: string | undefined) {
         const nextOrderIndex = maxOrder + 1;
 
         // Prepare slide input with defaults
-        const trimmedType = type.trim();
+        const trimmedType = (type || "default").trim() || "default";
         const defaultProps = defaultPropsForType(trimmedType);
 
         // Ensure we have a group_id (should never be null at this point)
@@ -357,4 +359,3 @@ export function useLessonManager(lessonId: string | undefined) {
     error,
   };
 }
-

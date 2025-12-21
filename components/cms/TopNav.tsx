@@ -10,14 +10,16 @@ export default function TopNav() {
   const isDashboardActive = pathname === "/";
   const isCefrActive = pathname.startsWith("/manage-modules/") || 
                        pathname.startsWith("/edit-level/") || 
-                       pathname.startsWith("/level-aspects/");
+                       pathname.startsWith("/level-aspects/") ||
+                       pathname.startsWith("/cefr/");
   const isModuleActive = pathname.startsWith("/edit-module/") || 
                          pathname.startsWith("/module-lessons/");
   const isLessonActive = pathname.startsWith("/edit-lesson/") || 
-                         pathname.startsWith("/lesson-slides/");
+                       pathname.startsWith("/lesson-slides/");
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
   const isSlideActive = pathname.startsWith("/edit-slide/");
+  const isSlideTypesActive = pathname.startsWith("/cms/slide-types");
 
   // Level colors: background and border/underline
   const levelColors = {
@@ -57,6 +59,17 @@ export default function TopNav() {
     color: uiTokens.color.text,
   };
 
+  const divider = (
+    <span
+      style={{
+        width: 3,
+        backgroundColor: "#595852",
+        height: "100%",
+        display: "block",
+      }}
+    />
+  );
+
   return (
         <nav
           style={{
@@ -64,18 +77,20 @@ export default function TopNav() {
             top: 0,
             zIndex: 100,
             borderBottom: `1px solid #595852`,
+            borderTop: "1px solid #595852",
+            borderLeft: "1px solid #595852",
+            borderRight: "1px solid #595852",
+            borderRadius: `${uiTokens.radius.md}px ${uiTokens.radius.md}px 0 0`,
             backgroundColor: "#f0ede9",
             display: "flex",
             alignItems: "stretch",
             height: 48,
-          }}
-        >
+        }}
+      >
       <Link
         href="/"
         style={{
           ...navLinkStyle(isDashboardActive),
-          borderRight: "3px solid #595852",
-          flex: 2,
         }}
         onMouseEnter={(e) => {
           if (!isDashboardActive) {
@@ -91,6 +106,26 @@ export default function TopNav() {
       >
         CMS Dashboard
       </Link>
+      <Link
+        href="/cms/slide-types"
+        style={{
+          ...navLinkStyle(isSlideTypesActive),
+        }}
+        onMouseEnter={(e) => {
+          if (!isSlideTypesActive) {
+            Object.assign(e.currentTarget.style, hoverStyle);
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSlideTypesActive) {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = uiTokens.color.textMuted;
+          }
+        }}
+      >
+        Slide Types
+      </Link>
+      {divider}
       <span style={navLinkStyle(isCefrActive, false, "cefr")}>
         CEFR
       </span>
@@ -109,4 +144,3 @@ export default function TopNav() {
     </nav>
   );
 }
-

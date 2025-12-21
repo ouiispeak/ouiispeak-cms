@@ -9,8 +9,10 @@ import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
 import Textarea from "../../../components/ui/Textarea";
 import Select from "../../../components/ui/Select";
-import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
+import BreadcrumbTrail from "../../../components/cms/BreadcrumbTrail";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton";
 import { slugify, nullIfEmpty } from "../../../lib/utils/string";
 import StatusMessage from "../../../components/ui/StatusMessage";
 import { updateLessonSchema } from "../../../lib/schemas/lessonSchema";
@@ -28,6 +30,8 @@ type LoadState =
 export default function EditLessonPage() {
   const params = useParams<{ lessonId: string }>();
   const lessonId = params?.lessonId;
+  const playerBaseUrl = process.env.NEXT_PUBLIC_PLAYER_BASE_URL || "";
+  const playerHref = playerBaseUrl && lessonId ? `${playerBaseUrl}/lecons/db/${lessonId}` : undefined;
 
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [modules, setModules] = useState<Module[]>([]);
@@ -61,6 +65,7 @@ export default function EditLessonPage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const initialDataRef = useRef<{
     moduleId: string;
     lessonSlugPart: string;
@@ -84,7 +89,7 @@ export default function EditLessonPage() {
   } | null>(null);
 
   // Check if form has unsaved changes
-  const hasUnsavedChanges = useMemo(() => {
+  const hasUnsavedChanges = (() => {
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
     return (
@@ -108,27 +113,7 @@ export default function EditLessonPage() {
       learningObjectives !== initial.learningObjectives ||
       notesForTeacherOrAI !== initial.notesForTeacherOrAI
     );
-  }, [
-    moduleId,
-    lessonSlugPart,
-    title,
-    orderIndex,
-    shortSummaryAdmin,
-    shortSummaryStudent,
-    courseOrganizationGroup,
-    slideContents,
-    groupingStrategySummary,
-    activityTypes,
-    activityDescription,
-    signatureMetaphors,
-    mainGrammarTopics,
-    pronunciationFocus,
-    vocabularyTheme,
-    l1L2Issues,
-    prerequisites,
-    learningObjectives,
-    notesForTeacherOrAI,
-  ]);
+  })();
 
   // Warn before navigation
   useUnsavedChangesWarning(hasUnsavedChanges);
@@ -339,6 +324,12 @@ export default function EditLessonPage() {
     }
   }
 
+  const handleSaveButtonClick = () => {
+    if (formRef.current) {
+      formRef.current.requestSubmit();
+    }
+  };
+
   return (
     <CmsPageShell
       title="Edit lesson"
@@ -355,24 +346,21 @@ export default function EditLessonPage() {
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
           <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #deb4a5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
-            <CmsOutlineView currentLessonId={lessonId} hasUnsavedChanges={hasUnsavedChanges} />
-          </div>
-          
-          {/* Right column - form */}
+          <CmsOutlineView currentLessonId={lessonId} hasUnsavedChanges={hasUnsavedChanges} />
+        </div>
+        
+        {/* Right column - form */}
           <div style={{ flex: 1 }}>
-            {hasUnsavedChanges && (
-              <div style={{ 
-                padding: uiTokens.space.sm, 
-                marginBottom: uiTokens.space.md, 
-                backgroundColor: "#fff3cd", 
-                border: "1px solid #ffc107",
-                borderRadius: uiTokens.radius.md,
-                color: uiTokens.color.text
-              }}>
-                ⚠️ You have unsaved changes
-              </div>
-            )}
-            <form onSubmit={handleSave}>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.md, gap: uiTokens.space.sm }}>
+              <PreviewInPlayerButton href={playerHref} />
+              <SaveChangesButton
+                onClick={handleSaveButtonClick}
+                hasUnsavedChanges={hasUnsavedChanges}
+                saving={saving}
+              />
+            </div>
+            <BreadcrumbTrail lessonId={lessonId} />
+          <form ref={formRef} onSubmit={handleSave}>
           <CmsSection title="Lesson Details" backgroundColor="#ecd7cf" borderColor="#deb4a5">
             <FormField label="Lesson ID" borderColor="#deb4a5">
               <Input value={lessonId || ""} disabled readOnly />
@@ -559,11 +547,6 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
             </form>
           </div>
         </div>
@@ -579,4 +562,3 @@ export default function EditLessonPage() {
     </CmsPageShell>
   );
 }
-

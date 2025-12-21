@@ -9,8 +9,10 @@ import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
 import Textarea from "../../../components/ui/Textarea";
 import Select from "../../../components/ui/Select";
-import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
+import BreadcrumbTrail from "../../../components/cms/BreadcrumbTrail";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton";
 import { nullIfEmpty } from "../../../lib/utils/string";
 import StatusMessage from "../../../components/ui/StatusMessage";
 import { updateGroupSchema } from "../../../lib/schemas/groupSchema";
@@ -31,6 +33,7 @@ type LoadState =
 export default function EditGroupPage() {
   const params = useParams<{ groupId: string }>();
   const groupId = params?.groupId;
+  const playerBaseUrl = process.env.NEXT_PUBLIC_PLAYER_BASE_URL || "";
 
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [lessons, setLessons] = useState<LessonMinimal[]>([]);
@@ -56,6 +59,7 @@ export default function EditGroupPage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const initialDataRef = useRef<{
     lessonId: string;
     orderIndex: number;
@@ -77,7 +81,7 @@ export default function EditGroupPage() {
   } | null>(null);
 
   // Check if form has unsaved changes
-  const hasUnsavedChanges = useMemo(() => {
+  const hasUnsavedChanges = (() => {
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
     return (
@@ -99,25 +103,7 @@ export default function EditGroupPage() {
       mediaUsedIds !== initial.mediaUsedIds ||
       groupSlidesPlan !== initial.groupSlidesPlan
     );
-  }, [
-    lessonId,
-    orderIndex,
-    title,
-    groupCode,
-    shortSummary,
-    groupType,
-    groupSummary,
-    groupGoal,
-    prerequisites,
-    isRequiredToPass,
-    passingScoreType,
-    passingScoreValue,
-    maxScoreValue,
-    extraPracticeNotes,
-    l1L2,
-    mediaUsedIds,
-    groupSlidesPlan,
-  ]);
+  })();
 
   // Warn before navigation
   useUnsavedChangesWarning(hasUnsavedChanges);
@@ -297,6 +283,12 @@ export default function EditGroupPage() {
     }
   }
 
+  const handleSaveButtonClick = () => {
+    if (formRef.current) {
+      formRef.current.requestSubmit();
+    }
+  };
+
   return (
     <CmsPageShell
       title="Edit group"
@@ -313,24 +305,27 @@ export default function EditGroupPage() {
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
           <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #e4c3b7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
-            <CmsOutlineView currentGroupId={groupId} hasUnsavedChanges={hasUnsavedChanges} />
-          </div>
-          
-          {/* Right column - form */}
-          <div style={{ flex: 1 }}>
-            {hasUnsavedChanges && (
-              <div style={{ 
-                padding: uiTokens.space.sm, 
-                marginBottom: uiTokens.space.md, 
-                backgroundColor: "#fff3cd", 
-                border: "1px solid #ffc107",
-                borderRadius: uiTokens.radius.md,
-                color: uiTokens.color.text
-              }}>
-                ⚠️ You have unsaved changes
-              </div>
-            )}
-            <form onSubmit={handleSave}>
+          <CmsOutlineView currentGroupId={groupId} hasUnsavedChanges={hasUnsavedChanges} />
+        </div>
+        
+        {/* Right column - form */}
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.md, gap: uiTokens.space.sm }}>
+            <PreviewInPlayerButton
+              href={
+                playerBaseUrl && loadState.status === "ready" && loadState.group.lessonId
+                  ? `${playerBaseUrl}/lecons/db/${loadState.group.lessonId}`
+                  : undefined
+              }
+            />
+            <SaveChangesButton
+              onClick={handleSaveButtonClick}
+              hasUnsavedChanges={hasUnsavedChanges}
+              saving={saving}
+            />
+            </div>
+          <BreadcrumbTrail groupId={groupId} />
+            <form ref={formRef} onSubmit={handleSave}>
           <CmsSection title="Group Details" backgroundColor="#f2e4de" borderColor="#e4c3b7">
             <FormField label="Group ID" borderColor="#e4c3b7">
               <Input value={groupId || ""} disabled readOnly />
@@ -496,12 +491,6 @@ export default function EditGroupPage() {
                 onChange={(e) => setMediaUsedIds(e.target.value)}
               />
             </FormField>
-
-            <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-            </div>
           </CmsSection>
             </form>
           </div>
@@ -518,4 +507,3 @@ export default function EditGroupPage() {
     </CmsPageShell>
   );
 }
-

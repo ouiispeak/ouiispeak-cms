@@ -24,8 +24,8 @@ export default function PageContainer({
 
   return (
     <main
-      className="p-6"
       style={{
+        padding: 0,
         ...(maxWidthValue && {
           maxWidth: maxWidthValue,
           marginLeft: "auto",
@@ -38,4 +38,3 @@ export default function PageContainer({
     </main>
   );
 }
-

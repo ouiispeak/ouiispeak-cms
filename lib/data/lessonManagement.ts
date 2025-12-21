@@ -94,7 +94,7 @@ export async function loadLessonManagement(
       (allSlides ?? [])
         .map((s: any) => (s.type || "").trim())
         .filter((t: string) => t.length > 0)
-    )
+    ).add("default")
   ).sort();
 
   return {
@@ -119,4 +119,3 @@ export async function loadLessonManagement(
     error: null,
   };
 }
-

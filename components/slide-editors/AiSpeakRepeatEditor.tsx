@@ -163,6 +163,7 @@ export default function AiSpeakRepeatEditor({
     const existingSlide = innerState.slide;
 
     setSaving(true);
+    onSavingChange?.(true);
 
     try {
       // Turn textarea back into lines[][]
@@ -265,6 +266,7 @@ export default function AiSpeakRepeatEditor({
       onSaveSuccess();
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -404,6 +406,7 @@ export default function AiSpeakRepeatEditor({
                   setRawJsonParseError(null);
                   setRawJsonSaveMessage(null);
                   setRawJsonSaving(true);
+                  onSavingChange?.(true);
 
                   try {
                     let parsedJson: unknown;
@@ -458,6 +461,7 @@ export default function AiSpeakRepeatEditor({
                     setRawJsonText(JSON.stringify(parsedJson, null, 2));
                   } finally {
                     setRawJsonSaving(false);
+                    onSavingChange?.(false);
                   }
                 }}
                 disabled={rawJsonSaving}

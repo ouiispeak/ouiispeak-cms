@@ -122,6 +122,7 @@ export default function TextSlideEditor({
     e.preventDefault();
     setSaveMessage(null);
     setSaving(true);
+    onSavingChange?.(true);
 
     try {
       const newProps: any = {};
@@ -191,6 +192,7 @@ export default function TextSlideEditor({
       onSaveSuccess();
     } finally {
       setSaving(false);
+      onSavingChange?.(false);
     }
   }
 
@@ -298,6 +300,7 @@ export default function TextSlideEditor({
                   setRawJsonParseError(null);
                   setRawJsonSaveMessage(null);
                   setRawJsonSaving(true);
+                  onSavingChange?.(true);
 
                   try {
                     let parsedJson: unknown;
@@ -346,6 +349,7 @@ export default function TextSlideEditor({
                     setRawJsonText(JSON.stringify(parsedJson, null, 2));
                   } finally {
                     setRawJsonSaving(false);
+                    onSavingChange?.(false);
                   }
                 }}
                 disabled={rawJsonSaving}
@@ -376,4 +380,3 @@ export default function TextSlideEditor({
     </>
   );
 }
-

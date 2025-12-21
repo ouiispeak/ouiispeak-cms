@@ -50,13 +50,17 @@ export default function LocationSpine({
             position: "sticky",
             top: 48,
             zIndex: 99,
-            padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`,
-            borderBottom: `1px solid #595852`,
-            backgroundColor: uiTokens.color.bg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            gap: 0,
+          padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`,
+          borderBottom: `1px solid #595852`,
+          borderLeft: "1px solid #595852",
+          borderRight: "1px solid #595852",
+          borderRadius: `0 0 ${uiTokens.radius.md}px ${uiTokens.radius.md}px`,
+          backgroundColor: uiTokens.color.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: 0,
+            marginBottom: "2.5%",
           }}
         >
           <span style={{ fontSize: 15, fontWeight: 400, color: uiTokens.color.textMuted }}>
@@ -79,23 +83,32 @@ export default function LocationSpine({
     }
   }
 
-  // On home page (no context), show simple anchor label
+  // On pages without context (e.g., dashboard, slide types), show a contextual anchor
   if (!moduleId && !lessonId && !groupId && !slideId && !level) {
+    const isSlideTypes = pathname?.includes("/cms/slide-types");
+    const heading = isSlideTypes ? "Slide Types:" : "Curriculum Map (A0–C2):";
+    const subheading = isSlideTypes
+      ? "Manage and edit slide types."
+      : "Manage and edit your curriculum from CEFR levels down to individual slides.";
     return (
-          <div
-            style={{
-              position: "sticky",
-              top: 48,
-              zIndex: 99,
-              padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`,
-              borderBottom: `1px solid #595852`,
-              backgroundColor: uiTokens.color.bg,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-start",
-              gap: uiTokens.space.md,
-            }}
-          >
+      <div
+        style={{
+          position: "sticky",
+          top: 48,
+          zIndex: 99,
+          padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`,
+          borderBottom: `1px solid #595852`,
+          borderLeft: "1px solid #595852",
+          borderRight: "1px solid #595852",
+          borderRadius: `0 0 ${uiTokens.radius.md}px ${uiTokens.radius.md}px`,
+          backgroundColor: uiTokens.color.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: uiTokens.space.md,
+          marginBottom: "2.5%",
+        }}
+      >
         <span
           style={{
             fontSize: 15,
@@ -103,7 +116,7 @@ export default function LocationSpine({
             color: uiTokens.color.textMuted,
           }}
         >
-          Curriculum Map (A0–C2):
+          {heading}
         </span>
         <span
           style={{
@@ -112,7 +125,7 @@ export default function LocationSpine({
             color: uiTokens.color.textMuted,
           }}
         >
-          Organize your curriculum from CEFR levels down to individual slides.
+          {subheading}
         </span>
       </div>
     );
@@ -229,11 +242,15 @@ export default function LocationSpine({
         zIndex: 99,
         padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`,
         borderBottom: `1px solid #595852`,
+        borderLeft: "1px solid #595852",
+        borderRight: "1px solid #595852",
+        borderRadius: `0 0 ${uiTokens.radius.md}px ${uiTokens.radius.md}px`,
         backgroundColor: uiTokens.color.bg,
         display: "flex",
         alignItems: "center",
         justifyContent: "flex-start",
         gap: 0,
+        marginBottom: "2.5%",
       }}
     >
       {trail.map((item, index) => (
@@ -293,5 +310,3 @@ export default function LocationSpine({
     </div>
   );
 }
-
-

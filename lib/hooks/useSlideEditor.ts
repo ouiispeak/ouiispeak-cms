@@ -145,6 +145,24 @@ export function useSlideEditor(slideId: string | undefined) {
     }
   };
 
+  const resetUnsavedChanges = () => {
+    if (loadState.status !== "ready" || !initialDataRef.current) return;
+    const slide = loadState.row;
+    initialDataRef.current = {
+      orderIndex: slide.orderIndex ?? 1,
+      selectedGroupId: slide.groupId ?? "",
+      slideType: slide.type ?? "",
+      propsJson: JSON.stringify(slide.propsJson || {}),
+      metaJson: JSON.stringify(slide.metaJson || {}),
+      code: slide.code,
+      isActivity: slide.isActivity,
+      scoreType: slide.scoreType,
+      passingScoreValue: slide.passingScoreValue,
+      maxScoreValue: slide.maxScoreValue,
+      passRequiredForNext: slide.passRequiredForNext,
+    };
+  };
+
   const saveSlide = useCallback(async (input: UpdateSlideInput): Promise<{ success: boolean; error?: string }> => {
     if (!slideId) {
       return { success: false, error: "No slideId provided" };
@@ -189,7 +207,7 @@ export function useSlideEditor(slideId: string | undefined) {
     setSlideType,
     reloadSlide,
     saveSlide,
+    resetUnsavedChanges,
     hasUnsavedChanges,
   };
 }
-

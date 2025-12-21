@@ -8,6 +8,7 @@ import {
   listSlideEditorDefinitions,
 } from "../../../lib/slide-editor-registry";
 import type { EditorField } from "../../../lib/slide-editor-registry/types";
+import LinkButton from "../../../components/ui/LinkButton";
 
 const fieldList = (fields: EditorField[]) => (
   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -53,38 +54,33 @@ export default function SlideTypesPage() {
         title="Registered slide types"
         description="Each entry resolves to an editor component and a simple field schema for UI metadata."
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: uiTokens.space.md,
-          }}
-        >
+        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {editors.map((editor) => (
-            <div
+            <li
               key={editor.type}
               style={{
-                border: `1px solid ${uiTokens.color.border}`,
-                borderRadius: uiTokens.radius.lg,
                 padding: uiTokens.space.md,
-                backgroundColor: "#fff",
+                border: `1px solid ${uiTokens.color.border}`,
+                borderRadius: uiTokens.radius.md,
+                marginBottom: uiTokens.space.md,
+                backgroundColor: "#f8f0ed",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{editor.label}</div>
-                  <div className="metaText" style={{ color: uiTokens.color.textMuted }}>
-                    type id: <code className="codeText">{editor.type}</code>
-                  </div>
-                </div>
+              <div style={{ fontWeight: 600 }}>{editor.label}</div>
+              <div className="metaText" style={{ color: uiTokens.color.textMuted }}>
+                {editor.type}
               </div>
-              <div style={{ marginTop: uiTokens.space.sm }}>
-                <div style={{ fontWeight: 500, marginBottom: uiTokens.space.xs }}>Schema fields</div>
-                {fieldList(editor.schema.fields)}
+              <div style={{ marginTop: uiTokens.space.xs }}>
+                <a
+                  href={`/cms/slide-types/${editor.type}/edit`}
+                  style={{ fontSize: 13, color: uiTokens.color.focus, textDecoration: "underline" }}
+                >
+                  Edit preset
+                </a>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </CmsSection>
 
       <CmsSection
@@ -98,7 +94,7 @@ export default function SlideTypesPage() {
             border: `1px solid ${uiTokens.color.border}`,
             borderRadius: uiTokens.radius.lg,
             padding: uiTokens.space.md,
-            backgroundColor: "#fff",
+            backgroundColor: "#f8f0ed",
             maxWidth: 520,
           }}
         >

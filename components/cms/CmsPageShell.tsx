@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import LocationSpine from "./LocationSpine";
 import PageShell from "../ui/PageShell";
 import { useParams } from "next/navigation";
 
@@ -34,13 +33,6 @@ export default function CmsPageShell({
 
   return (
     <>
-      <LocationSpine
-        moduleId={params?.moduleId}
-        lessonId={params?.lessonId}
-        groupId={params?.groupId}
-        slideId={params?.slideId}
-        level={params?.level}
-      />
       <PageShell
         title={title}
         showBack={showBack}
@@ -54,4 +46,3 @@ export default function CmsPageShell({
     </>
   );
 }
-

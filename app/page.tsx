@@ -48,7 +48,7 @@ export default function CmsHome() {
         showBack={false}
         maxWidth={undefined}
       >
-        <div style={{ width: "90vw", maxWidth: "none", margin: "0 auto" }}>
+        <div style={{ width: "100%", maxWidth: "1200px", margin: "0 auto" }}>
           {loadState.status === "loading" && <p>Loading…</p>}
           {loadState.status === "error" && (
             <p style={{ color: uiTokens.color.danger }}>{loadState.message}</p>

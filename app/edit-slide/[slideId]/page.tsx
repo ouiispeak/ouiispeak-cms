@@ -9,15 +9,20 @@ import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import { uiTokens } from "../../../lib/uiTokens";
+import BreadcrumbTrail from "../../../components/cms/BreadcrumbTrail";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton";
 import { useSlideEditor } from "../../../lib/hooks/useSlideEditor";
 import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
-import { getSlideEditorDefinition } from "../../../lib/slide-editor-registry";
+import { getSlideEditorDefinition, getVisibleSchemaForType } from "../../../lib/slide-editor-registry";
 
 export default function EditSlidePage() {
   const params = useParams<{ slideId: string }>();
   const slideId = params?.slideId;
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
   const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editorSaving, setEditorSaving] = useState(false);
   
   const copyToClipboard = async (text: string, label: string, buttonId: string) => {
     try {
@@ -41,8 +46,25 @@ export default function EditSlidePage() {
     setSlideType,
     reloadSlide,
     saveSlide,
+    resetUnsavedChanges,
     hasUnsavedChanges: topLevelHasUnsavedChanges,
   } = useSlideEditor(slideId);
+  const saveSlideWithIndicator = async (input: import("../../../lib/data/slides").UpdateSlideInput) => {
+    setSaving(true);
+    const result = await saveSlide(input);
+    setSaving(false);
+    if (result.success) {
+      setEditorHasUnsavedChanges(false);
+      resetUnsavedChanges();
+    }
+    return result;
+  };
+  const combinedSaving = saving || editorSaving;
+  const playerBaseUrl = process.env.NEXT_PUBLIC_PLAYER_BASE_URL || "";
+  const playerHref =
+    playerBaseUrl && loadState.status === "ready" && loadState.row.lessonId
+      ? `${playerBaseUrl}/lecons/db/${loadState.row.lessonId}`
+      : undefined;
   
   // Combine top-level and editor unsaved changes
   const hasUnsavedChanges = topLevelHasUnsavedChanges || editorHasUnsavedChanges;
@@ -71,44 +93,21 @@ export default function EditSlidePage() {
           
           {/* Right column - form */}
           <div style={{ flex: 1 }}>
-            {/* Save button at top right */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.md }}>
-              <button
-                type="button"
+            {/* Save & preview row */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.md, gap: uiTokens.space.sm }}>
+              <PreviewInPlayerButton href={playerHref} />
+              <SaveChangesButton
                 onClick={() => {
-                  const form = document.querySelector('form') as HTMLFormElement;
+                  const form = document.querySelector("form") as HTMLFormElement;
                   if (form) {
                     form.requestSubmit();
                   }
                 }}
-                style={{
-                  padding: `${uiTokens.space.xs}px ${uiTokens.space.md}px`,
-                  fontSize: uiTokens.font.label.size,
-                  fontWeight: 500,
-                  borderRadius: uiTokens.radius.sm,
-                  border: `1px solid ${hasUnsavedChanges ? "#ffc107" : "#d7a592"}`,
-                  backgroundColor: hasUnsavedChanges ? "#fff3cd" : "#d7a592",
-                  color: hasUnsavedChanges ? uiTokens.color.text : "#f6f5f3",
-                  cursor: "pointer",
-                  fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
-                  transition: "background-color 0.2s, border-color 0.2s, color 0.2s",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: uiTokens.space.xs,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = hasUnsavedChanges ? "#ffe69c" : "#c59582";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = hasUnsavedChanges ? "#fff3cd" : "#d7a592";
-                }}
-              >
-                {hasUnsavedChanges && (
-                  <span style={{ fontSize: "16px" }}>⚠️</span>
-                )}
-                <span style={{ color: hasUnsavedChanges ? uiTokens.color.text : "#f6f5f3" }}>Save changes</span>
-              </button>
+                hasUnsavedChanges={hasUnsavedChanges}
+                saving={combinedSaving}
+              />
             </div>
+            <BreadcrumbTrail slideId={slideId} />
             {/* Slide type input */}
             <CmsSection title="Slide Type" backgroundColor="#f8f0ed" borderColor="#f2e1db">
             <FormField 
@@ -289,15 +288,17 @@ export default function EditSlidePage() {
           {(() => {
             const editorDefinition = getSlideEditorDefinition(loadState.row.type);
             const EditorComponent = editorDefinition.editorComponent;
+            const visibleSchema = getVisibleSchemaForType(loadState.row.type);
             const editorProps = {
               row: loadState.row,
               orderIndex,
               groupId: selectedGroupId || null,
               slideType,
-              schema: editorDefinition.schema,
+              schema: visibleSchema.fields.length > 0 ? visibleSchema : editorDefinition.schema,
               onSaveSuccess: reloadSlide,
-              saveSlide,
+              saveSlide: saveSlideWithIndicator,
               onUnsavedChangesChange: setEditorHasUnsavedChanges,
+              onSavingChange: setEditorSaving,
             };
 
             return <EditorComponent {...editorProps} />;

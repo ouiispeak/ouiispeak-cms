@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import TopNav from "../components/cms/TopNav";
+import TopNavStack from "../components/cms/TopNavStack";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,8 +28,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TopNav />
-        {children}
+        <div
+          style={{
+            marginTop: "5%",
+            marginLeft: "5%",
+            marginRight: "5%",
+            boxSizing: "border-box",
+          }}
+        >
+          <TopNavStack />
+          <div
+            style={{
+              marginTop: "5%",
+              marginBottom: "5%",
+            }}
+          >
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   );

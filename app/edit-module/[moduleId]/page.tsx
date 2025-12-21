@@ -9,8 +9,10 @@ import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import Textarea from "../../../components/ui/Textarea";
-import { Button } from "../../../components/Button";
 import { uiTokens } from "../../../lib/uiTokens";
+import BreadcrumbTrail from "../../../components/cms/BreadcrumbTrail";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton";
 import StatusMessage from "../../../components/ui/StatusMessage";
 import { loadModuleById, updateModule } from "../../../lib/data/modules";
 import type { Module } from "../../../lib/domain/module";
@@ -43,6 +45,7 @@ export default function EditModulePage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const initialDataRef = useRef<{
     title: string;
     slug: string;
@@ -57,7 +60,7 @@ export default function EditModulePage() {
   } | null>(null);
 
   // Check if form has unsaved changes
-  const hasUnsavedChanges = useMemo(() => {
+  const hasUnsavedChanges = (() => {
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
     return (
@@ -72,7 +75,7 @@ export default function EditModulePage() {
       coreTopics !== initial.coreTopics ||
       authorNotes !== initial.authorNotes
     );
-  }, [title, slug, level, orderIndex, description, status, visibility, moduleGoal, coreTopics, authorNotes]);
+  })();
 
   // Warn before navigation
   useUnsavedChangesWarning(hasUnsavedChanges);
@@ -184,6 +187,12 @@ export default function EditModulePage() {
     }
   }
 
+  const handleSaveButtonClick = () => {
+    if (formRef.current) {
+      formRef.current.requestSubmit();
+    }
+  };
+
   return (
     <CmsPageShell
       title="Edit module"
@@ -205,20 +214,17 @@ export default function EditModulePage() {
           
           {/* Right column - form */}
           <div style={{ flex: 1 }}>
-            {hasUnsavedChanges && (
-              <div style={{ 
-                padding: uiTokens.space.sm, 
-                marginBottom: uiTokens.space.md, 
-                backgroundColor: "#fff3cd", 
-                border: "1px solid #ffc107",
-                borderRadius: uiTokens.radius.md,
-                color: uiTokens.color.text
-              }}>
-                ⚠️ You have unsaved changes
-              </div>
-            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.md, gap: uiTokens.space.sm }}>
+              <PreviewInPlayerButton href={moduleId ? `/module-lessons/${moduleId}` : undefined} />
+              <SaveChangesButton
+                onClick={handleSaveButtonClick}
+                hasUnsavedChanges={hasUnsavedChanges}
+                saving={saving}
+              />
+            </div>
+            <BreadcrumbTrail moduleId={moduleId} />
             <CmsSection title="Module Details" backgroundColor="#e3c3b9" borderColor="#d7a592">
-              <form onSubmit={handleSave}>
+              <form ref={formRef} onSubmit={handleSave}>
             <FormField label="Module ID" borderColor="#d7a592">
               <Input value={moduleId || ""} disabled readOnly />
             </FormField>
@@ -296,12 +302,6 @@ export default function EditModulePage() {
                 rows={4}
               />
             </FormField>
-
-            <div style={{ marginTop: uiTokens.space.lg, display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-            </div>
               </form>
             </CmsSection>
           </div>
@@ -316,4 +316,3 @@ export default function EditModulePage() {
     </CmsPageShell>
   );
 }
-
