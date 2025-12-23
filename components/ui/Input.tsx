@@ -6,6 +6,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export default function Input({ style, borderColor, ...props }: InputProps) {
+  const isLocked = Boolean(props.disabled || props.readOnly);
+
   return (
     <input
       {...props}
@@ -16,11 +18,10 @@ export default function Input({ style, borderColor, ...props }: InputProps) {
         border: `1px solid ${borderColor || uiTokens.color.inputBorder}`,
         fontSize: uiTokens.font.label.size,
         fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
-        backgroundColor: uiTokens.color.bg,
+        backgroundColor: isLocked ? "#f0ede9" : uiTokens.color.bg,
         color: uiTokens.color.text,
         ...style,
       }}
     />
   );
 }
-

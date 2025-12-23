@@ -33,6 +33,10 @@ export default function TextSlideEditor({
     activityName: ((row.metaJson as any) || {}).activityName || "",
     requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
     buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+    tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
+    difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
+    reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
+    showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
     isActivity: row.isActivity || false,
     scoreType: row.scoreType || "none",
     passingScoreValue: row.passingScoreValue ?? null,
@@ -59,6 +63,10 @@ export default function TextSlideEditor({
         activityName: ((row.metaJson as any) || {}).activityName || "",
         requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
         buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+        tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
+        difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
+        reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
+        showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
         isActivity: row.isActivity || false,
         scoreType: row.scoreType || "none",
         passingScoreValue: row.passingScoreValue ?? null,
@@ -75,6 +83,10 @@ export default function TextSlideEditor({
       activityName: ((row.metaJson as any) || {}).activityName || "",
       requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
       buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+      tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
+      difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
+      reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
+      showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
       isActivity: row.isActivity || false,
       scoreType: row.scoreType || "none",
       passingScoreValue: row.passingScoreValue ?? null,
@@ -96,6 +108,10 @@ export default function TextSlideEditor({
       metadata.activityName !== initial.metadata.activityName ||
       metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
       JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
+      JSON.stringify(metadata.tags) !== JSON.stringify(initial.metadata.tags) ||
+      metadata.difficultyHint !== initial.metadata.difficultyHint ||
+      metadata.reviewWeight !== initial.metadata.reviewWeight ||
+      metadata.showScoreToLearner !== initial.metadata.showScoreToLearner ||
       metadata.isActivity !== initial.metadata.isActivity ||
       metadata.scoreType !== initial.metadata.scoreType ||
       metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
@@ -153,6 +169,18 @@ export default function TextSlideEditor({
       }
       if (metadata.buttons.length > 0) {
         metaJson.buttons = metadata.buttons;
+      }
+      if (metadata.tags.length > 0) {
+        metaJson.tags = metadata.tags;
+      }
+      if (metadata.difficultyHint) {
+        metaJson.difficultyHint = metadata.difficultyHint;
+      }
+      if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
+        metaJson.reviewWeight = metadata.reviewWeight;
+      }
+      if (metadata.showScoreToLearner) {
+        metaJson.showScoreToLearner = true;
       }
 
       const result = await saveSlide({
@@ -325,6 +353,18 @@ export default function TextSlideEditor({
                     }
                     if (metadata.buttons.length > 0) {
                       metaJson.buttons = metadata.buttons;
+                    }
+                    if (metadata.tags.length > 0) {
+                      metaJson.tags = metadata.tags;
+                    }
+                    if (metadata.difficultyHint) {
+                      metaJson.difficultyHint = metadata.difficultyHint;
+                    }
+                    if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
+                      metaJson.reviewWeight = metadata.reviewWeight;
+                    }
+                    if (metadata.showScoreToLearner) {
+                      metaJson.showScoreToLearner = true;
                     }
 
                     const result = await saveSlide({

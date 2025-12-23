@@ -9,6 +9,10 @@ export type AuthoringMetadataState = {
   activityName: string;
   requiresExternalTTS: boolean;
   buttons: string[];
+  tags: string[];
+  difficultyHint: string;
+  reviewWeight: number | null;
+  showScoreToLearner: boolean;
   isActivity: boolean;
   scoreType: string;
   passingScoreValue: number | null;

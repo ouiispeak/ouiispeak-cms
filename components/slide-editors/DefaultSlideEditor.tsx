@@ -1,29 +1,235 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, FormEvent, useCallback } from "react";
-import CmsSection from "../ui/CmsSection";
+import { useEffect, useMemo, useRef, useState, FormEvent, useCallback, CSSProperties } from "react";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
-import type { SlideEditorProps } from "./types";
-import type { AuthoringMetadataState } from "./types";
+import type { SlideEditorProps, AuthoringMetadataState, EditorField } from "./types";
 import { DEFAULT_SLIDE_FIELDS } from "../../lib/slide-editor-registry/defaultFields";
+import {
+  categoriesGrid,
+  categoryContainer,
+  categoryTitle,
+} from "../../lib/styles/slideTypeEditStyles";
 
 type FieldValueMap = Record<string, any>;
 
-function buildInitialValues(row: any): FieldValueMap {
+const SYSTEM_FIELD_KEYS = new Set(["slideId", "slideType", "groupId", "orderIndex"]);
+const METADATA_FIELD_KEYS = new Set([
+  "code",
+  "slideGoal",
+  "activityName",
+  "requiresExternalTTS",
+  "buttons",
+  "tags",
+  "difficultyHint",
+  "reviewWeight",
+  "isActivity",
+  "scoreType",
+  "passThreshold",
+  "maxScoreValue",
+  "passRequiredForNext",
+  "showScoreToLearner",
+]);
+const AUTHORING_METADATA_KEYS = new Set([
+  "code",
+  "slideGoal",
+  "activityName",
+  "requiresExternalTTS",
+  "tags",
+  "difficultyHint",
+  "reviewWeight",
+]);
+const SPECIAL_METADATA_KEYS = new Set([
+  "buttons",
+  "isActivity",
+  "scoreType",
+  "passThreshold",
+  "maxScoreValue",
+  "passRequiredForNext",
+  "showScoreToLearner",
+]);
+const COPYABLE_SYSTEM_FIELDS = new Set(["slideId", "groupId"]);
+
+const SELECT_OPTIONS_BY_KEY: Record<string, { value: string; label: string }[]> = {
+  defaultLang: [
+    { value: "auto", label: "Auto" },
+    { value: "en", label: "English (en)" },
+    { value: "fr", label: "French (fr)" },
+  ],
+  speechMode: [
+    { value: "repeat", label: "Repeat" },
+    { value: "free", label: "Free" },
+    { value: "choose", label: "Choose" },
+  ],
+  scoreType: [
+    { value: "none", label: "None" },
+    { value: "confidence", label: "Confidence" },
+    { value: "accuracy", label: "Accuracy" },
+    { value: "percent", label: "Percent (legacy)" },
+    { value: "raw", label: "Raw (legacy)" },
+  ],
+  aiResponseMode: [
+    { value: "reactive", label: "Reactive" },
+    { value: "scripted", label: "Scripted" },
+    { value: "mixed", label: "Mixed" },
+  ],
+};
+
+const isSystemField = (key: string) => SYSTEM_FIELD_KEYS.has(key);
+const isMetadataField = (key: string) => METADATA_FIELD_KEYS.has(key);
+const isAuthoringMetadataField = (key: string) => AUTHORING_METADATA_KEYS.has(key);
+const isSpecialMetadataField = (key: string) => SPECIAL_METADATA_KEYS.has(key);
+
+const FIELD_GROUPS = [
+  {
+    id: "layer1-identity",
+    title: "Identity & structure",
+    keys: ["slideId", "slideType", "groupId", "orderIndex"],
+  },
+  {
+    id: "layer1-core",
+    title: "Core content",
+    keys: ["title", "subtitle", "body", "note"],
+  },
+  {
+    id: "layer1-language",
+    title: "Language & localization",
+    keys: ["defaultLang", "secondaryLang", "translation", "phoneticHint"],
+  },
+  {
+    id: "layer1-media",
+    title: "Media references",
+    keys: ["imageId", "imageUrl", "audioId", "videoId", "lottieId", "waveformId"],
+  },
+  {
+    id: "layer1-timing",
+    title: "Timing & flow",
+    keys: ["delayMs", "autoAdvance", "minDuration", "maxDuration"],
+  },
+  {
+    id: "layer1-interaction",
+    title: "Interaction flags",
+    keys: ["isInteractive", "requiresInput", "allowSkip", "allowRetry", "isActivity"],
+  },
+  {
+    id: "layer1-buttons",
+    title: "Buttons & affordances",
+    keys: ["buttons"],
+  },
+  {
+    id: "layer1-metadata",
+    title: "Authoring metadata",
+    keys: [
+      "code",
+      "slideGoal",
+      "activityName",
+      "requiresExternalTTS",
+      "tags",
+      "difficultyHint",
+      "reviewWeight",
+    ],
+  },
+  {
+    id: "layer1-freeform",
+    title: "Freeform / escape hatch",
+    keys: ["customProps"],
+  },
+  {
+    id: "layer2-speech",
+    title: "Speech & audio interaction",
+    keys: ["expectedSpeech", "speechMode", "minConfidence", "showPronunciationHelp", "phrases"],
+  },
+  {
+    id: "layer2-choice",
+    title: "Choice & selection",
+    keys: ["choices", "correctChoiceIds", "allowMultiple", "shuffleChoices"],
+  },
+  {
+    id: "layer2-sequencing",
+    title: "Sequencing & grouping",
+    keys: ["items", "groups", "chunks"],
+  },
+  {
+    id: "layer2-matching",
+    title: "Matching / mapping",
+    keys: ["pairs", "dragTargets", "dropZones"],
+  },
+  {
+    id: "layer2-scoring",
+    title: "Scoring hints",
+    keys: ["scoreType", "passThreshold", "maxScoreValue", "passRequiredForNext", "showScoreToLearner"],
+  },
+  {
+    id: "layer3-ai",
+    title: "AI / agent behavior hints",
+    keys: ["aiPrompt", "aiPersona", "aiResponseMode", "aiMemoryKey"],
+  },
+  {
+    id: "layer3-visual",
+    title: "Visual behavior hints",
+    keys: ["layoutVariant", "emphasisTarget", "highlightMode", "animationPreset"],
+  },
+  {
+    id: "layer3-analytics",
+    title: "Analytics & observation",
+    keys: ["trackEvents", "eventLabels", "debugNotes"],
+  },
+] as const;
+
+const groupFieldsForDisplay = (fields: EditorField[]) => {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  const used = new Set<string>();
+
+  const grouped = FIELD_GROUPS.map((group) => {
+    const groupFields = group.keys
+      .map((key) => {
+        const field = byKey.get(key);
+        if (field) used.add(key);
+        return field;
+      })
+      .filter(Boolean) as EditorField[];
+    return { ...group, fields: groupFields };
+  }).filter((group) => group.fields.length > 0);
+
+  const remaining = fields.filter((field) => !used.has(field.key));
+  if (remaining.length > 0) {
+    grouped.push({ id: "other", title: "Other", keys: [], fields: remaining });
+  }
+
+  return grouped;
+};
+
+function buildInitialValues(row: any, fields: EditorField[]): FieldValueMap {
   const props = (row.propsJson as any) || {};
-  return {
-    title: props.title || "",
-    subtitle: props.subtitle || "",
-    body: props.body || (props.bodies && Array.isArray(props.bodies) ? props.bodies.join("\n") : ""),
-    note: props.note || "",
-    defaultLang: props.defaultLang || "",
-    phrases: props.phrases || "",
-  };
+
+  return fields.reduce((acc, field) => {
+    if (isSystemField(field.key) || isMetadataField(field.key)) {
+      return acc;
+    }
+    if (field.key === "body") {
+      const bodyValue =
+        props.body || (props.bodies && Array.isArray(props.bodies) ? props.bodies.join("\n") : "");
+      acc.body = bodyValue || "";
+      return acc;
+    }
+    const rawValue = props[field.key];
+    if (field.uiType === "json") {
+      acc[field.key] =
+        rawValue === undefined || rawValue === null ? "" : JSON.stringify(rawValue, null, 2);
+      return acc;
+    }
+    if (rawValue === undefined || rawValue === null) {
+      acc[field.key] = "";
+      return acc;
+    }
+    acc[field.key] = rawValue;
+    return acc;
+  }, {} as FieldValueMap);
 }
 
 export default function DefaultSlideEditor({
@@ -37,13 +243,17 @@ export default function DefaultSlideEditor({
   onUnsavedChangesChange,
   onSavingChange,
 }: SlideEditorProps) {
-  const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row));
+  const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row, DEFAULT_SLIDE_FIELDS));
   const [metadata, setMetadata] = useState<AuthoringMetadataState>({
     code: row.code || "",
     slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
     activityName: ((row.metaJson as any) || {}).activityName || "",
     requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
     buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+    tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
+    difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
+    reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
+    showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
     isActivity: row.isActivity || false,
     scoreType: row.scoreType || "none",
     passingScoreValue: row.passingScoreValue ?? null,
@@ -53,13 +263,25 @@ export default function DefaultSlideEditor({
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
   const handleMetadataChange = useCallback((m: AuthoringMetadataState) => setMetadata(m), []);
+  const handleAuthoringMetadataChange = useCallback((m: AuthoringMetadataState) => {
+    setMetadata((prev) => {
+      const next = { ...prev };
+      AUTHORING_METADATA_KEYS.forEach((key) => {
+        if (key in m) {
+          (next as any)[key] = (m as any)[key];
+        }
+      });
+      return next;
+    });
+  }, []);
 
   const initialDataRef = useRef<{ values: FieldValueMap; metadata: AuthoringMetadataState } | null>(null);
 
   // Reset when row changes
   useEffect(() => {
-    const initialValues = buildInitialValues(row);
+    const initialValues = buildInitialValues(row, DEFAULT_SLIDE_FIELDS);
     initialDataRef.current = {
       values: initialValues,
       metadata: {
@@ -68,6 +290,10 @@ export default function DefaultSlideEditor({
         activityName: ((row.metaJson as any) || {}).activityName || "",
         requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
         buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
+        tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
+        difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
+        reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
+        showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
         isActivity: row.isActivity || false,
         scoreType: row.scoreType || "none",
         passingScoreValue: row.passingScoreValue ?? null,
@@ -77,7 +303,17 @@ export default function DefaultSlideEditor({
     };
     setValues(initialValues);
     setMetadata(initialDataRef.current.metadata);
-  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]);
+  }, [
+    row.id,
+    JSON.stringify(row.propsJson),
+    JSON.stringify(row.metaJson),
+    row.code,
+    row.isActivity,
+    row.scoreType,
+    row.passingScoreValue,
+    row.maxScoreValue,
+    row.passRequiredForNext,
+  ]);
 
   const visibleFieldKeys = useMemo(() => new Set(schema.fields.map((f) => f.key)), [schema.fields]);
   const hiddenFields = useMemo(
@@ -90,6 +326,41 @@ export default function DefaultSlideEditor({
     }
     return schema.fields;
   }, [schema.fields, hiddenFields, showHidden]);
+  const metadataFields = useMemo(
+    () => renderedFields.filter((field) => isMetadataField(field.key)),
+    [renderedFields]
+  );
+  const editableFields = useMemo(
+    () => renderedFields.filter((field) => !isMetadataField(field.key) && !isSystemField(field.key)),
+    [renderedFields]
+  );
+  const metadataFieldKeySet = useMemo(
+    () => new Set(metadataFields.map((field) => field.key)),
+    [metadataFields]
+  );
+  const authoringMetadataFieldKeySet = useMemo(() => {
+    const keys = new Set<string>();
+    metadataFields.forEach((field) => {
+      if (isAuthoringMetadataField(field.key)) {
+        keys.add(field.key);
+      }
+    });
+    return keys;
+  }, [metadataFields]);
+  const systemFieldValues = useMemo(
+    () => ({
+      slideId: row.id || "",
+      slideType: slideType || row.type || "",
+      groupId: groupId ?? row.groupId ?? "",
+      orderIndex: orderIndex ?? row.orderIndex ?? "",
+    }),
+    [groupId, orderIndex, row.groupId, row.id, row.orderIndex, row.type, slideType]
+  );
+  const isDefaultType = slideType.trim() === "default";
+  const groupedRenderedFields = useMemo(
+    () => groupFieldsForDisplay(renderedFields),
+    [renderedFields]
+  );
 
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
@@ -101,6 +372,10 @@ export default function DefaultSlideEditor({
       metadata.activityName !== init.metadata.activityName ||
       metadata.requiresExternalTTS !== init.metadata.requiresExternalTTS ||
       JSON.stringify(metadata.buttons) !== JSON.stringify(init.metadata.buttons) ||
+      JSON.stringify(metadata.tags) !== JSON.stringify(init.metadata.tags) ||
+      metadata.difficultyHint !== init.metadata.difficultyHint ||
+      metadata.reviewWeight !== init.metadata.reviewWeight ||
+      metadata.showScoreToLearner !== init.metadata.showScoreToLearner ||
       metadata.isActivity !== init.metadata.isActivity ||
       metadata.scoreType !== init.metadata.scoreType ||
       metadata.passingScoreValue !== init.metadata.passingScoreValue ||
@@ -116,6 +391,23 @@ export default function DefaultSlideEditor({
   const updateField = (key: string, val: any) => {
     setValues((prev) => ({ ...prev, [key]: val }));
   };
+  const updateMetadata = (next: Partial<AuthoringMetadataState>) => {
+    setMetadata((prev) => ({ ...prev, ...next }));
+  };
+  const copyToClipboard = async (text: string, label: string, buttonId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyConfirmation({ message: `${label} copied!`, buttonId });
+      setTimeout(() => setCopyConfirmation(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
+  };
+  const parseCommaList = (input: string) =>
+    input
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
@@ -125,16 +417,33 @@ export default function DefaultSlideEditor({
 
     try {
       const currentProps = { ...(row.propsJson as any) };
-      renderedFields.forEach((field) => {
-        if (field.key === "metadata") return;
+      let jsonError: string | null = null;
+      for (const field of editableFields) {
         const rawVal = values[field.key];
         const trimmedVal = typeof rawVal === "string" ? rawVal.trim() : rawVal;
+
         if (trimmedVal === "" || trimmedVal === undefined) {
           delete currentProps[field.key];
-        } else {
-          currentProps[field.key] = trimmedVal;
+          continue;
         }
-      });
+
+        if (field.uiType === "json") {
+          try {
+            currentProps[field.key] = JSON.parse(trimmedVal);
+          } catch (err) {
+            jsonError = `Invalid JSON in ${field.label}`;
+            break;
+          }
+          continue;
+        }
+
+        currentProps[field.key] = trimmedVal;
+      }
+
+      if (jsonError) {
+        setSaveMessage(jsonError);
+        return;
+      }
 
       // Build meta_json from metadata state
       const metaJson: any = {};
@@ -148,6 +457,18 @@ export default function DefaultSlideEditor({
       }
       if (metadata.buttons.length > 0) {
         metaJson.buttons = metadata.buttons;
+      }
+      if (metadata.tags.length > 0) {
+        metaJson.tags = metadata.tags;
+      }
+      if (metadata.difficultyHint) {
+        metaJson.difficultyHint = metadata.difficultyHint;
+      }
+      if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
+        metaJson.reviewWeight = metadata.reviewWeight;
+      }
+      if (metadata.showScoreToLearner) {
+        metaJson.showScoreToLearner = true;
       }
 
       const result = await saveSlide({
@@ -184,19 +505,29 @@ export default function DefaultSlideEditor({
     }
   }
 
-  const renderFieldInput = (fieldKey: string, uiType: string) => {
+  const renderFieldInput = (fieldKey: string, uiType: string, inputStyle?: CSSProperties) => {
     const val = (values as any)[fieldKey] ?? "";
     switch (uiType) {
       case "text":
-        return <Input type="text" value={val} onChange={(e) => updateField(fieldKey, e.target.value)} />;
+        return <Input type="text" value={val} onChange={(e) => updateField(fieldKey, e.target.value)} style={inputStyle} />;
       case "textarea":
-        return <Textarea value={val} onChange={(e) => updateField(fieldKey, e.target.value)} rows={4} />;
+        return <Textarea value={val} onChange={(e) => updateField(fieldKey, e.target.value)} rows={4} style={inputStyle} />;
+      case "json":
+        return (
+          <Textarea
+            value={val}
+            onChange={(e) => updateField(fieldKey, e.target.value)}
+            rows={6}
+            style={{ fontFamily: "monospace", fontSize: uiTokens.font.code.size, ...inputStyle }}
+          />
+        );
       case "number":
         return (
           <Input
             type="number"
             value={val ?? ""}
             onChange={(e) => updateField(fieldKey, e.target.value === "" ? "" : Number(e.target.value))}
+            style={inputStyle}
           />
         );
       case "boolean":
@@ -211,67 +542,314 @@ export default function DefaultSlideEditor({
             <span>Enabled</span>
           </label>
         );
+      case "select": {
+        const options = SELECT_OPTIONS_BY_KEY[fieldKey];
+        if (!options) {
+          return <Input type="text" value={val} onChange={(e) => updateField(fieldKey, e.target.value)} style={inputStyle} />;
+        }
+        return (
+          <Select value={val ?? ""} onChange={(e) => updateField(fieldKey, e.target.value)} style={inputStyle}>
+            <option value="">(not set)</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        );
+      }
       case "metadata":
         return (
           <AuthoringMetadataSection row={row} slideType={slideType} onMetadataChange={handleMetadataChange} />
         );
       default:
-        return <Input type="text" value={val} onChange={(e) => updateField(fieldKey, e.target.value)} />;
+        return <Input type="text" value={val} onChange={(e) => updateField(fieldKey, e.target.value)} style={inputStyle} />;
     }
   };
 
-  const hasMetadataField = renderedFields.some((f) => f.key === "metadata");
-  const visibleFieldItems = renderedFields.filter((f) => f.key !== "metadata");
+  const renderSpecialMetadataField = (field: EditorField) => {
+    switch (field.key) {
+      case "buttons":
+        return (
+          <Input
+            type="text"
+            value={metadata.buttons.join(", ")}
+            onChange={(e) => updateMetadata({ buttons: parseCommaList(e.target.value) })}
+            placeholder="e.g., next, replay, hint"
+          />
+        );
+      case "isActivity":
+        return (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={metadata.isActivity}
+              onChange={(e) => updateMetadata({ isActivity: e.target.checked })}
+            />
+            <span>Enabled</span>
+          </label>
+        );
+      case "scoreType":
+        return (
+          <Select value={metadata.scoreType} onChange={(e) => updateMetadata({ scoreType: e.target.value })}>
+            {SELECT_OPTIONS_BY_KEY.scoreType.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        );
+      case "passThreshold":
+        return (
+          <Input
+            type="number"
+            value={metadata.passingScoreValue ?? ""}
+            onChange={(e) =>
+              updateMetadata({
+                passingScoreValue: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+            placeholder="Optional"
+          />
+        );
+      case "maxScoreValue":
+        return (
+          <Input
+            type="number"
+            value={metadata.maxScoreValue ?? ""}
+            onChange={(e) =>
+              updateMetadata({
+                maxScoreValue: e.target.value === "" ? null : Number(e.target.value),
+              })
+            }
+            placeholder="Optional"
+          />
+        );
+      case "passRequiredForNext":
+        return (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={metadata.passRequiredForNext}
+              onChange={(e) => updateMetadata({ passRequiredForNext: e.target.checked })}
+            />
+            <span>Enabled</span>
+          </label>
+        );
+      case "showScoreToLearner":
+        return (
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={metadata.showScoreToLearner}
+              onChange={(e) => updateMetadata({ showScoreToLearner: e.target.checked })}
+            />
+            <span>Enabled</span>
+          </label>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderSystemField = (field: EditorField) => {
+    const rawValue = (systemFieldValues as Record<string, any>)[field.key];
+    const value = rawValue === null || rawValue === undefined ? "" : String(rawValue);
+    const canCopy = COPYABLE_SYSTEM_FIELDS.has(field.key) && value;
+    const buttonId = `copy-${field.key}`;
+    const labelText = typeof field.label === "string" ? field.label : "Value";
+    const inputType = field.key === "orderIndex" ? "number" : "text";
+
+    return (
+      <FormField
+        key={field.key}
+        label={field.label}
+        required={field.required}
+        borderColor="#f2e1db"
+        infoTooltip={field.helpText}
+      >
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <Input
+            type={inputType}
+            value={value}
+            disabled
+            readOnly
+            borderColor="#f2e1db"
+            style={canCopy ? { paddingRight: "32px" } : undefined}
+          />
+          {canCopy && (
+            <>
+              {copyConfirmation && copyConfirmation.buttonId === buttonId && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "100%",
+                    right: "8px",
+                    marginBottom: "4px",
+                    padding: `${uiTokens.space.xs}px ${uiTokens.space.sm}px`,
+                    backgroundColor: "#333",
+                    color: "#fff",
+                    borderRadius: uiTokens.radius.sm,
+                    fontSize: uiTokens.font.meta.size,
+                    zIndex: 1000,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    animation: "fadeIn 0.2s ease-in",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {copyConfirmation.message}
+                </div>
+              )}
+              <button
+                type="button"
+                id={buttonId}
+                title={`Copy ${labelText}`}
+                onClick={() => copyToClipboard(value, labelText, buttonId)}
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  background: "none",
+                  border: "none",
+                  padding: "4px",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  color: "#d7a592",
+                  opacity: 0.7,
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "0.7";
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="#d7a592"
+                  style={{
+                    width: 16,
+                    height: 16,
+                  }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                  />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      </FormField>
+    );
+  };
+
+  const hasMetadataFields = metadataFields.length > 0;
+  const visibleFieldItems = editableFields;
+  const hiddenFieldStyle: CSSProperties = { backgroundColor: "#f0ede9" };
 
   return (
-    <form onSubmit={handleSave}>
-      <CmsSection title="Default slide fields" backgroundColor="#f8f0ed" borderColor="#f2e1db">
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: uiTokens.space.sm }}>
-          {hiddenFields.length > 0 && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setShowHidden((v) => !v)}
+    <form onSubmit={handleSave} style={{ display: "grid", gap: uiTokens.space.lg }}>
+      {hiddenFields.length > 0 && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setShowHidden((v) => !v)}
+          style={{ justifySelf: "flex-end" }}
+        >
+          {showHidden ? "Hide hidden fields" : "Show hidden fields"}
+        </Button>
+      )}
+
+      {/* Always use grouped/categorized view for consistency across all slide types */}
+      <div style={categoriesGrid}>
+        {groupedRenderedFields.map((group) => {
+          const groupSystemFields = group.fields.filter((field) => isSystemField(field.key));
+          const groupEditableFields = group.fields.filter(
+            (field) => !isMetadataField(field.key) && !isSystemField(field.key)
+          );
+          const groupSpecialFields = group.fields.filter((field) => isSpecialMetadataField(field.key));
+          const groupHasMetadataSection = group.fields.some((field) => isAuthoringMetadataField(field.key));
+
+          if (
+            groupSystemFields.length === 0 &&
+            groupEditableFields.length === 0 &&
+            groupSpecialFields.length === 0 &&
+            !groupHasMetadataSection
+          ) {
+            return null;
+          }
+
+          return (
+            <div
+              key={group.id}
+              style={{
+                ...categoryContainer,
+                padding: uiTokens.space.sm,
+                border: `1px solid ${uiTokens.color.border}`,
+                borderRadius: uiTokens.radius.md,
+                backgroundColor: "#f8f0ed",
+              }}
             >
-              {showHidden ? "Hide hidden fields" : "Show hidden fields"}
-            </Button>
-          )}
-        </div>
-
-        <div style={{ display: "grid", gap: uiTokens.space.sm }}>
-          {visibleFieldItems.map((field) => (
-            <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
-              {renderFieldInput(field.key, field.uiType)}
-            </FormField>
-          ))}
-          {hasMetadataField && (
-            <div style={{ marginTop: uiTokens.space.sm }}>
-              <AuthoringMetadataSection row={row} slideType={slideType} onMetadataChange={handleMetadataChange} />
-            </div>
-          )}
-        </div>
-
-        {showHidden && hiddenFields.length > 0 && (
-          <div style={{ marginTop: uiTokens.space.md, opacity: 0.8 }}>
-            <div style={{ fontWeight: 600, marginBottom: uiTokens.space.sm }}>Hidden fields</div>
-            <div style={{ display: "grid", gap: uiTokens.space.sm }}>
-              {hiddenFields
-                .filter((field) => field.key !== "metadata")
-                .map((field) => (
+              {(groupSystemFields.length > 0 ||
+                groupEditableFields.length > 0 ||
+                groupSpecialFields.length > 0 ||
+                groupHasMetadataSection) && (
+                <div style={categoryTitle}>{group.title}</div>
+              )}
+              <div style={{ display: "grid", gap: uiTokens.space.sm }}>
+                {groupSystemFields.map((field) => renderSystemField(field))}
+                {groupEditableFields.map((field) => (
                   <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
-                    <div style={{ opacity: 0.7 }}>{renderFieldInput(field.key, field.uiType)}</div>
+                    {renderFieldInput(field.key, field.uiType)}
                   </FormField>
                 ))}
+                {groupSpecialFields.map((field) => (
+                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
+                    {renderSpecialMetadataField(field)}
+                  </FormField>
+                ))}
+                {groupHasMetadataSection && authoringMetadataFieldKeySet.size > 0 && (
+                  <AuthoringMetadataSection
+                    row={row}
+                    slideType={slideType}
+                    onMetadataChange={handleAuthoringMetadataChange}
+                    visibleFieldKeys={authoringMetadataFieldKeySet}
+                    variant="inline"
+                  />
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })}
+      </div>
 
-        {saveMessage && (
-          <div style={{ marginTop: uiTokens.space.sm, color: saveMessage.includes("error") ? uiTokens.color.danger : uiTokens.color.text }}>
-            {saveMessage}
+      {showHidden && hiddenFields.length > 0 && (
+        <section style={{ opacity: 0.8 }}>
+          <div style={{ fontWeight: 600, marginBottom: uiTokens.space.sm }}>Hidden fields</div>
+          <div style={{ display: "grid", gap: uiTokens.space.sm }}>
+            {hiddenFields
+                .filter((field) => !isMetadataField(field.key) && !isSystemField(field.key))
+                .map((field) => (
+                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
+                    <div style={{ opacity: 0.7 }}>{renderFieldInput(field.key, field.uiType, hiddenFieldStyle)}</div>
+                  </FormField>
+                ))}
           </div>
-        )}
-      </CmsSection>
+        </section>
+      )}
+
+      {saveMessage && (
+        <p style={{ margin: 0, color: saveMessage.includes("error") ? uiTokens.color.danger : uiTokens.color.text }}>
+          {saveMessage}
+        </p>
+      )}
     </form>
   );
 }

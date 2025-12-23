@@ -23,7 +23,7 @@ interface CmsDashboardTreeProps {
   onDeleteModule: (id: string, title: string) => void;
   onDeleteLesson: (id: string, title: string) => void;
   onDeleteGroup?: (id: string, title: string) => void;
-  onDeleteSlide?: (id: string) => void;
+  onDeleteSlide?: (id: string, title: string) => void;
 }
 
 export default function CmsDashboardTree({
@@ -139,6 +139,10 @@ export default function CmsDashboardTree({
                   const mid = m.id;
                   const moduleOpen = !!openModules[mid];
                   const moduleLessons = maps.lessonsByModule.get(mid) ?? [];
+                  const moduleDeleteDisabled = moduleLessons.length > 0;
+                  const moduleDeleteTitle = moduleDeleteDisabled
+                    ? `Cannot delete: module has ${moduleLessons.length} lesson${moduleLessons.length !== 1 ? "s" : ""}`
+                    : "Delete module";
 
                   return (
                     <div
@@ -201,11 +205,16 @@ export default function CmsDashboardTree({
                           <Button
                             variant="danger"
                             size="sm"
+                            disabled={moduleDeleteDisabled}
                             onClick={() => onDeleteModule(mid, m.title)}
-                            title={moduleLessons.length > 0 ? `Delete module (will also delete ${moduleLessons.length} lesson${moduleLessons.length !== 1 ? "s" : ""})` : "Delete module"}
-                            style={{ color: "#f8f0ed" }}
+                            title={moduleDeleteTitle}
+                            style={{
+                              color: moduleDeleteDisabled ? "#dededc" : "#f8f0ed",
+                              backgroundColor: moduleDeleteDisabled ? "#cdcdcb" : uiTokens.color.danger,
+                              border: "none",
+                            }}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#f8f0ed" style={{ width: 16, height: 16 }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={moduleDeleteDisabled ? "#8b8a86" : "#f8f0ed"} style={{ width: 16, height: 16 }}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                             </svg>
                           </Button>
@@ -218,6 +227,10 @@ export default function CmsDashboardTree({
                           const lessonOpen = !!openLessons[lid];
                           const lessonGroups = maps.groupsByLesson.get(lid) ?? [];
                           const ungroupedSlides = maps.ungroupedSlidesByLesson.get(lid) ?? [];
+                          const lessonDeleteDisabled = lessonGroups.length > 0 || ungroupedSlides.length > 0;
+                          const lessonDeleteTitle = lessonDeleteDisabled
+                            ? `Cannot delete: lesson has ${lessonGroups.length} group${lessonGroups.length !== 1 ? "s" : ""} and ${ungroupedSlides.length} slide${ungroupedSlides.length !== 1 ? "s" : ""}`
+                            : "Delete lesson";
 
                           return (
                             <div
@@ -278,11 +291,16 @@ export default function CmsDashboardTree({
                                   <Button
                                     variant="danger"
                                     size="sm"
+                                    disabled={lessonDeleteDisabled}
                                     onClick={() => onDeleteLesson(lid, l.title)}
-                                    title={(lessonGroups.length > 0 || ungroupedSlides.length > 0) ? `Delete lesson (will also delete ${lessonGroups.length} group${lessonGroups.length !== 1 ? "s" : ""} and ${ungroupedSlides.length} slide${ungroupedSlides.length !== 1 ? "s" : ""})` : "Delete lesson"}
-                                    style={{ color: "#f8f0ed", border: "none" }}
+                                    title={lessonDeleteTitle}
+                                    style={{
+                                      color: lessonDeleteDisabled ? "#dededc" : "#f8f0ed",
+                                      backgroundColor: lessonDeleteDisabled ? "#cdcdcb" : uiTokens.color.danger,
+                                      border: "none",
+                                    }}
                                   >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#f8f0ed" style={{ width: 16, height: 16 }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={lessonDeleteDisabled ? "#8b8a86" : "#f8f0ed"} style={{ width: 16, height: 16 }}>
                                       <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                     </svg>
                                   </Button>
@@ -296,6 +314,12 @@ export default function CmsDashboardTree({
                                       const gid = g.id;
                                       const groupOpen = !!openGroups[gid];
                                       const groupSlides = maps.slidesByGroup.get(gid) ?? [];
+                                      const groupDeleteDisabled = groupSlides.length > 0 || !onDeleteGroup;
+                                      const groupDeleteTitle = groupSlides.length > 0
+                                        ? `Cannot delete: group contains ${groupSlides.length} slide${groupSlides.length !== 1 ? "s" : ""}`
+                                        : !onDeleteGroup
+                                        ? "Delete not available"
+                                        : "Delete group";
 
                                       return (
                                         <div
@@ -359,16 +383,16 @@ export default function CmsDashboardTree({
                                               <Button
                                                 variant="danger"
                                                 size="sm"
-                                                disabled={groupSlides.length > 0 || !onDeleteGroup}
+                                                disabled={groupDeleteDisabled}
                                                 onClick={() => onDeleteGroup?.(gid, g.title)}
-                                                title={groupSlides.length > 0 ? `Cannot delete: group contains ${groupSlides.length} slide${groupSlides.length !== 1 ? "s" : ""}` : !onDeleteGroup ? "Delete not available" : "Delete group"}
+                                                title={groupDeleteTitle}
                                                 style={{ 
-                                                  color: groupSlides.length > 0 || !onDeleteGroup ? "#dededc" : "#f8f0ed",
-                                                  backgroundColor: groupSlides.length > 0 || !onDeleteGroup ? "#cdcdcb" : undefined,
+                                                  color: groupDeleteDisabled ? "#dededc" : "#f8f0ed",
+                                                  backgroundColor: groupDeleteDisabled ? "#cdcdcb" : uiTokens.color.danger,
                                                   border: "none"
                                                 }}
                                               >
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={groupSlides.length > 0 || !onDeleteGroup ? "#8b8a86" : "#f8f0ed"} style={{ width: 16, height: 16 }}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke={groupDeleteDisabled ? "#8b8a86" : "#f8f0ed"} style={{ width: 16, height: 16 }}>
                                                   <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                                 </svg>
                                               </Button>
@@ -382,6 +406,7 @@ export default function CmsDashboardTree({
                                                 s?.propsJson && typeof s.propsJson === "object"
                                                   ? (s.propsJson as any).title
                                                   : undefined;
+                                              const slideLabel = `Slide ${slideIndex + 1}: ${s.type}${title ? ` — ${title}` : ""}`;
 
                                               return (
                                                 <div
@@ -441,11 +466,11 @@ export default function CmsDashboardTree({
                                                       variant="danger"
                                                       size="sm"
                                                       disabled={!onDeleteSlide}
-                                                      onClick={() => onDeleteSlide?.(s.id)}
+                                                      onClick={() => onDeleteSlide?.(s.id, slideLabel)}
                                                       title={onDeleteSlide ? "Delete slide" : "Delete not available"}
                                                       style={{ 
                                                         color: !onDeleteSlide ? "#dededc" : "#f8f0ed",
-                                                        backgroundColor: !onDeleteSlide ? "#cdcdcb" : undefined,
+                                                        backgroundColor: !onDeleteSlide ? "#cdcdcb" : uiTokens.color.danger,
                                                         border: "none"
                                                       }}
                                                     >
@@ -504,6 +529,7 @@ export default function CmsDashboardTree({
                                           s?.propsJson && typeof s.propsJson === "object"
                                             ? (s.propsJson as any).title
                                             : undefined;
+                                        const slideLabel = `Slide ${slideIndex + 1}: ${s.type}${title ? ` — ${title}` : ""}`;
 
                                         return (
                                           <div
@@ -563,11 +589,11 @@ export default function CmsDashboardTree({
                                                 variant="danger"
                                                 size="sm"
                                                 disabled={!onDeleteSlide}
-                                                onClick={() => onDeleteSlide?.(s.id)}
+                                                onClick={() => onDeleteSlide?.(s.id, slideLabel)}
                                                 title={onDeleteSlide ? "Delete slide" : "Delete not available"}
                                                 style={{ 
                                                   color: !onDeleteSlide ? "#dededc" : "#f8f0ed",
-                                                  backgroundColor: !onDeleteSlide ? "#cdcdcb" : undefined,
+                                                  backgroundColor: !onDeleteSlide ? "#cdcdcb" : uiTokens.color.danger,
                                                   border: "none"
                                                 }}
                                               >

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { deleteModule } from "../data/modules";
 import { deleteLesson } from "../data/lessons";
+import { deleteGroup } from "../data/groups";
+import { deleteSlide } from "../data/slides";
 import {
   getModuleDeleteImpact,
   getLessonDeleteImpact,
@@ -11,13 +13,15 @@ import {
 export type DeleteState =
   | { type: null }
   | { type: "module"; id: string; title: string }
-  | { type: "lesson"; id: string; title: string };
+  | { type: "lesson"; id: string; title: string }
+  | { type: "group"; id: string; title: string }
+  | { type: "slide"; id: string; title: string };
 
 export interface UseCmsDeleteFlowReturn {
   deleteState: DeleteState;
   deleteImpact: ModuleDeleteImpact | LessonDeleteImpact | null;
   impactLoading: boolean;
-  handleDeleteClick: (type: "module" | "lesson", id: string, title: string) => Promise<void>;
+  handleDeleteClick: (type: "module" | "lesson" | "group" | "slide", id: string, title: string) => Promise<void>;
   handleDeleteCancel: () => void;
   handleDeleteConfirm: () => Promise<void>;
 }
@@ -27,9 +31,14 @@ export function useCmsDeleteFlow(onDeleteSuccess: () => void | Promise<void>): U
   const [deleteImpact, setDeleteImpact] = useState<ModuleDeleteImpact | LessonDeleteImpact | null>(null);
   const [impactLoading, setImpactLoading] = useState(false);
 
-  async function handleDeleteClick(type: "module" | "lesson", id: string, title: string) {
+  async function handleDeleteClick(type: "module" | "lesson" | "group" | "slide", id: string, title: string) {
     setDeleteState({ type, id, title });
     setDeleteImpact(null);
+    if (type !== "module" && type !== "lesson") {
+      setImpactLoading(false);
+      return;
+    }
+
     setImpactLoading(true);
 
     try {
@@ -66,6 +75,12 @@ export function useCmsDeleteFlow(onDeleteSuccess: () => void | Promise<void>): U
     } else if (deleteState.type === "lesson") {
       const { error } = await deleteLesson(deleteState.id);
       if (error) throw new Error(error);
+    } else if (deleteState.type === "group") {
+      const { error } = await deleteGroup(deleteState.id);
+      if (error) throw new Error(error);
+    } else if (deleteState.type === "slide") {
+      const { error } = await deleteSlide(deleteState.id);
+      if (error) throw new Error(error);
     }
 
     // Call success callback to reload data
@@ -82,4 +97,3 @@ export function useCmsDeleteFlow(onDeleteSuccess: () => void | Promise<void>): U
     handleDeleteConfirm,
   };
 }
-

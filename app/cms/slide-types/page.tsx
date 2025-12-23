@@ -43,7 +43,14 @@ export default function SlideTypesPage() {
         title="Registry overview"
         description="Registered slide types and the editors that handle them. Add new types to the registry to plug in custom authoring experiences without touching this page."
       >
-        <p style={{ marginBottom: uiTokens.space.sm }}>
+        <p
+          style={{
+            marginBottom: uiTokens.space.sm,
+            fontSize: uiTokens.font.meta.size,
+            fontWeight: uiTokens.font.meta.weight,
+            color: uiTokens.color.mutedText,
+          }}
+        >
           {editors.length} slide types are currently registered. Unknown types fall back to the default raw JSON editor so existing content stays editable.
         </p>
       </CmsSection>
@@ -63,21 +70,53 @@ export default function SlideTypesPage() {
                 border: `1px solid ${uiTokens.color.border}`,
                 borderRadius: uiTokens.radius.md,
                 marginBottom: uiTokens.space.md,
-                backgroundColor: "#f8f0ed",
+                backgroundColor: uiTokens.color.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: uiTokens.space.md,
               }}
             >
-              <div style={{ fontWeight: 600 }}>{editor.label}</div>
-              <div className="metaText" style={{ color: uiTokens.color.textMuted }}>
-                {editor.type}
+              <div>
+                <div style={{ fontWeight: 600 }}>{editor.label}</div>
+                <div className="metaText" style={{ color: uiTokens.color.textMuted }}>
+                  {editor.type}
+                </div>
               </div>
-              <div style={{ marginTop: uiTokens.space.xs }}>
-                <a
-                  href={`/cms/slide-types/${editor.type}/edit`}
-                  style={{ fontSize: 13, color: uiTokens.color.focus, textDecoration: "underline" }}
+              <LinkButton
+                href={`/cms/slide-types/${editor.type}/edit`}
+                size="sm"
+                style={{
+                  color: "#f8f0ed",
+                  border: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+                aria-label={`Edit preset for ${editor.label}`}
+                title="Edit preset"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="#f8f0ed"
+                  style={{ width: 16, height: 16 }}
                 >
-                  Edit preset
-                </a>
-              </div>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="#f8f0ed"
+                  style={{ width: 16, height: 16 }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </LinkButton>
             </li>
           ))}
         </ul>
@@ -94,7 +133,7 @@ export default function SlideTypesPage() {
             border: `1px solid ${uiTokens.color.border}`,
             borderRadius: uiTokens.radius.lg,
             padding: uiTokens.space.md,
-            backgroundColor: "#f8f0ed",
+            backgroundColor: uiTokens.color.bg,
             maxWidth: 520,
           }}
         >

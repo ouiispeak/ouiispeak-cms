@@ -6,6 +6,8 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export default function Textarea({ style, borderColor, ...props }: TextareaProps) {
+  const isLocked = Boolean(props.disabled || props.readOnly);
+
   return (
     <textarea
       {...props}
@@ -16,11 +18,10 @@ export default function Textarea({ style, borderColor, ...props }: TextareaProps
         border: `1px solid ${borderColor || uiTokens.color.inputBorder}`,
         fontSize: uiTokens.font.label.size,
         fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
-        backgroundColor: uiTokens.color.bg,
+        backgroundColor: isLocked ? "#f0ede9" : uiTokens.color.bg,
         color: uiTokens.color.text,
         ...style,
       }}
     />
   );
 }
-

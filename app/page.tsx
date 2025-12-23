@@ -42,6 +42,18 @@ export default function CmsHome() {
     }
   }
 
+  const deleteTypeLabel =
+    deleteState.type === "module"
+      ? "Module"
+      : deleteState.type === "lesson"
+      ? "Lesson"
+      : deleteState.type === "group"
+      ? "Group"
+      : deleteState.type === "slide"
+      ? "Slide"
+      : null;
+  const requireDeleteText = deleteTypeLabel ? `DELETE ${deleteTypeLabel.toUpperCase()}` : undefined;
+
   return (
     <>
       <CmsPageShell
@@ -61,7 +73,7 @@ export default function CmsHome() {
 
           <ConfirmDialog
             open={deleteState.type !== null}
-            title={`Delete ${deleteState.type === "module" ? "Module" : "Lesson"}`}
+            title={deleteTypeLabel ? `Delete ${deleteTypeLabel}` : "Delete"}
             description={
               <>
                 Are you sure you want to delete "{deleteState.type !== null ? deleteState.title : ""}"?
@@ -116,7 +128,7 @@ export default function CmsHome() {
               </>
             }
             danger={true}
-            requireText={deleteState.type === "module" ? "DELETE MODULE" : deleteState.type === "lesson" ? "DELETE LESSON" : undefined}
+            requireText={requireDeleteText}
             onConfirm={handleDeleteConfirmWithErrorHandling}
             onCancel={handleDeleteCancel}
           />
@@ -134,6 +146,8 @@ export default function CmsHome() {
               onToggleGroup={(groupId) => toggle(setOpenGroups, groupId)}
               onDeleteModule={(id, title) => handleDeleteClick("module", id, title)}
               onDeleteLesson={(id, title) => handleDeleteClick("lesson", id, title)}
+              onDeleteGroup={(id, title) => handleDeleteClick("group", id, title)}
+              onDeleteSlide={(id, title) => handleDeleteClick("slide", id, title)}
             />
           )}
         </div>

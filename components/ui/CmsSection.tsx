@@ -8,6 +8,7 @@ interface CmsSectionProps {
   footer?: ReactNode;
   backgroundColor?: string;
   borderColor?: string;
+  headerSpacing?: number | string;
   children: ReactNode;
 }
 
@@ -18,11 +19,21 @@ export default function CmsSection({
   footer,
   backgroundColor,
   borderColor,
+  headerSpacing,
   children,
 }: CmsSectionProps) {
+  const resolvedHeaderSpacing =
+    headerSpacing === undefined
+      ? undefined
+      : typeof headerSpacing === "number"
+      ? `${headerSpacing}px`
+      : headerSpacing;
+  const hasHeader = Boolean(title || description || actions);
+
   return (
     <div
       style={{
+        display: "flow-root",
         borderRadius: uiTokens.radius.lg,
         padding: uiTokens.space.md,
         marginBottom: uiTokens.space.lg,
@@ -31,14 +42,14 @@ export default function CmsSection({
       }}
     >
       {/* Section Header */}
-      {(title || description || actions) && (
+      {hasHeader && (
         <div
           style={{
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
             gap: uiTokens.space.md,
-            marginBottom: uiTokens.space.md,
+            marginBottom: headerSpacing === undefined ? uiTokens.space.md : 0,
           }}
         >
           <div style={{ flex: 1 }}>
@@ -76,7 +87,9 @@ export default function CmsSection({
       )}
 
       {/* Section Body */}
-      <div>{children}</div>
+      <div style={{ paddingTop: hasHeader ? resolvedHeaderSpacing : undefined }}>
+        {children}
+      </div>
 
       {/* Section Footer */}
       {footer && (
@@ -95,4 +108,3 @@ export default function CmsSection({
     </div>
   );
 }
-

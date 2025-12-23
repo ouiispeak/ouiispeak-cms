@@ -6,6 +6,8 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export default function Select({ style, borderColor, ...props }: SelectProps) {
+  const isLocked = Boolean(props.disabled);
+
   return (
     <select
       {...props}
@@ -16,7 +18,7 @@ export default function Select({ style, borderColor, ...props }: SelectProps) {
         border: `1px solid ${borderColor || uiTokens.color.inputBorder}`,
         fontSize: uiTokens.font.label.size,
         fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
-        backgroundColor: uiTokens.color.bg,
+        backgroundColor: isLocked ? "#f0ede9" : uiTokens.color.bg,
         color: uiTokens.color.text,
         cursor: "pointer",
         ...style,
@@ -24,4 +26,3 @@ export default function Select({ style, borderColor, ...props }: SelectProps) {
     />
   );
 }
-

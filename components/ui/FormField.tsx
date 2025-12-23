@@ -31,7 +31,7 @@ export default function FormField({ label, children, helper, required, borderCol
           gap: uiTokens.space.xs,
           marginBottom: 6,
           fontSize: uiTokens.font.label.size,
-          fontWeight: uiTokens.font.label.weight,
+          fontWeight: 400,
           color: uiTokens.color.text,
           position: "relative",
         }}
