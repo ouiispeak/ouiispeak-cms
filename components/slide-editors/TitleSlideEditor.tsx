@@ -5,10 +5,48 @@ import { Button } from "../Button";
 import CmsSection from "../ui/CmsSection";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
+import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
-import type { SlideEditorProps } from "./types";
+import type { SlideEditorProps, EditorField } from "./types";
 import type { AuthoringMetadataState } from "./types";
+
+const SYSTEM_FIELD_KEYS = new Set(["slideId", "slideType", "groupId", "orderIndex"]);
+const METADATA_FIELD_KEYS = new Set([
+  "code", "slideGoal", "activityName", "requiresExternalTTS", "buttons", "tags",
+  "difficultyHint", "reviewWeight", "isActivity", "scoreType", "passThreshold",
+  "maxScoreValue", "passRequiredForNext", "showScoreToLearner",
+]);
+
+const SELECT_OPTIONS_BY_KEY: Record<string, { value: string; label: string }[]> = {
+  defaultLang: [
+    { value: "auto", label: "Auto" },
+    { value: "en", label: "English (en)" },
+    { value: "fr", label: "French (fr)" },
+  ],
+};
+
+const isSystemField = (key: string) => SYSTEM_FIELD_KEYS.has(key);
+const isMetadataField = (key: string) => METADATA_FIELD_KEYS.has(key);
+
+type FieldValueMap = Record<string, any>;
+
+function buildInitialValues(row: any, fields: EditorField[]): FieldValueMap {
+  const props = (row.propsJson as any) || {};
+  return fields.reduce((acc, field) => {
+    if (isSystemField(field.key) || isMetadataField(field.key)) {
+      return acc;
+    }
+    const rawValue = props[field.key];
+    if (rawValue === undefined || rawValue === null) {
+      acc[field.key] = "";
+    } else {
+      acc[field.key] = rawValue;
+    }
+    return acc;
+  }, {} as FieldValueMap);
+}
 
 export default function TitleSlideEditor({
   row,
@@ -21,15 +59,9 @@ export default function TitleSlideEditor({
   onUnsavedChangesChange,
   onSavingChange,
 }: SlideEditorProps) {
-  // Respect visibility presets: only render fields that are in the schema
-  const visibleFieldKeys = new Set(schema.fields.map((f) => f.key));
-  const shouldShowLabel = visibleFieldKeys.has("label");
-  const shouldShowTitle = visibleFieldKeys.has("title");
-  const shouldShowSubtitle = visibleFieldKeys.has("subtitle");
+  // Iterate over schema.fields dynamically - no hardcoded checks
   const props = (row.propsJson as any) || {};
-  const [label, setLabel] = useState(props.label || "");
-  const [title, setTitle] = useState(props.title || "");
-  const [subtitle, setSubtitle] = useState(props.subtitle || "");
+  const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row, schema.fields));
   const [metadata, setMetadata] = useState<AuthoringMetadataState>({
     code: row.code || "",
     slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
@@ -47,19 +79,22 @@ export default function TitleSlideEditor({
     passRequiredForNext: row.passRequiredForNext || false,
   });
   
-  const initialDataRef = useRef<{
-    label: string;
-    title: string;
-    subtitle: string;
-    metadata: AuthoringMetadataState;
-  } | null>(null);
+  const initialDataRef = useRef<{ values: FieldValueMap; metadata: AuthoringMetadataState } | null>(null);
+  
+  // Filter schema fields: exclude system and metadata fields (handled separately)
+  // ONLY render fields from schema.fields - no hardcoded lists, no DEFAULT_SLIDE_FIELDS
+  const editableFields = useMemo(
+    () => schema.fields.filter((field) => !isSystemField(field.key) && !isMetadataField(field.key)),
+    [schema.fields]
+  );
+  // Metadata fields are handled by AuthoringMetadataSection, not in main editor loop
+  const schemaFieldKeys = useMemo(() => new Set(schema.fields.map((f) => f.key)), [schema.fields]);
   
   // Initialize initial data when row changes
   useEffect(() => {
+    const initialValues = buildInitialValues(row, schema.fields);
     initialDataRef.current = {
-      label: props.label || "",
-      title: props.title || "",
-      subtitle: props.subtitle || "",
+      values: initialValues,
       metadata: {
         code: row.code || "",
         slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
@@ -77,52 +112,36 @@ export default function TitleSlideEditor({
         passRequiredForNext: row.passRequiredForNext || false,
       },
     };
-    // Reset form state when row changes
-    setLabel(props.label || "");
-    setTitle(props.title || "");
-    setSubtitle(props.subtitle || "");
-      setMetadata({
-        code: row.code || "",
-        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
-        activityName: ((row.metaJson as any) || {}).activityName || "",
-        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
-        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
-        tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
-        difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
-        reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
-        showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
-        isActivity: row.isActivity || false,
-        scoreType: row.scoreType || "none",
-        passingScoreValue: row.passingScoreValue ?? null,
-        maxScoreValue: row.maxScoreValue ?? null,
-        passRequiredForNext: row.passRequiredForNext || false,
-      });
-  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]); // Reset when slide data changes
+    setValues(initialValues);
+    setMetadata(initialDataRef.current.metadata);
+  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext, JSON.stringify(schema.fields.map(f => f.key))]); // Reset when slide data changes
   
   // Check for unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
-    const initial = initialDataRef.current;
-    return (
-      label !== initial.label ||
-      title !== initial.title ||
-      subtitle !== initial.subtitle ||
-      metadata.code !== initial.metadata.code ||
-      metadata.slideGoal !== initial.metadata.slideGoal ||
-      metadata.activityName !== initial.metadata.activityName ||
-      metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
-      JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
-      JSON.stringify(metadata.tags) !== JSON.stringify(initial.metadata.tags) ||
-      metadata.difficultyHint !== initial.metadata.difficultyHint ||
-      metadata.reviewWeight !== initial.metadata.reviewWeight ||
-      metadata.showScoreToLearner !== initial.metadata.showScoreToLearner ||
-      metadata.isActivity !== initial.metadata.isActivity ||
-      metadata.scoreType !== initial.metadata.scoreType ||
-      metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
-      metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
-      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
-    );
-  }, [label, title, subtitle, metadata]);
+    const init = initialDataRef.current;
+    const valueChanged = Object.keys(values).some((k) => (values as any)[k] !== (init.values as any)[k]);
+    const metaChanged =
+      metadata.code !== init.metadata.code ||
+      metadata.slideGoal !== init.metadata.slideGoal ||
+      metadata.activityName !== init.metadata.activityName ||
+      metadata.requiresExternalTTS !== init.metadata.requiresExternalTTS ||
+      JSON.stringify(metadata.buttons) !== JSON.stringify(init.metadata.buttons) ||
+      JSON.stringify(metadata.tags) !== JSON.stringify(init.metadata.tags) ||
+      metadata.difficultyHint !== init.metadata.difficultyHint ||
+      metadata.reviewWeight !== init.metadata.reviewWeight ||
+      metadata.showScoreToLearner !== init.metadata.showScoreToLearner ||
+      metadata.isActivity !== init.metadata.isActivity ||
+      metadata.scoreType !== init.metadata.scoreType ||
+      metadata.passingScoreValue !== init.metadata.passingScoreValue ||
+      metadata.maxScoreValue !== init.metadata.maxScoreValue ||
+      metadata.passRequiredForNext !== init.metadata.passRequiredForNext;
+    return valueChanged || metaChanged;
+  }, [values, metadata]);
+  
+  const updateField = (key: string, val: any) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  };
   
   // Notify parent of unsaved changes
   useEffect(() => {
@@ -138,6 +157,34 @@ export default function TitleSlideEditor({
   const [rawJsonSaving, setRawJsonSaving] = useState(false);
   const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
 
+  const renderFieldInput = (field: EditorField) => {
+    const val = (values as any)[field.key] ?? "";
+    switch (field.uiType) {
+      case "text":
+        return <Input type="text" value={val} onChange={(e) => updateField(field.key, e.target.value)} />;
+      case "textarea":
+        return <Textarea value={val} onChange={(e) => updateField(field.key, e.target.value)} rows={4} />;
+      case "select": {
+        const options = SELECT_OPTIONS_BY_KEY[field.key];
+        if (!options) {
+          return <Input type="text" value={val} onChange={(e) => updateField(field.key, e.target.value)} />;
+        }
+        return (
+          <Select value={val ?? ""} onChange={(e) => updateField(field.key, e.target.value)}>
+            <option value="">(not set)</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        );
+      }
+      default:
+        return <Input type="text" value={val} onChange={(e) => updateField(field.key, e.target.value)} />;
+    }
+  };
+
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaveMessage(null);
@@ -146,23 +193,28 @@ export default function TitleSlideEditor({
 
     try {
       // Validate required fields (label is required for new slides)
+      const labelField = editableFields.find((f) => f.key === "label");
       const isNewSlide = !row.id;
-      if (isNewSlide && !label.trim()) {
-        setSaveMessage("Slide label is required for CMS navigation.");
-        setSaving(false);
-        onSavingChange?.(false);
-        return;
+      if (labelField && isNewSlide) {
+        const labelValue = values["label"];
+        const trimmedLabel = typeof labelValue === "string" ? labelValue.trim() : "";
+        if (!trimmedLabel) {
+          setSaveMessage("Slide label is required for CMS navigation.");
+          setSaving(false);
+          onSavingChange?.(false);
+          return;
+        }
       }
 
+      // Build props from values map - iterate over editableFields
       const newProps: any = {};
-      if (label.trim()) {
-        newProps.label = label.trim();
-      }
-      if (title.trim()) {
-        newProps.title = title.trim();
-      }
-      if (subtitle.trim()) {
-        newProps.subtitle = subtitle.trim();
+      for (const field of editableFields) {
+        const rawVal = values[field.key];
+        const trimmedVal = typeof rawVal === "string" ? rawVal.trim() : rawVal;
+        if (trimmedVal === "" || trimmedVal === undefined) {
+          continue; // Skip empty values
+        }
+        newProps[field.key] = trimmedVal;
       }
 
       const trimmedType = slideType.trim();
@@ -216,9 +268,7 @@ export default function TitleSlideEditor({
       
       // Update initial data ref after successful save
       initialDataRef.current = {
-        label,
-        title,
-        subtitle,
+        values: { ...values },
         metadata: { ...metadata },
       };
       
@@ -238,60 +288,26 @@ export default function TitleSlideEditor({
     <>
       <CmsSection
         title="title-slide editor"
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
       >
 
         <form onSubmit={handleSave}>
-          {shouldShowLabel && (
-            <FormField 
-              label="Label" 
-              required
-              borderColor="#f2e1db"
-              infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners."
+          {/* Iterate over schema.fields dynamically - no hardcoded checks */}
+          {editableFields.map((field) => (
+            <FormField
+              key={field.key}
+              label={field.label}
+              required={field.required}
+              borderColor="#b4d5d5"
+              infoTooltip={field.helpText}
             >
-              <Input
-                type="text"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                required
-              />
+              {renderFieldInput(field)}
             </FormField>
-          )}
-
-          {shouldShowTitle && (
-            <FormField 
-              label="Title" 
-              required 
-              borderColor="#f2e1db"
-              infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
-            >
-              <Input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </FormField>
-          )}
-
-          {shouldShowSubtitle && (
-            <FormField 
-              label="Subtitle (optional)" 
-              borderColor="#f2e1db"
-              infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
-            >
-              <Input
-                type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-              />
-            </FormField>
-          )}
-
+          ))}
         </form>
 
-        {row.id && !label.trim() && (
+        {row.id && !((values as any)["label"] && typeof (values as any)["label"] === "string" && (values as any)["label"].trim().length > 0) && (
           <div
             style={{
               padding: uiTokens.space.md,
@@ -322,10 +338,10 @@ export default function TitleSlideEditor({
         row={row}
         slideType={slideType}
         onMetadataChange={setMetadata}
-        visibleFieldKeys={visibleFieldKeys}
+        visibleFieldKeys={schemaFieldKeys}
       />
 
-      <CmsSection backgroundColor="#f8f0ed" borderColor="#f2e1db">
+      <CmsSection backgroundColor="#e6f1f1" borderColor="#b4d5d5">
         <Button
           variant="ghost"
           size="sm"
@@ -452,7 +468,7 @@ export default function TitleSlideEditor({
         )}
       </CmsSection>
 
-      <CmsSection title="Raw DB row (debug)" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+      <CmsSection title="Raw DB row (debug)" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
         <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
           {JSON.stringify(row, null, 2)}
         </pre>

@@ -34,5 +34,4 @@ export type SlideEditorDefinition = {
   type: string;
   label: string;
   editorComponent: SlideEditorComponent;
-  schema: EditorSchema;
 };

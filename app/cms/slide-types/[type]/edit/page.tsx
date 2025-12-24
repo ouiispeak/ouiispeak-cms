@@ -13,8 +13,7 @@ import {
   serializePresetConfig,
   type SlideTypePreset,
 } from "../../../../../lib/slide-editor-registry/presets";
-import { getSlideEditorDefinition } from "../../../../../lib/slide-editor-registry";
-import DefaultSlideEditor from "../../../../../components/slide-editors/DefaultSlideEditor";
+import { getSlideEditorDefinition, listSlideEditorDefinitions } from "../../../../../lib/slide-editor-registry";
 import { SchemaDebugPanel } from "../../../../../components/debug/SchemaDebugPanel";
 import type { Slide } from "../../../../../lib/domain/slide";
 import {
@@ -207,13 +206,34 @@ export default function EditSlideTypePresetPage() {
     return Array.from(visibility.typeHiddenKeys);
   }, [isDefaultType, visibility]);
 
+  // Generate default props based on slide type for preview
+  const getDefaultPreviewProps = (type: string): Record<string, any> => {
+    switch (type) {
+      case "ai-speak-repeat":
+        return {
+          title: "",
+          lines: [],
+        };
+      case "title-slide":
+        return {
+          title: "",
+        };
+      case "text-slide":
+        return {
+          body: "",
+        };
+      default:
+        return {};
+    }
+  };
+
   const [previewSlide] = useState<Slide>(() => ({
     id: "preview-slide",
     lessonId: null,
     groupId: null,
     orderIndex: 1,
     type: slideType,
-    propsJson: {},
+    propsJson: getDefaultPreviewProps(slideType),
     aidHook: null,
     code: null,
     metaJson: {},
@@ -223,7 +243,7 @@ export default function EditSlideTypePresetPage() {
     maxScoreValue: null,
     passRequiredForNext: false,
   }));
-  const [previewProps, setPreviewProps] = useState<Record<string, any>>({});
+  const [previewProps, setPreviewProps] = useState<Record<string, any>>(getDefaultPreviewProps(slideType));
 
   // Compute visible/hidden fields using resolver output
   const visibleFields = useMemo(
@@ -260,32 +280,123 @@ export default function EditSlideTypePresetPage() {
     setPresetsConfig((prev) => {
       const next = { ...prev, presets: { ...prev.presets } };
 
+      // Required fields that must always be visible (protected from cascade removal)
+      const REQUIRED_ALWAYS_VISIBLE_KEYS = new Set(["label"]);
+      const isRequiredKey = REQUIRED_ALWAYS_VISIBLE_KEYS.has(key);
+
       if (isDefaultType) {
-        // For default type, update default preset
+        // For default type, update default preset using hiddenFieldKeys
         const defaultPreset = next.presets.default || { hiddenFieldKeys: [] };
-        const hiddenSet = new Set(defaultPreset.hiddenFieldKeys);
+        const hiddenSet = new Set(defaultPreset.hiddenFieldKeys || []);
         if (hide) {
+          // Protect required fields from being hidden
+          if (isRequiredKey) {
+            console.warn(`[SlideTypeEditor] Cannot hide required field "${key}"`);
+            return prev; // No change
+          }
           hiddenSet.add(key);
+          
+          // DESTRUCTIVE CASCADE: When hiding in Default, remove field from ALL non-default slide types' visibleFieldKeys
+          // This ensures the system "forgets" that the field was previously enabled on those types
+          for (const [slideTypeKey, typePreset] of Object.entries(next.presets)) {
+            if (slideTypeKey === "default") {
+              continue; // Skip default type
+            }
+            
+            const currentPreset = typePreset || {};
+            let visibleSet: Set<string>;
+            
+            // Get current visibleFieldKeys or compute from hiddenFieldKeys (backward compatibility)
+            if (currentPreset.visibleFieldKeys && currentPreset.visibleFieldKeys.length > 0) {
+              visibleSet = new Set(currentPreset.visibleFieldKeys);
+            } else {
+              // Backward compatibility: compute visibleFieldKeys from hiddenFieldKeys
+              const hiddenSetForType = new Set(currentPreset.hiddenFieldKeys || []);
+              visibleSet = new Set(
+                DEFAULT_SLIDE_FIELDS
+                  .filter((f) => !hiddenSetForType.has(f.key))
+                  .map((f) => f.key)
+              );
+            }
+            
+            // Remove the field from this type's visibleFieldKeys (unless it's required)
+            if (!isRequiredKey) {
+              visibleSet.delete(key);
+            }
+            
+            // Update preset with visibleFieldKeys (explicit allowlist)
+            next.presets[slideTypeKey] = {
+              visibleFieldKeys: Array.from(visibleSet),
+            };
+          }
+          
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[SlideTypeEditor] Destructive cascade: Removed "${key}" from all non-default slide types' visibleFieldKeys`);
+          }
         } else {
           hiddenSet.delete(key);
+          // When re-showing in Default, do NOT automatically add to child types
+          // They remain hidden until manually enabled (this is the "forget" behavior)
         }
         next.presets.default = { hiddenFieldKeys: Array.from(hiddenSet) };
+        
+        // PARENT GATING + DESTRUCTIVE CASCADE:
+        // - When a field is hidden in Default, it becomes hidden in ALL child types AND is removed from their allowlists.
+        // - When a field is shown in Default, it becomes available but remains hidden in child types until manually enabled.
       } else {
-        // For non-default types, update type-specific preset
-        // But cannot unhide fields hidden by default
-        if (!hide && visibility.defaultHiddenKeys.has(key)) {
-          // Cannot unhide default-hidden fields
-          return prev;
+        // For non-default types, use visibleFieldKeys as explicit allowlist
+        // BUT: can only show fields that are visible in Default (parent gate)
+        const defaultPreset = next.presets.default || { hiddenFieldKeys: [] };
+        const defaultHiddenKeys = new Set(defaultPreset.hiddenFieldKeys || []);
+        const defaultVisibleKeys = new Set(
+          DEFAULT_SLIDE_FIELDS
+            .filter((f) => !defaultHiddenKeys.has(f.key))
+            .map((f) => f.key)
+        );
+        
+        // Check if field is gated by Default (hidden in Default)
+        const isGatedByDefault = defaultHiddenKeys.has(key);
+        const isRequiredKey = key === "label"; // Required always visible keys
+        
+        // Cannot show fields that are hidden in Default (unless required)
+        if (!hide && isGatedByDefault && !isRequiredKey) {
+          // Field is hidden in Default - cannot show it in child type
+          console.warn(`[SlideTypeEditor] Cannot show "${key}" - it is hidden in Default (parent gate)`);
+          return prev; // No change
         }
-
-        const typePreset = next.presets[normalizedType] || { hiddenFieldKeys: [] };
-        const hiddenSet = new Set(typePreset.hiddenFieldKeys);
-        if (hide) {
-          hiddenSet.add(key);
+        
+        const typePreset = next.presets[normalizedType] || {};
+        
+        // Get current visibleFieldKeys or compute from hiddenFieldKeys (backward compatibility)
+        let visibleSet: Set<string>;
+        if (typePreset.visibleFieldKeys && typePreset.visibleFieldKeys.length > 0) {
+          visibleSet = new Set(typePreset.visibleFieldKeys);
         } else {
-          hiddenSet.delete(key);
+          // Backward compatibility: compute visibleFieldKeys from hiddenFieldKeys
+          const hiddenSet = new Set(typePreset.hiddenFieldKeys || []);
+          visibleSet = new Set(
+            DEFAULT_SLIDE_FIELDS
+              .filter((f) => !hiddenSet.has(f.key))
+              .map((f) => f.key)
+          );
         }
-        next.presets[normalizedType] = { hiddenFieldKeys: Array.from(hiddenSet) };
+        
+        if (hide) {
+          // Hide: remove from visibleFieldKeys (unless required)
+          if (!isRequiredKey) {
+            visibleSet.delete(key);
+          }
+        } else {
+          // Show: add to visibleFieldKeys (only if visible in Default or required)
+          if (defaultVisibleKeys.has(key) || isRequiredKey) {
+            visibleSet.add(key);
+          }
+        }
+        
+        // Update preset with visibleFieldKeys (explicit allowlist, gated by Default)
+        next.presets[normalizedType] = {
+          visibleFieldKeys: Array.from(visibleSet),
+        };
       }
 
       // Save to localStorage immediately
@@ -320,8 +431,8 @@ export default function EditSlideTypePresetPage() {
         title="Field visibility"
         description={
           isDefaultType
-            ? "Hide fields to declutter the editor. Hidden fields stay saved; they are just not shown in the UI."
-            : "Hide fields to declutter the editor. Fields hidden in the default preset cannot be shown here. Hidden fields stay saved; they are just not shown in the UI."
+            ? "Hide fields to declutter the editor. Hidden fields act as a parent gate - they will be hidden in ALL child slide types AND removed from their allowlists. When re-enabled, fields remain hidden in child types until manually enabled. Hidden fields stay saved; they are just not shown in the UI."
+            : "Hide fields to declutter the editor. Fields hidden in Default cannot be shown here (parent gate). You can only show fields that are visible in Default. Hidden fields stay saved; they are just not shown in the UI."
         }
         backgroundColor={fieldVisibilitySection.backgroundColor}
         borderColor={fieldVisibilitySection.borderColor}
@@ -335,86 +446,53 @@ export default function EditSlideTypePresetPage() {
         <div style={twoColumnGrid}>
           <div style={columnContainer}>
             <h3 style={columnTitle}>Visible fields</h3>
-            {isDefaultType ? (
-              <div style={categoriesGrid}>
-                {visibleGroups.map((group) => (
-                  <div key={group.id} style={categoryContainer}>
-                    <div style={categoryTitle}>{group.title}</div>
-                    <ul style={fieldList}>
-                      {group.fields.map((field) => (
-                        <li key={field.key} style={visibleFieldItem}>
-                          <div>
-                            <div style={fieldLabel}>{field.label}</div>
-                            {field.helpText && (
-                              <div className="metaText" style={fieldHelpText}>
-                                {field.helpText}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => toggleHide(field.key, true)}
-                            aria-label={`Hide ${field.label}`}
-                            style={hideButton}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={1.5}
-                              style={buttonIcon}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                            </svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                {visibleFields.length === 0 && (
-                  <div className="metaText" style={emptyState}>
-                    No visible fields.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <ul style={fieldList}>
-                {visibleFields.map((field) => (
-                  <li key={field.key} style={visibleFieldItem}>
-                    <div>
-                      <div style={fieldLabel}>{field.label}</div>
-                      {field.helpText && (
-                        <div className="metaText" style={fieldHelpText}>
-                          {field.helpText}
+            <div style={categoriesGrid}>
+              {visibleGroups.map((group) => (
+                <div key={group.id} style={categoryContainer}>
+                  <div style={categoryTitle}>{group.title}</div>
+                  <ul style={fieldList}>
+                    {group.fields.map((field) => (
+                      <li key={field.key} style={visibleFieldItem}>
+                        <div>
+                          <div style={fieldLabel}>{field.label}</div>
+                          {field.helpText && (
+                            <div className="metaText" style={fieldHelpText}>
+                              {field.helpText}
+                            </div>
+                          )}
+                          {isDefaultType && field.key !== "label" && (
+                            <div className="metaText" style={{ fontSize: 11, color: "#856404", marginTop: 4 }}>
+                              Hiding will remove from all slide types
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleHide(field.key, true)}
-                      aria-label={`Hide ${field.label}`}
-                      style={hideButton}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        style={buttonIcon}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-                {visibleFields.length === 0 && (
-                  <li className="metaText" style={emptyState}>
-                    No visible fields.
-                  </li>
-                )}
-              </ul>
-            )}
+                        <button
+                          type="button"
+                          onClick={() => toggleHide(field.key, true)}
+                          aria-label={`Hide ${field.label}${isDefaultType && field.key !== "label" ? " (will remove from all slide types)" : ""}`}
+                          style={hideButton}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            style={buttonIcon}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              {visibleFields.length === 0 && (
+                <div className="metaText" style={emptyState}>
+                  No visible fields.
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={columnContainer}>
@@ -583,22 +661,30 @@ export default function EditSlideTypePresetPage() {
         borderColor={livePreviewSection.borderColor}
       >
         <>
-          <DefaultSlideEditor
-            row={{ ...previewSlide, propsJson: previewProps }}
-            orderIndex={1}
-            groupId={null}
-            slideType={slideType}
-            schema={previewSchema}
-            onSaveSuccess={() => {}}
-            saveSlide={async () => ({ success: true })}
-            onUnsavedChangesChange={() => {}}
-            onSavingChange={() => {}}
-          />
-          <SchemaDebugPanel
-            typeKey={slideType}
-            schemaSource="visibleSchema"
-            actualSchema={previewSchema}
-          />
+          {(() => {
+            const editorDefinition = getSlideEditorDefinition(slideType);
+            const EditorComponent = editorDefinition.editorComponent;
+            return (
+              <EditorComponent
+                row={{ ...previewSlide, propsJson: previewProps }}
+                orderIndex={1}
+                groupId={null}
+                slideType={slideType}
+                schema={previewSchema}
+                onSaveSuccess={() => {}}
+                saveSlide={async () => ({ success: true })}
+                onUnsavedChangesChange={() => {}}
+                onSavingChange={() => {}}
+              />
+            );
+          })()}
+          {isHydrated && (
+            <SchemaDebugPanel
+              typeKey={slideType}
+              schemaSource="visibleSchema"
+              actualSchema={previewSchema}
+            />
+          )}
         </>
       </CmsSection>
     </CmsPageShell>

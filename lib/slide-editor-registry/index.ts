@@ -7,93 +7,16 @@ import { DEFAULT_SLIDE_FIELDS } from "./defaultFields";
 import { getVisibleFieldsForType } from "./presets";
 import type { EditorSchema, SlideEditorDefinition } from "./types";
 
-const aiSpeakRepeatSchema: EditorSchema = {
-  fields: [
-    { key: "title", label: "Title", required: true, uiType: "text" },
-    { key: "subtitle", label: "Subtitle", required: false, uiType: "text" },
-    { key: "note", label: "Note (internal)", required: false, uiType: "textarea" },
-    { key: "defaultLang", label: "Default language", required: true, uiType: "text" },
-    {
-      key: "phrases",
-      label: "Phrases",
-      helpText: "One phrase per line, flattened into lines[][]",
-      required: true,
-      uiType: "textarea",
-    },
-    {
-      key: "metadata",
-      label: "Authoring metadata",
-      helpText: "Code, goal, activity, and scoring fields.",
-      required: false,
-      uiType: "metadata",
-    },
-  ],
-};
-
-const titleSlideSchema: EditorSchema = {
-  fields: [
-    { key: "title", label: "Title", required: true, uiType: "text" },
-    { key: "subtitle", label: "Subtitle", required: false, uiType: "text" },
-    {
-      key: "metadata",
-      label: "Authoring metadata",
-      helpText: "Code, goal, activity flags, and buttons.",
-      required: false,
-      uiType: "metadata",
-    },
-  ],
-};
-
-const textSlideSchema: EditorSchema = {
-  fields: [
-    { key: "title", label: "Title", required: false, uiType: "text" },
-    { key: "subtitle", label: "Subtitle", required: false, uiType: "text" },
-    {
-      key: "body",
-      label: "Body",
-      helpText: "Main slide copy; saves as props_json.body.",
-      required: false,
-      uiType: "textarea",
-    },
-    {
-      key: "metadata",
-      label: "Authoring metadata",
-      helpText: "Code, goal, activity, and scoring fields.",
-      required: false,
-      uiType: "metadata",
-    },
-  ],
-};
-
 export const defaultSlideEditorDefinition: SlideEditorDefinition = {
   type: "default",
   label: "Default",
   editorComponent: DefaultSlideEditor,
-  schema: textSlideSchema,
 };
 
 export const rawJsonEditorDefinition: SlideEditorDefinition = {
   type: "raw-json",
   label: "Raw JSON",
   editorComponent: RawJsonEditor,
-  schema: {
-    fields: [
-      {
-        key: "props_json",
-        label: "Props JSON",
-        helpText: "Raw JSON payload for slide props.",
-        required: true,
-        uiType: "json",
-      },
-      {
-        key: "metadata",
-        label: "Authoring metadata",
-        helpText: "Code, goals, activity flags, buttons, and scoring settings.",
-        required: false,
-        uiType: "metadata",
-      },
-    ],
-  },
 };
 
 const slideEditorRegistry: Record<string, SlideEditorDefinition> = {
@@ -102,19 +25,16 @@ const slideEditorRegistry: Record<string, SlideEditorDefinition> = {
     type: "ai-speak-repeat",
     label: "AI Speak Repeat",
     editorComponent: AiSpeakRepeatEditor,
-    schema: aiSpeakRepeatSchema,
   },
   "title-slide": {
     type: "title-slide",
     label: "Title slide",
     editorComponent: TitleSlideEditor,
-    schema: titleSlideSchema,
   },
   "text-slide": {
     type: "text-slide",
     label: "Text slide",
     editorComponent: TextSlideEditor,
-    schema: textSlideSchema,
   },
 };
 

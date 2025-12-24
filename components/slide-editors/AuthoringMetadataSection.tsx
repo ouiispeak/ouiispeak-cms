@@ -112,7 +112,7 @@ export default function AuthoringMetadataSection({
       {isVisible("code") && (
         <FormField 
           label="Code" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Internal shorthand name for the slide. Used by authors and developers to quickly identify the slide's purpose. Not shown to students."
         >
           <Input
@@ -126,7 +126,7 @@ export default function AuthoringMetadataSection({
       {isVisible("slideGoal") && (
         <FormField 
           label="Slide goal" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="What the learner should achieve by completing this slide. Write in outcome-focused language (understand, practice, notice, produce)."
         >
           <Textarea
@@ -140,7 +140,7 @@ export default function AuthoringMetadataSection({
       {isVisible("activityName") && (
         <FormField 
           label="Activity name" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip='Human-readable name of the activity pattern. Used for analytics, reuse, and reporting (e.g. "Listen & Repeat", "Choose the Correct Form").'
         >
           <Input
@@ -154,7 +154,7 @@ export default function AuthoringMetadataSection({
       {isVisible("requiresExternalTTS") && (
         <FormField 
           label="Requires external TTS" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Indicates whether this slide depends on external text-to-speech generation. TRUE if audio is generated dynamically. FALSE if audio is pre-recorded or not needed."
         >
           <label
@@ -183,7 +183,7 @@ export default function AuthoringMetadataSection({
       {isVisible("buttons") && (
         <FormField 
           label="Buttons (comma-separated)" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Defines which action buttons appear on this slide. Example: next, replay, hint. Controls UI only, not logic."
         >
           <Input
@@ -198,7 +198,7 @@ export default function AuthoringMetadataSection({
       {isVisible("tags") && (
         <FormField 
           label="Tags (comma-separated)" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Internal tags for search, filtering, or batch operations."
         >
           <Input
@@ -213,7 +213,7 @@ export default function AuthoringMetadataSection({
       {isVisible("difficultyHint") && (
         <FormField 
           label="Difficulty hint" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Internal difficulty signal for planning or sequencing."
         >
           <Input
@@ -227,7 +227,7 @@ export default function AuthoringMetadataSection({
       {isVisible("reviewWeight") && (
         <FormField 
           label="Review weight" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Optional weight for review scheduling."
         >
           <Input
@@ -242,7 +242,7 @@ export default function AuthoringMetadataSection({
       {isVisible("isActivity") && (
         <FormField 
           label="Is activity" 
-          borderColor="#f2e1db"
+          borderColor="#b4d5d5"
           infoTooltip="Marks whether this slide counts as an interactive activity. TRUE if the learner must perform an action to proceed. FALSE for passive or informational slides."
         >
           <label
@@ -271,7 +271,7 @@ export default function AuthoringMetadataSection({
       {!isTitleSlide && (
         <>
           {isVisible("scoreType") && (
-            <FormField label="Score type" borderColor="#f2e1db">
+            <FormField label="Score type" borderColor="#b4d5d5">
               <Select value={scoreType} onChange={(e) => setScoreType(e.target.value)}>
                 <option value="none">None</option>
                 <option value="confidence">Confidence</option>
@@ -283,7 +283,7 @@ export default function AuthoringMetadataSection({
           )}
 
           {isPassThresholdVisible && (
-            <FormField label="Pass threshold" borderColor="#f2e1db">
+            <FormField label="Pass threshold" borderColor="#b4d5d5">
               <Input
                 type="number"
                 value={passingScoreValue ?? ""}
@@ -298,7 +298,7 @@ export default function AuthoringMetadataSection({
           )}
 
           {isVisible("maxScoreValue") && (
-            <FormField label="Max score" borderColor="#f2e1db">
+            <FormField label="Max score" borderColor="#b4d5d5">
               <Input
                 type="number"
                 value={maxScoreValue ?? ""}
@@ -313,7 +313,7 @@ export default function AuthoringMetadataSection({
           )}
 
           {isVisible("passRequiredForNext") && (
-            <FormField label="Pass required for next" borderColor="#f2e1db">
+            <FormField label="Pass required for next" borderColor="#b4d5d5">
               <label
                 style={{
                   display: "flex",
@@ -338,7 +338,7 @@ export default function AuthoringMetadataSection({
           )}
 
           {isVisible("showScoreToLearner") && (
-            <FormField label="Show score to learner" borderColor="#f2e1db">
+            <FormField label="Show score to learner" borderColor="#b4d5d5">
               <label
                 style={{
                   display: "flex",
@@ -371,7 +371,7 @@ export default function AuthoringMetadataSection({
   }
 
   return (
-    <CmsSection title="Authoring metadata" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+    <CmsSection title="Authoring metadata" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
       {content}
     </CmsSection>
   );

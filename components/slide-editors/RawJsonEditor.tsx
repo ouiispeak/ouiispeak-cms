@@ -229,8 +229,8 @@ export default function RawJsonEditor({
     <>
       <CmsSection
         title="Raw JSON editor"
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         description={
           <>
             Editing slide <code className="codeText">{row.id}</code> (type: <code className="codeText">{row.type}</code>) in group{" "}
@@ -241,7 +241,7 @@ export default function RawJsonEditor({
         }
       >
         <form onSubmit={handleSave}>
-          <FormField label="props_json (raw JSON)" required borderColor="#f2e1db">
+          <FormField label="props_json (raw JSON)" required borderColor="#b4d5d5">
             <Textarea
               value={jsonText}
               onChange={(e) => {
@@ -281,8 +281,8 @@ export default function RawJsonEditor({
 
       <CmsSection
         title="Raw props_json (advanced)"
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         actions={
           <Button
             variant="ghost"
@@ -401,7 +401,7 @@ export default function RawJsonEditor({
         )}
       </CmsSection>
 
-      <CmsSection title="Raw DB row (debug)" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+      <CmsSection title="Raw DB row (debug)" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
         <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
           {JSON.stringify(row, null, 2)}
         </pre>

@@ -26,14 +26,8 @@ export default function AiSpeakRepeatEditor({
   onUnsavedChangesChange,
   onSavingChange,
 }: SlideEditorProps) {
-  // Respect visibility presets: only render fields that are in the schema
-  const visibleFieldKeys = new Set(schema.fields.map((f) => f.key));
-  const shouldShowLabel = visibleFieldKeys.has("label");
-  const shouldShowTitle = visibleFieldKeys.has("title");
-  const shouldShowSubtitle = visibleFieldKeys.has("subtitle");
-  const shouldShowNote = visibleFieldKeys.has("note");
-  const shouldShowDefaultLang = visibleFieldKeys.has("defaultLang");
-  const shouldShowPhrases = visibleFieldKeys.has("phrases");
+  // Use schema.fields as the ONLY source of truth - no hardcoded checks
+  const schemaFieldKeys = new Set(schema.fields.map((f) => f.key));
   const [innerState, setInnerState] = useState<
     | { status: "loading" }
     | { status: "error"; message: string }
@@ -41,11 +35,17 @@ export default function AiSpeakRepeatEditor({
   >({ status: "loading" });
 
   const props = (row.propsJson as any) || {};
-  const [label, setLabel] = useState(props.label || "");
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [note, setNote] = useState("");
-  const [defaultLang, setDefaultLang] = useState("en");
+  // Use values map for all fields except phrases (which has special handling)
+  const [values, setValues] = useState<Record<string, any>>(() => {
+    const initial: Record<string, any> = {};
+    schema.fields.forEach((field) => {
+      if (field.key !== "phrases") {
+        initial[field.key] = props[field.key] || "";
+      }
+    });
+    return initial;
+  });
+  // Special handling for phrases: convert lines[][] to textarea text
   const [phrasesText, setPhrasesText] = useState("");
   const [metadata, setMetadata] = useState<AuthoringMetadataState>({
     code: row.code || "",
@@ -65,14 +65,14 @@ export default function AiSpeakRepeatEditor({
   });
 
   const initialDataRef = useRef<{
-    label: string;
-    title: string;
-    subtitle: string;
-    note: string;
-    defaultLang: string;
+    values: Record<string, any>;
     phrasesText: string;
     metadata: AuthoringMetadataState;
   } | null>(null);
+  
+  const updateField = (key: string, val: any) => {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  };
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -85,21 +85,70 @@ export default function AiSpeakRepeatEditor({
   // Parse and validate slide, populate fields
   useEffect(() => {
     const rawSlide = {
-      id: row.id,
+      id: row.id || "new-slide",
       groupId: row.groupId ?? undefined,
       type: row.type,
-      props: row.propsJson,
+      props: row.propsJson || {},
       aidHook: row.aidHook ?? null,
     };
 
     const result = aiSpeakRepeatSlideSchema.safeParse(rawSlide);
 
     if (!result.success) {
-      console.error(result.error.format());
+      // Handle validation errors more gracefully
+      let errorMessage = "Validation failed when parsing ai-speak-repeat slide.";
+      try {
+        if (result.error && typeof result.error.format === 'function') {
+          const formatted = result.error.format();
+          console.error("Validation error:", formatted);
+          // Extract a more helpful error message
+          const issues = result.error.issues || [];
+          if (issues.length > 0) {
+            const firstIssue = issues[0];
+            errorMessage = `Validation error: ${firstIssue.path.join('.')} - ${firstIssue.message}`;
+          }
+        } else {
+          console.error("Validation error:", result.error);
+          errorMessage = "Invalid slide data. Please check that all required fields are present.";
+        }
+      } catch (e) {
+        console.error("Error formatting validation error:", e, result.error);
+        errorMessage = "Invalid slide data. Please check that all required fields are present.";
+      }
+      
+      // For new/incomplete slides, don't show error - just initialize with defaults
+      const props = (row.propsJson as any) || {};
+      const hasMinimalData = props.title || props.lines;
+      
+      if (!hasMinimalData) {
+        // New slide - initialize with defaults instead of showing error
+        const newValues: Record<string, any> = {};
+        schema.fields.forEach((field) => {
+          if (field.key !== "phrases") {
+            newValues[field.key] = props[field.key] ?? "";
+          }
+        });
+        setValues(newValues);
+        setPhrasesText("");
+        setInnerState({ status: "ready", slide: {
+          id: row.id || "new-slide",
+          groupId: row.groupId ?? undefined,
+          type: "ai-speak-repeat" as const,
+          props: {
+            title: props.title ?? "",
+            subtitle: props.subtitle,
+            note: props.note,
+            defaultLang: props.defaultLang,
+            lines: props.lines || [],
+          },
+          aidHook: row.aidHook ?? null,
+        }});
+        return;
+      }
+      
       setInnerState({
         status: "error",
-        message:
-          "Validation failed when parsing ai-speak-repeat slide. See console for details.",
+        message: errorMessage,
       });
       return;
     }
@@ -107,13 +156,16 @@ export default function AiSpeakRepeatEditor({
     const slide = result.data;
     const props = (row.propsJson as any) || {};
 
-    setLabel(props.label ?? "");
-    setTitle(slide.props.title);
-    setSubtitle(slide.props.subtitle ?? "");
-    setNote(slide.props.note ?? "");
-    setDefaultLang(slide.props.defaultLang ?? "en");
+    // Update values map from slide props (except phrases)
+    const newValues: Record<string, any> = {};
+    schema.fields.forEach((field) => {
+      if (field.key !== "phrases") {
+        newValues[field.key] = slide.props[field.key] ?? props[field.key] ?? "";
+      }
+    });
+    setValues(newValues);
 
-    // Flatten lines[][] → textarea
+    // Flatten lines[][] → textarea (special handling for phrases)
     const flatPhrases = slide.props.lines
       .flat()
       .map((cell) => cell.label)
@@ -122,11 +174,7 @@ export default function AiSpeakRepeatEditor({
     
     // Store initial values for comparison
     initialDataRef.current = {
-      label: props.label ?? "",
-      title: slide.props.title,
-      subtitle: slide.props.subtitle ?? "",
-      note: slide.props.note ?? "",
-      defaultLang: slide.props.defaultLang ?? "en",
+      values: { ...newValues },
       phrasesText: flatPhrases,
       metadata: {
         code: row.code || "",
@@ -147,19 +195,15 @@ export default function AiSpeakRepeatEditor({
     };
 
     setInnerState({ status: "ready", slide });
-  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext]); // Reset when slide data changes
+  }, [row.id, JSON.stringify(row.propsJson), JSON.stringify(row.metaJson), row.code, row.isActivity, row.scoreType, row.passingScoreValue, row.maxScoreValue, row.passRequiredForNext, JSON.stringify(schema.fields.map(f => f.key))]); // Reset when slide data changes
   
   // Check for unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current || innerState.status !== "ready") return false;
     const initial = initialDataRef.current;
-    return (
-      label !== initial.label ||
-      title !== initial.title ||
-      subtitle !== initial.subtitle ||
-      note !== initial.note ||
-      defaultLang !== initial.defaultLang ||
-      phrasesText !== initial.phrasesText ||
+    const valueChanged = Object.keys(values).some((k) => (values as any)[k] !== (initial.values as any)[k]);
+    const phrasesChanged = phrasesText !== initial.phrasesText;
+    const metaChanged =
       metadata.code !== initial.metadata.code ||
       metadata.slideGoal !== initial.metadata.slideGoal ||
       metadata.activityName !== initial.metadata.activityName ||
@@ -173,9 +217,9 @@ export default function AiSpeakRepeatEditor({
       metadata.scoreType !== initial.metadata.scoreType ||
       metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
       metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
-      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
-    );
-  }, [label, title, subtitle, note, defaultLang, phrasesText, metadata, innerState.status]);
+      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext;
+    return valueChanged || phrasesChanged || metaChanged;
+  }, [values, phrasesText, metadata, innerState.status]);
   
   // Notify parent of unsaved changes
   useEffect(() => {
@@ -196,40 +240,54 @@ export default function AiSpeakRepeatEditor({
 
     try {
       // Validate required fields (label is required for new slides)
+      const labelField = schema.fields.find((f) => f.key === "label");
       const isNewSlide = !row.id;
-      if (isNewSlide && !label.trim()) {
-        setSaveMessage("Slide label is required for CMS navigation.");
-        setSaving(false);
-        onSavingChange?.(false);
-        return;
+      if (labelField && isNewSlide) {
+        const labelValue = values["label"];
+        const trimmedLabel = typeof labelValue === "string" ? labelValue.trim() : "";
+        if (!trimmedLabel) {
+          setSaveMessage("Slide label is required for CMS navigation.");
+          setSaving(false);
+          onSavingChange?.(false);
+          return;
+        }
       }
 
-      // Turn textarea back into lines[][]
+      // Turn textarea back into lines[][] (special handling for phrases)
       const phraseList = phrasesText
         .split("\n")
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
 
+      const defaultLangValue = values["defaultLang"] || "en";
       const newLines = [
         phraseList.map((label) => ({
           label,
           speech: {
             mode: "tts" as const,
-            lang: defaultLang || "en",
+            lang: defaultLangValue,
             text: label,
           },
         })),
       ];
 
-      const newProps = {
+      // Build props from values map (iterate over schema.fields)
+      const newProps: any = {
         ...existingSlide.props,
-        label: label.trim() || undefined,
-        title,
-        subtitle: subtitle || undefined,
-        note: note || undefined,
-        defaultLang,
         lines: newLines,
       };
+      
+      // Add all visible fields from values map
+      for (const field of schema.fields) {
+        if (field.key !== "phrases") {
+          const rawVal = values[field.key];
+          const trimmedVal = typeof rawVal === "string" ? rawVal.trim() : rawVal;
+          if (trimmedVal === "" || trimmedVal === undefined) {
+            continue;
+          }
+          newProps[field.key] = trimmedVal;
+        }
+      }
 
       const rawSlide = {
         id: existingSlide.id,
@@ -301,11 +359,7 @@ export default function AiSpeakRepeatEditor({
       
       // Update initial data ref after successful save
       initialDataRef.current = {
-        label,
-        title,
-        subtitle,
-        note,
-        defaultLang,
+        values: { ...values },
         phrasesText,
         metadata: { ...metadata },
       };
@@ -328,7 +382,7 @@ export default function AiSpeakRepeatEditor({
 
   if (innerState.status === "error") {
     return (
-      <CmsSection title="ai-speak-repeat editor error" description={innerState.message} backgroundColor="#f8f0ed" borderColor="#f2e1db">
+      <CmsSection title="ai-speak-repeat editor error" description={innerState.message} backgroundColor="#e6f1f1" borderColor="#b4d5d5">
         <p style={{ color: uiTokens.color.danger }}>{innerState.message}</p>
       </CmsSection>
     );
@@ -340,8 +394,8 @@ export default function AiSpeakRepeatEditor({
     <>
       <CmsSection
         title="ai-speak-repeat editor"
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         description={
           <>
             Editing slide <code className="codeText">{slide.id}</code> in group{" "}
@@ -350,85 +404,65 @@ export default function AiSpeakRepeatEditor({
         }
       >
         <form onSubmit={handleSave}>
-          {shouldShowLabel && (
-            <FormField 
-              label="Label" 
-              required
-              borderColor="#f2e1db"
-              infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners."
-            >
-              <Input
-                type="text"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                required
-              />
-            </FormField>
-          )}
-
-          {shouldShowTitle && (
-            <FormField 
-              label="Slide title" 
-              required 
-              borderColor="#f2e1db"
-              infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
-            >
-              <Input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </FormField>
-          )}
-
-          {shouldShowSubtitle && (
-            <FormField 
-              label="Subtitle" 
-              borderColor="#f2e1db"
-              infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
-            >
-              <Input
-                type="text"
-                value={subtitle}
-                onChange={(e) => setSubtitle(e.target.value)}
-              />
-            </FormField>
-          )}
-
-          {shouldShowNote && (
-            <FormField label="Note" borderColor="#f2e1db">
-              <Input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </FormField>
-          )}
-
-          {shouldShowDefaultLang && (
-            <FormField label="Default language" required borderColor="#f2e1db">
-              <Input
-                type="text"
-                value={defaultLang}
-                onChange={(e) => setDefaultLang(e.target.value)}
-              />
-            </FormField>
-          )}
-
-          {shouldShowPhrases && (
-            <FormField label="Phrases (one per line)" required borderColor="#f2e1db">
-              <Textarea
-                value={phrasesText}
-                onChange={(e) => setPhrasesText(e.target.value)}
-                rows={6}
-                style={{ fontFamily: "monospace" }}
-              />
-            </FormField>
-          )}
-
+          {/* Render ONLY fields from schema.fields - no hardcoded checks, no duplicate rendering */}
+          {schema.fields.map((field) => {
+            // Special handling for "phrases" field (synthetic field representing lines[][])
+            if (field.key === "phrases") {
+              return (
+                <FormField
+                  key={field.key}
+                  label={field.label || "Phrases (one per line)"}
+                  required={field.required}
+                  borderColor="#b4d5d5"
+                  infoTooltip={field.helpText}
+                >
+                  <Textarea
+                    value={phrasesText}
+                    onChange={(e) => setPhrasesText(e.target.value)}
+                    rows={6}
+                    style={{ fontFamily: "monospace" }}
+                  />
+                </FormField>
+              );
+            }
+            
+            // Regular field rendering
+            const val = (values as any)[field.key] ?? "";
+            return (
+              <FormField
+                key={field.key}
+                label={field.label}
+                required={field.required}
+                borderColor="#b4d5d5"
+                infoTooltip={field.helpText}
+              >
+                {field.uiType === "select" ? (
+                  <Select value={val} onChange={(e) => updateField(field.key, e.target.value)}>
+                    <option value="">(not set)</option>
+                    <option value="auto">Auto</option>
+                    <option value="en">English (en)</option>
+                    <option value="fr">French (fr)</option>
+                  </Select>
+                ) : field.uiType === "textarea" ? (
+                  <Textarea
+                    value={val}
+                    onChange={(e) => updateField(field.key, e.target.value)}
+                    rows={6}
+                  />
+                ) : (
+                  <Input
+                    type="text"
+                    value={val}
+                    onChange={(e) => updateField(field.key, e.target.value)}
+                    required={field.required}
+                  />
+                )}
+              </FormField>
+            );
+          })}
         </form>
 
-        {row.id && !label.trim() && (
+        {row.id && !((values as any)["label"] && typeof (values as any)["label"] === "string" && (values as any)["label"].trim().length > 0) && (
           <div
             style={{
               padding: uiTokens.space.md,
@@ -459,13 +493,13 @@ export default function AiSpeakRepeatEditor({
         row={row}
         slideType={slideType}
         onMetadataChange={setMetadata}
-        visibleFieldKeys={visibleFieldKeys}
+        visibleFieldKeys={schemaFieldKeys}
       />
 
       <CmsSection
         title="Raw props_json (advanced)"
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         actions={
           <Button
             variant="secondary"
@@ -590,7 +624,7 @@ export default function AiSpeakRepeatEditor({
         )}
       </CmsSection>
 
-      <CmsSection title="Current slide data" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+      <CmsSection title="Current slide data" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
         <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
           {JSON.stringify(slide, null, 2)}
         </pre>

@@ -4,20 +4,35 @@ import {
   resolveSlideTypeVisibility,
   type SlideTypePresetsConfig,
   getDefaultPresetsConfig,
+  migratePresetToVisibleFieldKeys,
 } from "./resolver";
 import { loadPresetsFromStorage } from "./presetStorage";
 
 export type SlideTypePreset = {
-  hiddenFieldKeys: string[];
+  hiddenFieldKeys?: string[];
+  visibleFieldKeys?: string[];
 };
 
+/**
+ * Converts hiddenFieldKeys to visibleFieldKeys for non-default types.
+ * This is used to initialize CODE_DEFAULT_PRESETS in the new format.
+ */
+function computeVisibleFieldKeys(hiddenFieldKeys: string[]): string[] {
+  const hiddenSet = new Set(hiddenFieldKeys);
+  return DEFAULT_SLIDE_FIELDS
+    .filter((field) => !hiddenSet.has(field.key))
+    .map((field) => field.key);
+}
+
 // Code-defined presets (fallback defaults). These are merged with localStorage presets.
-export const CODE_DEFAULT_PRESETS: Record<string, SlideTypePreset> = {
+// For "default": uses hiddenFieldKeys (everything visible except hidden)
+// For non-default types: uses visibleFieldKeys (explicit allowlist, no inheritance)
+export const CODE_DEFAULT_PRESETS: Record<string, SlideTypePresetsConfig["presets"][string]> = {
   default: { hiddenFieldKeys: [] },
-  "text-slide": { hiddenFieldKeys: [] },
-  text: { hiddenFieldKeys: [] },
-  "title-slide": { hiddenFieldKeys: ["body", "note", "phrases", "defaultLang"] },
-  "ai-speak-repeat": { hiddenFieldKeys: ["body", "note"] },
+  "text-slide": { visibleFieldKeys: computeVisibleFieldKeys([]) },
+  text: { visibleFieldKeys: computeVisibleFieldKeys([]) },
+  "title-slide": { visibleFieldKeys: computeVisibleFieldKeys(["body", "note", "phrases", "defaultLang"]) },
+  "ai-speak-repeat": { visibleFieldKeys: computeVisibleFieldKeys(["body", "note"]) },
 };
 
 /**
@@ -64,15 +79,37 @@ export function getVisibleFieldsForType(type?: string | null): EditorField[] {
 }
 
 /**
- * Gets preset for a specific type (returns effective hidden keys including inheritance)
+ * Gets preset for a specific type (returns effective preset configuration)
  */
 export function getPresetForType(type?: string | null): SlideTypePreset {
   const normalized = (type || "default").trim() || "default";
   const config = getPresetsConfig();
-  const result = resolveSlideTypeVisibility(normalized, DEFAULT_SLIDE_FIELDS, config);
-  return {
-    hiddenFieldKeys: Array.from(result.hiddenKeys),
-  };
+  const preset = config.presets[normalized];
+  
+  if (normalized === "default") {
+    // Default type: return hiddenFieldKeys
+    return {
+      hiddenFieldKeys: preset?.hiddenFieldKeys || [],
+    };
+  } else {
+    // Non-default type: return visibleFieldKeys if present, otherwise compute from hiddenFieldKeys
+    if (preset?.visibleFieldKeys) {
+      return {
+        visibleFieldKeys: preset.visibleFieldKeys,
+      };
+    } else if (preset?.hiddenFieldKeys) {
+      // Backward compatibility: convert hiddenFieldKeys to visibleFieldKeys
+      const result = resolveSlideTypeVisibility(normalized, DEFAULT_SLIDE_FIELDS, config);
+      return {
+        visibleFieldKeys: Array.from(result.visibleKeys),
+      };
+    } else {
+      // No preset: all fields visible
+      return {
+        visibleFieldKeys: DEFAULT_SLIDE_FIELDS.map((f) => f.key),
+      };
+    }
+  }
 }
 
 /**
@@ -99,7 +136,7 @@ export function serializePreset(type: string, preset: SlideTypePreset): string {
     version: config.version,
     presets: {
       ...config.presets,
-      [normalized]: { hiddenFieldKeys: preset.hiddenFieldKeys },
+      [normalized]: preset,
     },
   };
   return serializePresetConfig(payload);

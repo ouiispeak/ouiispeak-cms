@@ -1,13 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import CmsPageShell from "../../../components/cms/CmsPageShell";
 import CmsSection from "../../../components/ui/CmsSection";
 import { uiTokens } from "../../../lib/uiTokens";
 import {
   getSlideEditorDefinition,
   listSlideEditorDefinitions,
+  getVisibleSchemaForType,
 } from "../../../lib/slide-editor-registry";
-import type { EditorField } from "../../../lib/slide-editor-registry/types";
+import type { EditorField, EditorSchema } from "../../../lib/slide-editor-registry/types";
 import LinkButton from "../../../components/ui/LinkButton";
 
 const fieldList = (fields: EditorField[]) => (
@@ -34,6 +36,14 @@ const fieldList = (fields: EditorField[]) => (
 export default function SlideTypesPage() {
   const editors = listSlideEditorDefinitions();
   const fallbackEditor = getSlideEditorDefinition(null);
+  const [fallbackSchema, setFallbackSchema] = useState<EditorSchema | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load schema after hydration to avoid SSR/client mismatch
+  useEffect(() => {
+    setIsHydrated(true);
+    setFallbackSchema(getVisibleSchemaForType(null));
+  }, []);
 
   return (
     <CmsPageShell title="Slide type registry">
@@ -141,9 +151,15 @@ export default function SlideTypesPage() {
           <div className="metaText" style={{ color: uiTokens.color.textMuted }}>
             type id: <code className="codeText">{fallbackEditor.type}</code>
           </div>
-          <div style={{ marginTop: uiTokens.space.sm }}>
-            {fieldList(fallbackEditor.schema.fields)}
-          </div>
+          {isHydrated && fallbackSchema ? (
+            <div style={{ marginTop: uiTokens.space.sm }}>
+              {fieldList(fallbackSchema.fields)}
+            </div>
+          ) : (
+            <div style={{ marginTop: uiTokens.space.sm, color: uiTokens.color.textMuted }}>
+              Loading fields...
+            </div>
+          )}
         </div>
       </CmsSection>
     </CmsPageShell>

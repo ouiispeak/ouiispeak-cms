@@ -9,7 +9,7 @@ import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import type { SlideEditorProps, AuthoringMetadataState, EditorField } from "./types";
-import { DEFAULT_SLIDE_FIELDS } from "../../lib/slide-editor-registry/defaultFields";
+// Removed DEFAULT_SLIDE_FIELDS import - editors must ONLY use schema.fields
 import {
   categoriesGrid,
   categoryContainer,
@@ -244,7 +244,8 @@ export default function DefaultSlideEditor({
   onUnsavedChangesChange,
   onSavingChange,
 }: SlideEditorProps) {
-  const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row, DEFAULT_SLIDE_FIELDS));
+  // Use schema.fields as the ONLY source of truth - no DEFAULT_SLIDE_FIELDS
+  const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row, schema.fields));
   const [metadata, setMetadata] = useState<AuthoringMetadataState>({
     code: row.code || "",
     slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
@@ -263,7 +264,6 @@ export default function DefaultSlideEditor({
   });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
   const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
   const handleMetadataChange = useCallback((m: AuthoringMetadataState) => setMetadata(m), []);
   const handleAuthoringMetadataChange = useCallback((m: AuthoringMetadataState) => {
@@ -280,9 +280,9 @@ export default function DefaultSlideEditor({
 
   const initialDataRef = useRef<{ values: FieldValueMap; metadata: AuthoringMetadataState } | null>(null);
 
-  // Reset when row changes
+  // Reset when row changes - use schema.fields ONLY
   useEffect(() => {
-    const initialValues = buildInitialValues(row, DEFAULT_SLIDE_FIELDS);
+    const initialValues = buildInitialValues(row, schema.fields);
     initialDataRef.current = {
       values: initialValues,
       metadata: {
@@ -316,17 +316,12 @@ export default function DefaultSlideEditor({
     row.passRequiredForNext,
   ]);
 
-  const visibleFieldKeys = useMemo(() => new Set(schema.fields.map((f) => f.key)), [schema.fields]);
-  const hiddenFields = useMemo(
-    () => DEFAULT_SLIDE_FIELDS.filter((f) => !visibleFieldKeys.has(f.key)),
-    [visibleFieldKeys]
-  );
+  // Use schema.fields as the ONLY source of truth - no DEFAULT_SLIDE_FIELDS
+  const schemaFieldKeys = useMemo(() => new Set(schema.fields.map((f) => f.key)), [schema.fields]);
+  // Render ONLY fields from schema.fields - no DEFAULT_SLIDE_FIELDS, no hidden fields list
   const renderedFields = useMemo(() => {
-    if (showHidden) {
-      return [...schema.fields, ...hiddenFields];
-    }
-    return schema.fields;
-  }, [schema.fields, hiddenFields, showHidden]);
+    return schema.fields; // Schema already contains only visible fields (hidden fields filtered by resolver)
+  }, [schema.fields]);
   const metadataFields = useMemo(
     () => renderedFields.filter((field) => isMetadataField(field.key)),
     [renderedFields]
@@ -689,7 +684,7 @@ export default function DefaultSlideEditor({
         key={field.key}
         label={field.label}
         required={field.required}
-        borderColor="#f2e1db"
+        borderColor="#b4d5d5"
         infoTooltip={field.helpText}
       >
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -698,7 +693,7 @@ export default function DefaultSlideEditor({
             value={value}
             disabled
             readOnly
-            borderColor="#f2e1db"
+            borderColor="#b4d5d5"
             style={canCopy ? { paddingRight: "32px" } : undefined}
           />
           {canCopy && (
@@ -776,7 +771,6 @@ export default function DefaultSlideEditor({
 
   const hasMetadataFields = metadataFields.length > 0;
   const visibleFieldItems = editableFields;
-  const hiddenFieldStyle: CSSProperties = { backgroundColor: "#f0ede9" };
 
   // Check if label is missing (for backward compatibility warning)
   const labelValue = values["label"];
@@ -798,17 +792,6 @@ export default function DefaultSlideEditor({
           <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
         </div>
       )}
-      {hiddenFields.length > 0 && (
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => setShowHidden((v) => !v)}
-          style={{ justifySelf: "flex-end" }}
-        >
-          {showHidden ? "Hide hidden fields" : "Show hidden fields"}
-        </Button>
-      )}
-
       {/* Always use grouped/categorized view for consistency across all slide types */}
       <div style={categoriesGrid}>
         {groupedRenderedFields.map((group) => {
@@ -836,7 +819,7 @@ export default function DefaultSlideEditor({
                 padding: uiTokens.space.sm,
                 border: `1px solid ${uiTokens.color.border}`,
                 borderRadius: uiTokens.radius.md,
-                backgroundColor: "#f8f0ed",
+                backgroundColor: "#e6f1f1",
               }}
             >
               {(groupSystemFields.length > 0 ||
@@ -848,12 +831,12 @@ export default function DefaultSlideEditor({
               <div style={{ display: "grid", gap: uiTokens.space.sm }}>
                 {groupSystemFields.map((field) => renderSystemField(field))}
                 {groupEditableFields.map((field) => (
-                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
+                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#b4d5d5" infoTooltip={field.helpText}>
                     {renderFieldInput(field.key, field.uiType)}
                   </FormField>
                 ))}
                 {groupSpecialFields.map((field) => (
-                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
+                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#b4d5d5" infoTooltip={field.helpText}>
                     {renderSpecialMetadataField(field)}
                   </FormField>
                 ))}
@@ -872,20 +855,7 @@ export default function DefaultSlideEditor({
         })}
       </div>
 
-      {showHidden && hiddenFields.length > 0 && (
-        <section style={{ opacity: 0.8 }}>
-          <div style={{ fontWeight: 600, marginBottom: uiTokens.space.sm }}>Hidden fields</div>
-          <div style={{ display: "grid", gap: uiTokens.space.sm }}>
-            {hiddenFields
-                .filter((field) => !isMetadataField(field.key) && !isSystemField(field.key))
-                .map((field) => (
-                  <FormField key={field.key} label={field.label} required={field.required} borderColor="#f2e1db" infoTooltip={field.helpText}>
-                    <div style={{ opacity: 0.7 }}>{renderFieldInput(field.key, field.uiType, hiddenFieldStyle)}</div>
-                  </FormField>
-                ))}
-          </div>
-        </section>
-      )}
+      {/* Removed hidden fields section - schema.fields already contains only visible fields (filtered by resolver) */}
 
       {saveMessage && (
         <p style={{ margin: 0, color: saveMessage.includes("error") ? uiTokens.color.danger : uiTokens.color.text }}>

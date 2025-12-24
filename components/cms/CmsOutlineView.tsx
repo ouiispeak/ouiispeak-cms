@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../Button";
 import { uiTokens } from "../../lib/uiTokens";
 import { useCmsDashboard } from "../../lib/hooks/useCmsDashboard";
-import { getModuleDisplayName } from "../../lib/utils/displayName";
+import { getModuleDisplayName, getSlideDisplayName } from "../../lib/utils/displayName";
 
 const LEVELS = ["A0", "A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
@@ -444,9 +444,6 @@ export default function CmsOutlineView({
                                           {groupOpen && groupSlides.length > 0 && (
                                             <ul style={{ marginLeft: uiTokens.space.md, marginTop: uiTokens.space.xs, paddingLeft: uiTokens.space.md, listStyle: "disc", marginBottom: 0 }}>
                                               {groupSlides.map((slide) => {
-                                                const slideTitle = slide?.propsJson && typeof slide.propsJson === "object"
-                                                  ? (slide.propsJson as any).title
-                                                  : undefined;
                                                 const isCurrentSlide = currentSlideId === slide.id;
 
                                                 return (
@@ -481,7 +478,7 @@ export default function CmsOutlineView({
                                                         }
                                                       }}
                                                     >
-                                                      {slideTitle || slide.type}
+                                                      {getSlideDisplayName(slide)}
                                                     </Link>
                                                   </li>
                                                 );
@@ -495,9 +492,6 @@ export default function CmsOutlineView({
                                     {ungroupedSlides.length > 0 && (
                                       <ul style={{ marginTop: uiTokens.space.xs, marginLeft: uiTokens.space.md, paddingLeft: uiTokens.space.md, listStyle: "disc", marginBottom: 0 }}>
                                         {ungroupedSlides.map((slide) => {
-                                          const slideTitle = slide?.propsJson && typeof slide.propsJson === "object"
-                                            ? (slide.propsJson as any).title
-                                            : undefined;
                                           const isCurrentSlide = currentSlideId === slide.id;
 
                                           return (
@@ -532,7 +526,7 @@ export default function CmsOutlineView({
                                                   }
                                                 }}
                                               >
-                                                {slideTitle || slide.type}
+                                                {getSlideDisplayName(slide)}
                                               </Link>
                                             </li>
                                           );

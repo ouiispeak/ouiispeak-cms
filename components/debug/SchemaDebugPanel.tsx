@@ -13,7 +13,7 @@ import { getSlideEditorDefinition } from "../../lib/slide-editor-registry";
 
 type SchemaDebugPanelProps = {
   typeKey: string;
-  schemaSource: "visibleSchema" | "editorDefinition.schema" | "other";
+  schemaSource: "visibleSchema" | "other";
   actualSchema: { fields: Array<{ key: string }> };
 };
 
@@ -86,11 +86,13 @@ export function SchemaDebugPanel({
           {visibleSchema.fields.map((f) => f.key).join(", ")}
         </div>
         <div>
-          <strong>editorDefinition.schema.fields ({editorDefinition.schema.fields.length}):</strong>{" "}
-          {editorDefinition.schema.fields.map((f) => f.key).join(", ")}
+          <strong>editorDefinition.type:</strong> {editorDefinition.type}
         </div>
         <div>
-          <strong>actualSchema.fields passed to DefaultSlideEditor ({actualSchema.fields.length}):</strong>{" "}
+          <strong>editorDefinition.label:</strong> {editorDefinition.label}
+        </div>
+        <div>
+          <strong>actualSchema.fields passed to editor ({actualSchema.fields.length}):</strong>{" "}
           {schemaFieldKeys.join(", ")}
         </div>
         {leakedFields.length > 0 && (
