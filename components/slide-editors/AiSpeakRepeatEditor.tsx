@@ -18,6 +18,7 @@ import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
 import { hasUnsavedChanges as checkUnsavedChanges } from "../../lib/slide-editor-registry/useUnsavedChanges";
 import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
+import { validateRequiredLabel } from "../../lib/slide-editor-registry/validationHelpers";
 
 export default function AiSpeakRepeatEditor({
   row,
@@ -199,17 +200,17 @@ export default function AiSpeakRepeatEditor({
 
     try {
       // Validate required fields (label is required for new slides)
-      const labelField = schema.fields.find((f) => f.key === "label");
       const isNewSlide = !row.id;
-      if (labelField && isNewSlide) {
-        const labelValue = values["label"];
-        const trimmedLabel = typeof labelValue === "string" ? labelValue.trim() : "";
-        if (!trimmedLabel) {
-          setSaveMessage("Slide label is required for CMS navigation.");
-          setSaving(false);
-          onSavingChange?.(false);
-          return;
-        }
+      const labelError = validateRequiredLabel({
+        isNewSlide,
+        schemaFields: schema.fields,
+        values,
+      });
+      if (labelError) {
+        setSaveMessage(labelError);
+        setSaving(false);
+        onSavingChange?.(false);
+        return;
       }
 
       // Turn textarea back into lines[][] (special handling for phrases)

@@ -26,6 +26,7 @@ import {
 } from "../../lib/slide-editor-registry/fieldKeys";
 import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
 import { hasUnsavedChanges as checkUnsavedChanges } from "../../lib/slide-editor-registry/useUnsavedChanges";
+import { validateRequiredLabel } from "../../lib/slide-editor-registry/validationHelpers";
 
 type FieldValueMap = Record<string, any>;
 
@@ -320,17 +321,17 @@ export default function DefaultSlideEditor({
 
     try {
       // Validate required fields (label is required for new slides)
-      const labelField = editableFields.find((f) => f.key === "label");
       const isNewSlide = !row.id; // New slides don't have an id yet
-      if (labelField && isNewSlide) {
-        const labelValue = values["label"];
-        const trimmedLabel = typeof labelValue === "string" ? labelValue.trim() : "";
-        if (!trimmedLabel) {
-          setSaveMessage("Slide label is required for CMS navigation.");
-          setSaving(false);
-          onSavingChange?.(false);
-          return;
-        }
+      const labelError = validateRequiredLabel({
+        isNewSlide,
+        schemaFields: editableFields,
+        values,
+      });
+      if (labelError) {
+        setSaveMessage(labelError);
+        setSaving(false);
+        onSavingChange?.(false);
+        return;
       }
 
       const currentProps = { ...(row.propsJson as any) };
