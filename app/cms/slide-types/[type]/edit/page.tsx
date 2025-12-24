@@ -8,6 +8,7 @@ import CmsSection from "../../../../../components/ui/CmsSection";
 import { uiTokens } from "../../../../../lib/uiTokens";
 import { DEFAULT_SLIDE_FIELDS } from "../../../../../lib/slide-editor-registry/defaultFields";
 import type { EditorField } from "../../../../../lib/slide-editor-registry/types";
+import { FIELD_GROUPS, groupFieldsForDisplay } from "../../../../../lib/slide-editor-registry/fieldGroups";
 import {
   getPresetsConfigForEditor,
   serializePresetConfig,
@@ -53,124 +54,6 @@ import {
   livePreviewSection,
 } from "../../../../../lib/styles/slideTypeEditStyles";
 
-const FIELD_GROUPS = [
-  {
-    id: "layer1-identity",
-    title: "Identity & structure",
-    keys: ["slideId", "slideType", "groupId", "orderIndex", "label"],
-  },
-  {
-    id: "layer1-core",
-    title: "Core content",
-    keys: ["title", "subtitle", "body", "note"],
-  },
-  {
-    id: "layer1-language",
-    title: "Language & localization",
-    keys: ["defaultLang", "secondaryLang", "translation", "phoneticHint"],
-  },
-  {
-    id: "layer1-media",
-    title: "Media references",
-    keys: ["imageId", "imageUrl", "audioId", "videoId", "lottieId", "waveformId"],
-  },
-  {
-    id: "layer1-timing",
-    title: "Timing & flow",
-    keys: ["delayMs", "autoAdvance", "minDuration", "maxDuration"],
-  },
-  {
-    id: "layer1-interaction",
-    title: "Interaction flags",
-    keys: ["isInteractive", "requiresInput", "allowSkip", "allowRetry", "isActivity"],
-  },
-  {
-    id: "layer1-buttons",
-    title: "Buttons & affordances",
-    keys: ["buttons"],
-  },
-  {
-    id: "layer1-metadata",
-    title: "Authoring metadata",
-    keys: [
-      "code",
-      "slideGoal",
-      "activityName",
-      "requiresExternalTTS",
-      "tags",
-      "difficultyHint",
-      "reviewWeight",
-    ],
-  },
-  {
-    id: "layer1-freeform",
-    title: "Freeform / escape hatch",
-    keys: ["customProps"],
-  },
-  {
-    id: "layer2-speech",
-    title: "Speech & audio interaction",
-    keys: ["expectedSpeech", "speechMode", "minConfidence", "showPronunciationHelp", "phrases"],
-  },
-  {
-    id: "layer2-choice",
-    title: "Choice & selection",
-    keys: ["choices", "correctChoiceIds", "allowMultiple", "shuffleChoices"],
-  },
-  {
-    id: "layer2-sequencing",
-    title: "Sequencing & grouping",
-    keys: ["items", "groups", "chunks"],
-  },
-  {
-    id: "layer2-matching",
-    title: "Matching / mapping",
-    keys: ["pairs", "dragTargets", "dropZones"],
-  },
-  {
-    id: "layer2-scoring",
-    title: "Scoring hints",
-    keys: ["scoreType", "passThreshold", "maxScoreValue", "passRequiredForNext", "showScoreToLearner"],
-  },
-  {
-    id: "layer3-ai",
-    title: "AI / agent behavior hints",
-    keys: ["aiPrompt", "aiPersona", "aiResponseMode", "aiMemoryKey"],
-  },
-  {
-    id: "layer3-visual",
-    title: "Visual behavior hints",
-    keys: ["layoutVariant", "emphasisTarget", "highlightMode", "animationPreset"],
-  },
-  {
-    id: "layer3-analytics",
-    title: "Analytics & observation",
-    keys: ["trackEvents", "eventLabels", "debugNotes"],
-  },
-] as const;
-
-const groupFieldsForDisplay = (fields: EditorField[]) => {
-  const byKey = new Map(fields.map((field) => [field.key, field]));
-  const used = new Set<string>();
-
-  const grouped: Array<{ id: string; title: string; keys: readonly string[]; fields: EditorField[] }> = FIELD_GROUPS.map((group) => {
-    const groupFields = group.keys
-      .map((key) => {
-        const field = byKey.get(key);
-        if (field) used.add(key);
-        return field;
-      })
-      .filter(Boolean) as EditorField[];
-    return { ...group, fields: groupFields };
-  }).filter((group) => group.fields.length > 0);
-
-  const remaining = fields.filter((field) => !used.has(field.key));
-  if (remaining.length > 0) {
-    grouped.push({ id: "other", title: "Other", keys: [], fields: remaining });
-  }
-
-  return grouped;
-};
 
 export default function EditSlideTypePresetPage() {
   const params = useParams<{ type: string }>();
