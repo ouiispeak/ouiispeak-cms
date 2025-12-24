@@ -9,6 +9,7 @@ import CmsSection from "../ui/CmsSection";
 import { uiTokens } from "../../lib/uiTokens";
 import type { Slide } from "../../lib/domain/slide";
 import type { AuthoringMetadataState } from "./types";
+import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
 
 interface AuthoringMetadataSectionProps {
   row: Slide;
@@ -58,7 +59,6 @@ export default function AuthoringMetadataSection({
     row.passRequiredForNext || false
   );
 
-  const isTitleSlide = slideType === "title-slide";
   const isVisible = (key: string) => !visibleFieldKeys || visibleFieldKeys.has(key);
   const isPassThresholdVisible = isVisible("passThreshold") || isVisible("passingScoreValue");
 
@@ -268,100 +268,97 @@ export default function AuthoringMetadataSection({
         </FormField>
       )}
 
-      {!isTitleSlide && (
-        <>
-          {isVisible("scoreType") && (
-            <FormField label="Score type" borderColor="#b4d5d5">
-              <Select value={scoreType} onChange={(e) => setScoreType(e.target.value)}>
-                <option value="none">None</option>
-                <option value="confidence">Confidence</option>
-                <option value="accuracy">Accuracy</option>
-                <option value="percent">Percent (legacy)</option>
-                <option value="raw">Raw (legacy)</option>
-              </Select>
-            </FormField>
-          )}
+      {isVisible("scoreType") && (
+        <FormField label="Score type" borderColor="#b4d5d5">
+          <Select value={scoreType} onChange={(e) => setScoreType(e.target.value)}>
+            <option value="">(not set)</option>
+            {SELECT_OPTIONS_BY_KEY.scoreType.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
 
-          {isPassThresholdVisible && (
-            <FormField label="Pass threshold" borderColor="#b4d5d5">
-              <Input
-                type="number"
-                value={passingScoreValue ?? ""}
-                onChange={(e) =>
-                  setPassingScoreValue(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-                placeholder="Optional"
-              />
-            </FormField>
-          )}
+      {isPassThresholdVisible && (
+        <FormField label="Pass threshold" borderColor="#b4d5d5">
+          <Input
+            type="number"
+            value={passingScoreValue ?? ""}
+            onChange={(e) =>
+              setPassingScoreValue(
+                e.target.value === "" ? null : Number(e.target.value)
+              )
+            }
+            placeholder="Optional"
+          />
+        </FormField>
+      )}
 
-          {isVisible("maxScoreValue") && (
-            <FormField label="Max score" borderColor="#b4d5d5">
-              <Input
-                type="number"
-                value={maxScoreValue ?? ""}
-                onChange={(e) =>
-                  setMaxScoreValue(
-                    e.target.value === "" ? null : Number(e.target.value)
-                  )
-                }
-                placeholder="Optional"
-              />
-            </FormField>
-          )}
+      {isVisible("maxScoreValue") && (
+        <FormField label="Max score" borderColor="#b4d5d5">
+          <Input
+            type="number"
+            value={maxScoreValue ?? ""}
+            onChange={(e) =>
+              setMaxScoreValue(
+                e.target.value === "" ? null : Number(e.target.value)
+              )
+            }
+            placeholder="Optional"
+          />
+        </FormField>
+      )}
 
-          {isVisible("passRequiredForNext") && (
-            <FormField label="Pass required for next" borderColor="#b4d5d5">
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: uiTokens.space.xs,
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={passRequiredForNext}
-                  onChange={(e) => setPassRequiredForNext(e.target.checked)}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    cursor: "pointer",
-                  }}
-                />
-                <span>Require passing score to proceed</span>
-              </label>
-            </FormField>
-          )}
+      {isVisible("passRequiredForNext") && (
+        <FormField label="Pass required for next" borderColor="#b4d5d5">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: uiTokens.space.xs,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={passRequiredForNext}
+              onChange={(e) => setPassRequiredForNext(e.target.checked)}
+              style={{
+                width: 18,
+                height: 18,
+                cursor: "pointer",
+              }}
+            />
+            <span>Require passing score to proceed</span>
+          </label>
+        </FormField>
+      )}
 
-          {isVisible("showScoreToLearner") && (
-            <FormField label="Show score to learner" borderColor="#b4d5d5">
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: uiTokens.space.xs,
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={showScoreToLearner}
-                  onChange={(e) => setShowScoreToLearner(e.target.checked)}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    cursor: "pointer",
-                  }}
-                />
-                <span>Expose score results in UI</span>
-              </label>
-            </FormField>
-          )}
-        </>
+      {isVisible("showScoreToLearner") && (
+        <FormField label="Show score to learner" borderColor="#b4d5d5">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: uiTokens.space.xs,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showScoreToLearner}
+              onChange={(e) => setShowScoreToLearner(e.target.checked)}
+              style={{
+                width: 18,
+                height: 18,
+                cursor: "pointer",
+              }}
+            />
+            <span>Expose score results in UI</span>
+          </label>
+        </FormField>
       )}
     </>
   );

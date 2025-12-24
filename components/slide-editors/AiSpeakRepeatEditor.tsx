@@ -8,6 +8,7 @@ import {
 import CmsSection from "../ui/CmsSection";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
@@ -15,6 +16,7 @@ import type { SlideEditorProps } from "./types";
 import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
 import { hasUnsavedChanges as checkUnsavedChanges } from "../../lib/slide-editor-registry/useUnsavedChanges";
+import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
 
 export default function AiSpeakRepeatEditor({
   row,
@@ -370,12 +372,26 @@ export default function AiSpeakRepeatEditor({
                 infoTooltip={field.helpText}
               >
                 {field.uiType === "select" ? (
-                  <Select value={val} onChange={(e) => updateField(field.key, e.target.value)}>
-                    <option value="">(not set)</option>
-                    <option value="auto">Auto</option>
-                    <option value="en">English (en)</option>
-                    <option value="fr">French (fr)</option>
-                  </Select>
+                  (() => {
+                    const options = SELECT_OPTIONS_BY_KEY[field.key];
+                    if (!options) {
+                      return (
+                        <Select value={val} onChange={(e) => updateField(field.key, e.target.value)}>
+                          <option value="">(not set)</option>
+                        </Select>
+                      );
+                    }
+                    return (
+                      <Select value={val} onChange={(e) => updateField(field.key, e.target.value)}>
+                        <option value="">(not set)</option>
+                        {options.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </Select>
+                    );
+                  })()
                 ) : field.uiType === "textarea" ? (
                   <Textarea
                     value={val}
