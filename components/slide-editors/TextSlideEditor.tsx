@@ -11,24 +11,11 @@ import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import type { SlideEditorProps, EditorField } from "./types";
 import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
+import { isSystemFieldKey, isMetadataFieldKey } from "../../lib/slide-editor-registry/fieldKeys";
+import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
 
-const SYSTEM_FIELD_KEYS = new Set(["slideId", "slideType", "groupId", "orderIndex"]);
-const METADATA_FIELD_KEYS = new Set([
-  "code", "slideGoal", "activityName", "requiresExternalTTS", "buttons", "tags",
-  "difficultyHint", "reviewWeight", "isActivity", "scoreType", "passThreshold",
-  "maxScoreValue", "passRequiredForNext", "showScoreToLearner",
-]);
-
-const SELECT_OPTIONS_BY_KEY: Record<string, { value: string; label: string }[]> = {
-  defaultLang: [
-    { value: "auto", label: "Auto" },
-    { value: "en", label: "English (en)" },
-    { value: "fr", label: "French (fr)" },
-  ],
-};
-
-const isSystemField = (key: string) => SYSTEM_FIELD_KEYS.has(key);
-const isMetadataField = (key: string) => METADATA_FIELD_KEYS.has(key);
+const isSystemField = (key: string) => isSystemFieldKey(key);
+const isMetadataField = (key: string) => isMetadataFieldKey(key);
 
 type FieldValueMap = Record<string, any>;
 

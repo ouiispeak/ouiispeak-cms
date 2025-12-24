@@ -16,75 +16,21 @@ import {
   categoryTitle,
 } from "../../lib/styles/slideTypeEditStyles";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
+import {
+  isSystemFieldKey,
+  isMetadataFieldKey,
+  isAuthoringMetadataFieldKey,
+  isSpecialMetadataFieldKey,
+  COPYABLE_SYSTEM_FIELDS,
+} from "../../lib/slide-editor-registry/fieldKeys";
+import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
 
 type FieldValueMap = Record<string, any>;
 
-const SYSTEM_FIELD_KEYS = new Set(["slideId", "slideType", "groupId", "orderIndex"]);
-const METADATA_FIELD_KEYS = new Set([
-  "code",
-  "slideGoal",
-  "activityName",
-  "requiresExternalTTS",
-  "buttons",
-  "tags",
-  "difficultyHint",
-  "reviewWeight",
-  "isActivity",
-  "scoreType",
-  "passThreshold",
-  "maxScoreValue",
-  "passRequiredForNext",
-  "showScoreToLearner",
-]);
-const AUTHORING_METADATA_KEYS = new Set([
-  "code",
-  "slideGoal",
-  "activityName",
-  "requiresExternalTTS",
-  "tags",
-  "difficultyHint",
-  "reviewWeight",
-]);
-const SPECIAL_METADATA_KEYS = new Set([
-  "buttons",
-  "isActivity",
-  "scoreType",
-  "passThreshold",
-  "maxScoreValue",
-  "passRequiredForNext",
-  "showScoreToLearner",
-]);
-const COPYABLE_SYSTEM_FIELDS = new Set(["slideId", "groupId"]);
-
-const SELECT_OPTIONS_BY_KEY: Record<string, { value: string; label: string }[]> = {
-  defaultLang: [
-    { value: "auto", label: "Auto" },
-    { value: "en", label: "English (en)" },
-    { value: "fr", label: "French (fr)" },
-  ],
-  speechMode: [
-    { value: "repeat", label: "Repeat" },
-    { value: "free", label: "Free" },
-    { value: "choose", label: "Choose" },
-  ],
-  scoreType: [
-    { value: "none", label: "None" },
-    { value: "confidence", label: "Confidence" },
-    { value: "accuracy", label: "Accuracy" },
-    { value: "percent", label: "Percent (legacy)" },
-    { value: "raw", label: "Raw (legacy)" },
-  ],
-  aiResponseMode: [
-    { value: "reactive", label: "Reactive" },
-    { value: "scripted", label: "Scripted" },
-    { value: "mixed", label: "Mixed" },
-  ],
-};
-
-const isSystemField = (key: string) => SYSTEM_FIELD_KEYS.has(key);
-const isMetadataField = (key: string) => METADATA_FIELD_KEYS.has(key);
-const isAuthoringMetadataField = (key: string) => AUTHORING_METADATA_KEYS.has(key);
-const isSpecialMetadataField = (key: string) => SPECIAL_METADATA_KEYS.has(key);
+const isSystemField = (key: string) => isSystemFieldKey(key);
+const isMetadataField = (key: string) => isMetadataFieldKey(key);
+const isAuthoringMetadataField = (key: string) => isAuthoringMetadataFieldKey(key);
+const isSpecialMetadataField = (key: string) => isSpecialMetadataFieldKey(key);
 
 const FIELD_GROUPS = [
   {
@@ -255,11 +201,14 @@ export default function DefaultSlideEditor({
   const handleAuthoringMetadataChange = useCallback((m: AuthoringMetadataState) => {
     setMetadata((prev) => {
       const next = { ...prev };
-      AUTHORING_METADATA_KEYS.forEach((key) => {
-        if (key in m) {
-          (next as any)[key] = (m as any)[key];
-        }
-      });
+      // Update only authoring metadata fields (not special metadata)
+      if ("code" in m) next.code = m.code;
+      if ("slideGoal" in m) next.slideGoal = m.slideGoal;
+      if ("activityName" in m) next.activityName = m.activityName;
+      if ("requiresExternalTTS" in m) next.requiresExternalTTS = m.requiresExternalTTS;
+      if ("tags" in m) next.tags = m.tags;
+      if ("difficultyHint" in m) next.difficultyHint = m.difficultyHint;
+      if ("reviewWeight" in m) next.reviewWeight = m.reviewWeight;
       return next;
     });
   }, []);
