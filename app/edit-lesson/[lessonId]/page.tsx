@@ -37,6 +37,7 @@ export default function EditLessonPage() {
   const [modules, setModules] = useState<Module[]>([]);
   const [moduleId, setModuleId] = useState("");
   const [lessonSlugPart, setLessonSlugPart] = useState("");
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
 
@@ -69,6 +70,7 @@ export default function EditLessonPage() {
   const initialDataRef = useRef<{
     moduleId: string;
     lessonSlugPart: string;
+    label: string;
     title: string;
     orderIndex: number;
     shortSummaryAdmin: string;
@@ -95,6 +97,7 @@ export default function EditLessonPage() {
     return (
       moduleId !== initial.moduleId ||
       lessonSlugPart !== initial.lessonSlugPart ||
+      label !== initial.label ||
       title !== initial.title ||
       orderIndex !== initial.orderIndex ||
       shortSummaryAdmin !== initial.shortSummaryAdmin ||
@@ -160,7 +163,8 @@ export default function EditLessonPage() {
         ? data.slug.replace(`${selectedModule.slug}/`, "")
         : data.slug ?? "";
       setLessonSlugPart(slugPart);
-      setTitle(data.title);
+      setLabel(data.label ?? "");
+      setTitle(data.title ?? "");
       setOrderIndex(data.orderIndex ?? 1);
 
       // Summaries
@@ -191,7 +195,8 @@ export default function EditLessonPage() {
       initialDataRef.current = {
         moduleId: data.moduleId ?? "",
         lessonSlugPart: slugPart,
-        title: data.title,
+        label: data.label ?? "",
+        title: data.title ?? "",
         orderIndex: data.orderIndex ?? 1,
         shortSummaryAdmin: data.shortSummaryAdmin ?? "",
         shortSummaryStudent: data.shortSummaryStudent ?? "",
@@ -230,11 +235,19 @@ export default function EditLessonPage() {
 
     const fullSlug = `${selectedModule.slug}/${slugify(lessonSlugPart)}`;
 
+    // Validate required fields (label is required for new lessons)
+    const isNewLesson = !lessonId;
+    if (isNewLesson && !label.trim()) {
+      setMessage("Lesson label is required for CMS navigation.");
+      return;
+    }
+
     // Validate using schema
     const result = updateLessonSchema.safeParse({
       module_id: moduleId,
       slug: fullSlug,
-      title,
+      label: label.trim() || null,
+      title: title.trim() || undefined,
       order_index: orderIndex,
       short_summary_admin: shortSummaryAdmin || null,
       short_summary_student: shortSummaryStudent || null,
@@ -266,10 +279,11 @@ export default function EditLessonPage() {
         ? result.data.activity_types.join(",")
         : result.data.activity_types;
 
-      const { error } = await updateLesson(lessonId, {
+      const updateResult = await updateLesson(lessonId, {
         module_id: result.data.module_id,
         slug: result.data.slug,
-        title: result.data.title,
+        label: result.data.label,
+        title: result.data.title ?? undefined,
         order_index: result.data.order_index,
         short_summary_admin: result.data.short_summary_admin,
         short_summary_student: result.data.short_summary_student,
@@ -288,36 +302,104 @@ export default function EditLessonPage() {
         notes_for_teacher_or_ai: result.data.notes_for_teacher_or_ai,
       });
 
-      if (error) {
-        setMessage(`Error: ${error}`);
+      if (updateResult.error) {
+        const errorMessage = `Error saving lesson: ${updateResult.error}`;
+        console.error("[lesson save UI error]", errorMessage);
+        setMessage(errorMessage);
+        return;
+      }
+
+      if (!updateResult.data) {
+        const errorMessage = "Error: Lesson update returned no data";
+        console.error("[lesson save UI error]", errorMessage);
+        setMessage(errorMessage);
         return;
       }
 
       setMessage("Lesson updated successfully!");
       
-      // Update initial data ref after successful save
-      if (initialDataRef.current) {
-        initialDataRef.current = {
-          moduleId,
-          lessonSlugPart,
-          title,
-          orderIndex,
-          shortSummaryAdmin,
-          shortSummaryStudent,
-          courseOrganizationGroup,
-          slideContents,
-          groupingStrategySummary,
-          activityTypes,
-          activityDescription,
-          signatureMetaphors,
-          mainGrammarTopics,
-          pronunciationFocus,
-          vocabularyTheme,
-          l1L2Issues,
-          prerequisites,
-          learningObjectives,
-          notesForTeacherOrAI,
-        };
+      // Reload lesson data from server to ensure we have the latest values
+      const { data: reloadedData, error: reloadError } = await loadLessonById(lessonId);
+      
+      if (reloadError || !reloadedData) {
+        // If reload fails, use the current form state
+        if (initialDataRef.current) {
+          initialDataRef.current = {
+            moduleId,
+            lessonSlugPart,
+            label,
+            title,
+            orderIndex,
+            shortSummaryAdmin,
+            shortSummaryStudent,
+            courseOrganizationGroup,
+            slideContents,
+            groupingStrategySummary,
+            activityTypes,
+            activityDescription,
+            signatureMetaphors,
+            mainGrammarTopics,
+            pronunciationFocus,
+            vocabularyTheme,
+            l1L2Issues,
+            prerequisites,
+            learningObjectives,
+            notesForTeacherOrAI,
+          };
+        }
+      } else {
+        // Use reloaded data to update form fields
+        const selectedModule = modules.find((m) => m.id === reloadedData.moduleId);
+        const slugPart = selectedModule && reloadedData.slug
+          ? reloadedData.slug.replace(`${selectedModule.slug}/`, "")
+          : reloadedData.slug ?? "";
+        
+        setModuleId(reloadedData.moduleId ?? "");
+        setLessonSlugPart(slugPart);
+        setLabel(reloadedData.label ?? "");
+        setTitle(reloadedData.title ?? "");
+        setOrderIndex(reloadedData.orderIndex ?? 1);
+        setShortSummaryAdmin(reloadedData.shortSummaryAdmin ?? "");
+        setShortSummaryStudent(reloadedData.shortSummaryStudent ?? "");
+        setCourseOrganizationGroup(reloadedData.courseOrganizationGroup ?? "");
+        setSlideContents(reloadedData.slideContents ?? "");
+        setGroupingStrategySummary(reloadedData.groupingStrategySummary ?? "");
+        setActivityTypes(reloadedData.activityTypes ?? "");
+        setActivityDescription(reloadedData.activityDescription ?? "");
+        setSignatureMetaphors(reloadedData.signatureMetaphors ?? "");
+        setMainGrammarTopics(reloadedData.mainGrammarTopics ?? "");
+        setPronunciationFocus(reloadedData.pronunciationFocus ?? "");
+        setVocabularyTheme(reloadedData.vocabularyTheme ?? "");
+        setL1L2Issues(reloadedData.l1L2Issues ?? "");
+        setPrerequisites(reloadedData.prerequisites ?? "");
+        setLearningObjectives(reloadedData.learningObjectives ?? "");
+        setNotesForTeacherOrAI(reloadedData.notesForTeacherOrAI ?? "");
+        
+        // Update initial data ref with reloaded data
+        if (initialDataRef.current) {
+          initialDataRef.current = {
+            moduleId: reloadedData.moduleId ?? "",
+            lessonSlugPart: slugPart,
+            label: reloadedData.label ?? "",
+            title: reloadedData.title ?? "",
+            orderIndex: reloadedData.orderIndex ?? 1,
+            shortSummaryAdmin: reloadedData.shortSummaryAdmin ?? "",
+            shortSummaryStudent: reloadedData.shortSummaryStudent ?? "",
+            courseOrganizationGroup: reloadedData.courseOrganizationGroup ?? "",
+            slideContents: reloadedData.slideContents ?? "",
+            groupingStrategySummary: reloadedData.groupingStrategySummary ?? "",
+            activityTypes: reloadedData.activityTypes ?? "",
+            activityDescription: reloadedData.activityDescription ?? "",
+            signatureMetaphors: reloadedData.signatureMetaphors ?? "",
+            mainGrammarTopics: reloadedData.mainGrammarTopics ?? "",
+            pronunciationFocus: reloadedData.pronunciationFocus ?? "",
+            vocabularyTheme: reloadedData.vocabularyTheme ?? "",
+            l1L2Issues: reloadedData.l1L2Issues ?? "",
+            prerequisites: reloadedData.prerequisites ?? "",
+            learningObjectives: reloadedData.learningObjectives ?? "",
+            notesForTeacherOrAI: reloadedData.notesForTeacherOrAI ?? "",
+          };
+        }
       }
     } finally {
       setSaving(false);
@@ -337,7 +419,7 @@ export default function EditLessonPage() {
       {loadState.status === "loading" && <p>Loading lesson…</p>}
 
       {loadState.status === "error" && (
-        <CmsSection title="Error" description={loadState.message} backgroundColor="#ecd7cf" borderColor="#deb4a5">
+        <CmsSection title="Error" description={loadState.message} backgroundColor="#b5d5d5" borderColor="#6aabab">
           <p style={{ color: uiTokens.color.danger }}>{loadState.message}</p>
         </CmsSection>
       )}
@@ -345,7 +427,7 @@ export default function EditLessonPage() {
       {loadState.status === "ready" && (
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #deb4a5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #6aabab", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
           <CmsOutlineView currentLessonId={lessonId} hasUnsavedChanges={hasUnsavedChanges} />
         </div>
         
@@ -361,12 +443,12 @@ export default function EditLessonPage() {
             </div>
             <BreadcrumbTrail lessonId={lessonId} />
           <form ref={formRef} onSubmit={handleSave}>
-          <CmsSection title="Lesson Details" backgroundColor="#ecd7cf" borderColor="#deb4a5">
-            <FormField label="Lesson ID" borderColor="#deb4a5">
+          <CmsSection title="Lesson Details" backgroundColor="#b5d5d5" borderColor="#6aabab">
+            <FormField label="Lesson ID" borderColor="#6aabab">
               <Input value={lessonId || ""} disabled readOnly />
             </FormField>
 
-            <FormField label="Module" required borderColor="#deb4a5">
+            <FormField label="Module" required borderColor="#6aabab">
               <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)}>
                 <option value="">Select a module…</option>
                 {modules.map((m) => (
@@ -380,7 +462,7 @@ export default function EditLessonPage() {
             <FormField
               label="Lesson slug (just the lesson part)"
               required
-              borderColor="#deb4a5"
+              borderColor="#6aabab"
               helper={
                 <>
                   Full slug will become:{" "}
@@ -399,11 +481,38 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Lesson title" required borderColor="#deb4a5">
+            <FormField 
+              label="Label" 
+              required
+              borderColor="#6aabab"
+              infoTooltip="Internal name for this lesson used in the CMS and navigation. Not shown to learners."
+            >
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+            </FormField>
+
+            {lessonId && !label.trim() && (
+              <div
+                style={{
+                  padding: uiTokens.space.md,
+                  backgroundColor: "#fff3cd",
+                  border: `1px solid #ffc107`,
+                  borderRadius: uiTokens.radius.md,
+                  color: "#856404",
+                }}
+              >
+                <strong>Missing label:</strong> This lesson is missing a label. Please add one for proper CMS navigation.
+              </div>
+            )}
+
+            <FormField 
+              label="Title (optional - for student-facing content)" 
+              borderColor="#6aabab"
+              infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+            >
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Order index" required borderColor="#deb4a5">
+            <FormField label="Order index" required borderColor="#6aabab">
               <Input
                 type="number"
                 value={orderIndex}
@@ -412,8 +521,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Summaries" backgroundColor="#ecd7cf" borderColor="#deb4a5">
-            <FormField label="Short Summary (Admin)" borderColor="#deb4a5">
+          <CmsSection title="Summaries" backgroundColor="#b5d5d5" borderColor="#6aabab">
+            <FormField label="Short Summary (Admin)" borderColor="#6aabab">
               <Textarea
                 value={shortSummaryAdmin}
                 onChange={(e) => setShortSummaryAdmin(e.target.value)}
@@ -421,7 +530,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Short Summary (Student)" borderColor="#deb4a5">
+            <FormField label="Short Summary (Student)" borderColor="#6aabab">
               <Textarea
                 value={shortSummaryStudent}
                 onChange={(e) => setShortSummaryStudent(e.target.value)}
@@ -430,8 +539,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Lesson Structure" backgroundColor="#ecd7cf" borderColor="#deb4a5">
-            <FormField label="Course Organization Group" borderColor="#deb4a5">
+          <CmsSection title="Lesson Structure" backgroundColor="#b5d5d5" borderColor="#6aabab">
+            <FormField label="Course Organization Group" borderColor="#6aabab">
               <Input
                 value={courseOrganizationGroup}
                 onChange={(e) => setCourseOrganizationGroup(e.target.value)}
@@ -441,7 +550,7 @@ export default function EditLessonPage() {
 
             <FormField
               label="Slide Contents"
-              borderColor="#deb4a5"
+              borderColor="#6aabab"
               helper="Use semicolons. Example: Intro; 3 Text; …"
             >
               <Textarea
@@ -451,7 +560,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Grouping Strategy Summary" borderColor="#deb4a5">
+            <FormField label="Grouping Strategy Summary" borderColor="#6aabab">
               <Textarea
                 value={groupingStrategySummary}
                 onChange={(e) => setGroupingStrategySummary(e.target.value)}
@@ -460,10 +569,10 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Activities" backgroundColor="#ecd7cf" borderColor="#deb4a5">
+          <CmsSection title="Activities" backgroundColor="#b5d5d5" borderColor="#6aabab">
             <FormField
               label="Activity Types"
-              borderColor="#deb4a5"
+              borderColor="#6aabab"
               helper="Example: AISpeak, AISpeakStudentRepeat, AISpeakStudentChoose"
             >
               <Input
@@ -473,7 +582,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Activity Description" borderColor="#deb4a5">
+            <FormField label="Activity Description" borderColor="#6aabab">
               <Textarea
                 value={activityDescription}
                 onChange={(e) => setActivityDescription(e.target.value)}
@@ -482,8 +591,8 @@ export default function EditLessonPage() {
             </FormField>
           </CmsSection>
 
-          <CmsSection title="Pedagogy" backgroundColor="#ecd7cf" borderColor="#deb4a5">
-            <FormField label="Signature Metaphors" borderColor="#deb4a5">
+          <CmsSection title="Pedagogy" backgroundColor="#b5d5d5" borderColor="#6aabab">
+            <FormField label="Signature Metaphors" borderColor="#6aabab">
               <Textarea
                 value={signatureMetaphors}
                 onChange={(e) => setSignatureMetaphors(e.target.value)}
@@ -491,7 +600,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Main Grammar Topics" borderColor="#deb4a5">
+            <FormField label="Main Grammar Topics" borderColor="#6aabab">
               <Textarea
                 value={mainGrammarTopics}
                 onChange={(e) => setMainGrammarTopics(e.target.value)}
@@ -499,7 +608,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Pronunciation Focus" borderColor="#deb4a5">
+            <FormField label="Pronunciation Focus" borderColor="#6aabab">
               <Textarea
                 value={pronunciationFocus}
                 onChange={(e) => setPronunciationFocus(e.target.value)}
@@ -507,14 +616,14 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Vocabulary Theme" borderColor="#deb4a5">
+            <FormField label="Vocabulary Theme" borderColor="#6aabab">
               <Input
                 value={vocabularyTheme}
                 onChange={(e) => setVocabularyTheme(e.target.value)}
               />
             </FormField>
 
-            <FormField label="L1>L2 Issues" borderColor="#deb4a5">
+            <FormField label="L1>L2 Issues" borderColor="#6aabab">
               <Textarea
                 value={l1L2Issues}
                 onChange={(e) => setL1L2Issues(e.target.value)}
@@ -522,7 +631,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Prerequisites" borderColor="#deb4a5">
+            <FormField label="Prerequisites" borderColor="#6aabab">
               <Textarea
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
@@ -530,7 +639,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Learning Objectives" borderColor="#deb4a5">
+            <FormField label="Learning Objectives" borderColor="#6aabab">
               <Textarea
                 value={learningObjectives}
                 onChange={(e) => setLearningObjectives(e.target.value)}
@@ -538,7 +647,7 @@ export default function EditLessonPage() {
               />
             </FormField>
 
-            <FormField label="Notes for Teacher or AI" borderColor="#deb4a5">
+            <FormField label="Notes for Teacher or AI" borderColor="#6aabab">
               <Textarea
                 value={notesForTeacherOrAI}
                 onChange={(e) => setNotesForTeacherOrAI(e.target.value)}

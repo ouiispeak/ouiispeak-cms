@@ -8,7 +8,8 @@ export function toGroup(row: GroupData): Group {
   return {
     id: row.id,
     lessonId: row.lesson_id,
-    title: row.title,
+    label: row.label,
+    title: row.title ?? "",
     orderIndex: row.order_index,
     groupCode: row.group_code,
     shortSummary: row.short_summary,
@@ -35,7 +36,8 @@ export function toGroupMinimal(row: GroupDataMinimal): GroupMinimal {
     id: row.id,
     lessonId: row.lesson_id,
     orderIndex: row.order_index,
-    title: row.title,
+    label: row.label,
+    title: row.title ?? "",
   };
 }
 
@@ -46,6 +48,7 @@ export function toGroupRowUpdate(input: Partial<Group>): Partial<GroupData> {
   const update: Partial<GroupData> = {};
 
   if (input.lessonId !== undefined) update.lesson_id = input.lessonId;
+  if (input.label !== undefined) update.label = input.label;
   if (input.title !== undefined) update.title = input.title;
   if (input.orderIndex !== undefined) update.order_index = input.orderIndex;
   if (input.groupCode !== undefined) update.group_code = input.groupCode;

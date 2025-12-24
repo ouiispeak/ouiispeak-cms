@@ -15,12 +15,19 @@ export default function TitleSlideEditor({
   orderIndex,
   groupId,
   slideType,
+  schema,
   onSaveSuccess,
   saveSlide,
   onUnsavedChangesChange,
   onSavingChange,
 }: SlideEditorProps) {
+  // Respect visibility presets: only render fields that are in the schema
+  const visibleFieldKeys = new Set(schema.fields.map((f) => f.key));
+  const shouldShowLabel = visibleFieldKeys.has("label");
+  const shouldShowTitle = visibleFieldKeys.has("title");
+  const shouldShowSubtitle = visibleFieldKeys.has("subtitle");
   const props = (row.propsJson as any) || {};
+  const [label, setLabel] = useState(props.label || "");
   const [title, setTitle] = useState(props.title || "");
   const [subtitle, setSubtitle] = useState(props.subtitle || "");
   const [metadata, setMetadata] = useState<AuthoringMetadataState>({
@@ -41,6 +48,7 @@ export default function TitleSlideEditor({
   });
   
   const initialDataRef = useRef<{
+    label: string;
     title: string;
     subtitle: string;
     metadata: AuthoringMetadataState;
@@ -49,6 +57,7 @@ export default function TitleSlideEditor({
   // Initialize initial data when row changes
   useEffect(() => {
     initialDataRef.current = {
+      label: props.label || "",
       title: props.title || "",
       subtitle: props.subtitle || "",
       metadata: {
@@ -69,6 +78,7 @@ export default function TitleSlideEditor({
       },
     };
     // Reset form state when row changes
+    setLabel(props.label || "");
     setTitle(props.title || "");
     setSubtitle(props.subtitle || "");
       setMetadata({
@@ -94,6 +104,7 @@ export default function TitleSlideEditor({
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
     return (
+      label !== initial.label ||
       title !== initial.title ||
       subtitle !== initial.subtitle ||
       metadata.code !== initial.metadata.code ||
@@ -111,7 +122,7 @@ export default function TitleSlideEditor({
       metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
       metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
     );
-  }, [title, subtitle, metadata]);
+  }, [label, title, subtitle, metadata]);
   
   // Notify parent of unsaved changes
   useEffect(() => {
@@ -134,9 +145,24 @@ export default function TitleSlideEditor({
     onSavingChange?.(true);
 
     try {
-      const newProps: any = { title };
+      // Validate required fields (label is required for new slides)
+      const isNewSlide = !row.id;
+      if (isNewSlide && !label.trim()) {
+        setSaveMessage("Slide label is required for CMS navigation.");
+        setSaving(false);
+        onSavingChange?.(false);
+        return;
+      }
+
+      const newProps: any = {};
+      if (label.trim()) {
+        newProps.label = label.trim();
+      }
+      if (title.trim()) {
+        newProps.title = title.trim();
+      }
       if (subtitle.trim()) {
-        newProps.subtitle = subtitle;
+        newProps.subtitle = subtitle.trim();
       }
 
       const trimmedType = slideType.trim();
@@ -190,6 +216,7 @@ export default function TitleSlideEditor({
       
       // Update initial data ref after successful save
       initialDataRef.current = {
+        label,
         title,
         subtitle,
         metadata: { ...metadata },
@@ -216,33 +243,68 @@ export default function TitleSlideEditor({
       >
 
         <form onSubmit={handleSave}>
-          <FormField 
-            label="Title" 
-            required 
-            borderColor="#f2e1db"
-            infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
-          >
-            <Input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+          {shouldShowLabel && (
+            <FormField 
+              label="Label" 
               required
-            />
-          </FormField>
+              borderColor="#f2e1db"
+              infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners."
+            >
+              <Input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                required
+              />
+            </FormField>
+          )}
 
-          <FormField 
-            label="Subtitle (optional)" 
-            borderColor="#f2e1db"
-            infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
-          >
-            <Input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-            />
-          </FormField>
+          {shouldShowTitle && (
+            <FormField 
+              label="Title" 
+              required 
+              borderColor="#f2e1db"
+              infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
+            >
+              <Input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </FormField>
+          )}
+
+          {shouldShowSubtitle && (
+            <FormField 
+              label="Subtitle (optional)" 
+              borderColor="#f2e1db"
+              infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
+            >
+              <Input
+                type="text"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+              />
+            </FormField>
+          )}
 
         </form>
+
+        {row.id && !label.trim() && (
+          <div
+            style={{
+              padding: uiTokens.space.md,
+              backgroundColor: "#fff3cd",
+              border: `1px solid #ffc107`,
+              borderRadius: uiTokens.radius.md,
+              color: "#856404",
+              marginTop: uiTokens.space.md,
+            }}
+          >
+            <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
+          </div>
+        )}
 
         {saveMessage && (
           <p
@@ -260,6 +322,7 @@ export default function TitleSlideEditor({
         row={row}
         slideType={slideType}
         onMetadataChange={setMetadata}
+        visibleFieldKeys={visibleFieldKeys}
       />
 
       <CmsSection backgroundColor="#f8f0ed" borderColor="#f2e1db">

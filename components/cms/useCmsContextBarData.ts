@@ -4,6 +4,7 @@ import { loadModules, loadModuleById } from "../../lib/data/modules";
 import type { Module } from "../../lib/domain/module";
 import { loadLessonsByModule } from "../../lib/data/lessons";
 import type { LessonMinimal } from "../../lib/domain/lesson";
+import { toLesson } from "../../lib/mappers/lessonMapper";
 import { loadGroupsByLesson } from "../../lib/data/groups";
 import type { GroupMinimal } from "../../lib/domain/group";
 import { loadSlidesByGroup, loadSlidesByLesson } from "../../lib/data/slides";
@@ -16,6 +17,7 @@ import {
   type GroupAncestors,
   type SlideAncestors,
 } from "../../lib/data/ancestors";
+import { getModuleDisplayName, getLessonDisplayName, getGroupDisplayName, getSlideDisplayName } from "../../lib/utils/displayName";
 
 export interface CmsContextBarDataProps {
   moduleId?: string;
@@ -233,7 +235,10 @@ export function useCmsContextBarData({
             const lessonsResult = await loadLessonsByModule(currentContextIds.moduleId);
             if (cancelled) return;
             if (lessonsResult.data) {
-              setLessons(lessonsResult.data);
+              setLessons(lessonsResult.data.map((ld) => {
+                const lesson = toLesson(ld);
+                return { id: lesson.id, slug: lesson.slug, label: lesson.label, title: lesson.title };
+              }));
               loadedKeysRef.current.lessons = currentContextIds.moduleId;
             }
           }
@@ -348,21 +353,22 @@ export function useCmsContextBarData({
       // On home page or error - just show "Modules"
       // (already added above)
     } else if (ancestors.type === "module") {
-      crumbs.push({ label: ancestors.module.title, href: `/edit-module/${ancestors.module.id}` });
+      crumbs.push({ label: getModuleDisplayName(ancestors.module), href: `/edit-module/${ancestors.module.id}` });
     } else if (ancestors.type === "lesson") {
-      crumbs.push({ label: ancestors.ancestors.module.title, href: `/edit-module/${ancestors.ancestors.module.id}` });
-      crumbs.push({ label: ancestors.ancestors.lesson.title, href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
+      crumbs.push({ label: getModuleDisplayName(ancestors.ancestors.module), href: `/edit-module/${ancestors.ancestors.module.id}` });
+      crumbs.push({ label: getLessonDisplayName(ancestors.ancestors.lesson), href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
     } else if (ancestors.type === "group") {
-      crumbs.push({ label: ancestors.ancestors.module.title, href: `/edit-module/${ancestors.ancestors.module.id}` });
-      crumbs.push({ label: ancestors.ancestors.lesson.title, href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
-      crumbs.push({ label: ancestors.ancestors.group.title, href: `/edit-group/${ancestors.ancestors.group.id}` });
+      crumbs.push({ label: getModuleDisplayName(ancestors.ancestors.module), href: `/edit-module/${ancestors.ancestors.module.id}` });
+      crumbs.push({ label: getLessonDisplayName(ancestors.ancestors.lesson), href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
+      crumbs.push({ label: getGroupDisplayName(ancestors.ancestors.group), href: `/edit-group/${ancestors.ancestors.group.id}` });
     } else if (ancestors.type === "slide") {
-      crumbs.push({ label: ancestors.ancestors.module.title, href: `/edit-module/${ancestors.ancestors.module.id}` });
-      crumbs.push({ label: ancestors.ancestors.lesson.title, href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
+      crumbs.push({ label: getModuleDisplayName(ancestors.ancestors.module), href: `/edit-module/${ancestors.ancestors.module.id}` });
+      crumbs.push({ label: getLessonDisplayName(ancestors.ancestors.lesson), href: `/lesson-slides/${ancestors.ancestors.lesson.id}` });
       if (ancestors.ancestors.group) {
-        crumbs.push({ label: ancestors.ancestors.group.title, href: `/edit-group/${ancestors.ancestors.group.id}` });
+        crumbs.push({ label: getGroupDisplayName(ancestors.ancestors.group), href: `/edit-group/${ancestors.ancestors.group.id}` });
       }
-      crumbs.push({ label: `Slide: ${ancestors.ancestors.slide.type}`, href: `/edit-slide/${ancestors.ancestors.slide.id}` });
+      const slideDisplayName = getSlideDisplayName(ancestors.ancestors.slide);
+      crumbs.push({ label: `Slide: ${ancestors.ancestors.slide.type}${slideDisplayName !== "unnamed" ? ` — ${slideDisplayName}` : ""}`, href: `/edit-slide/${ancestors.ancestors.slide.id}` });
     }
 
     return crumbs;

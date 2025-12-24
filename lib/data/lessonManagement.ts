@@ -104,6 +104,7 @@ export async function loadLessonManagement(
         id: g.id,
         lesson_id: g.lesson_id,
         order_index: g.order_index,
+        label: g.label,
         title: g.title,
       })),
       slides: (slides ?? []).map((s: any) => ({

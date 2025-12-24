@@ -10,9 +10,11 @@ import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import SaveChangesButton from "../../../components/ui/SaveChangesButton";
 import StatusMessage from "../../../components/ui/StatusMessage";
+import LinkButton from "../../../components/ui/LinkButton";
 import { uiTokens } from "../../../lib/uiTokens";
 import { loadModules, createModule } from "../../../lib/data/modules";
 import { createModuleSchema } from "../../../lib/schemas/moduleSchema";
+import { getModuleDisplayName } from "../../../lib/utils/displayName";
 import type { Module } from "../../../lib/domain/module";
 
 export default function ManageModulesPage() {
@@ -23,6 +25,7 @@ export default function ManageModulesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [level, setLevel] = useState(levelParam || "A0");
@@ -110,7 +113,8 @@ export default function ManageModulesPage() {
     const parsedOrderIndex = Number(orderIndex);
 
     const validation = createModuleSchema.safeParse({
-      title,
+      label,
+      title: title || null,
       slug,
       level,
       order_index: parsedOrderIndex,
@@ -125,7 +129,8 @@ export default function ManageModulesPage() {
 
     setSaving(true);
     const { error: insertError } = await createModule({
-      title: validation.data.title,
+      label: validation.data.label,
+      title: validation.data.title ?? undefined,
       slug: validation.data.slug,
       level: validation.data.level,
       order_index: validation.data.order_index,
@@ -140,6 +145,7 @@ export default function ManageModulesPage() {
     }
 
     setMessage("Module created!");
+    setLabel("");
     setTitle("");
     setSlug("");
     setDescription("");
@@ -163,28 +169,31 @@ export default function ManageModulesPage() {
     <CmsPageShell title={`${levelParam || "A0"} - Manage CEFR`}>
       <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
         {/* Left column - outline view */}
-        <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #d09680", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+        <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #398f8f", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
           <CmsOutlineView currentLevel={levelParam} />
         </div>
         
         {/* Right column - content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: uiTokens.space.md }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <SaveChangesButton
-              onClick={handleSaveButtonClick}
-              hasUnsavedChanges={hasUnsavedChanges}
-              saving={saving}
-              label="Create module"
-            />
-          </div>
           <CmsSection
             title="Add module"
-            backgroundColor="#f8f0ed"
-            borderColor="#f2e1db"
+            backgroundColor="#83b9b9"
+            borderColor="#398f8f"
             description="Create a module for this CEFR level."
           >
             <form ref={formRef} onSubmit={handleCreate}>
-              <FormField label="Title" required>
+              <FormField 
+                label="Label" 
+                required
+                infoTooltip="Internal name for this module used in the CMS and navigation. Not shown to learners."
+              >
+                <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+              </FormField>
+
+              <FormField 
+                label="Title (optional - for student-facing content)" 
+                infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+              >
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} />
               </FormField>
 
@@ -217,6 +226,15 @@ export default function ManageModulesPage() {
               <FormField label="Description (optional)">
                 <Input value={description} onChange={(e) => setDescription(e.target.value)} />
               </FormField>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: uiTokens.space.md }}>
+                <SaveChangesButton
+                  onClick={handleSaveButtonClick}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  saving={saving}
+                  label="Create module"
+                />
+              </div>
             </form>
             {message && (
               <StatusMessage variant={message.toLowerCase().includes("error") ? "error" : "success"}>
@@ -227,8 +245,8 @@ export default function ManageModulesPage() {
 
           <CmsSection
             title="Modules"
-            backgroundColor="#f8f0ed"
-            borderColor="#f2e1db"
+            backgroundColor="#83b9b9"
+            borderColor="#398f8f"
             description={levelParam ? `Showing modules for level ${levelParam}` : undefined}
           >
             {loading && <p>Loading modules…</p>}
@@ -240,21 +258,36 @@ export default function ManageModulesPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ textAlign: "left", borderBottom: `1px solid ${uiTokens.color.border}` }}>
-                    <th style={{ padding: uiTokens.space.xs }}>Title</th>
+                    <th style={{ padding: uiTokens.space.xs }}>Label</th>
                     <th style={{ padding: uiTokens.space.xs }}>Slug</th>
                     <th style={{ padding: uiTokens.space.xs }}>Level</th>
                     <th style={{ padding: uiTokens.space.xs }}>Order</th>
                     <th style={{ padding: uiTokens.space.xs }}>Status</th>
+                    <th style={{ padding: uiTokens.space.xs }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {modulesForPageLevel.map((mod) => (
                     <tr key={mod.id} style={{ borderBottom: `1px solid ${uiTokens.color.border}` }}>
-                      <td style={{ padding: uiTokens.space.xs }}>{mod.title}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>{getModuleDisplayName(mod)}</td>
                       <td style={{ padding: uiTokens.space.xs }}><code className="codeText">{mod.slug}</code></td>
                       <td style={{ padding: uiTokens.space.xs }}>{mod.level || "—"}</td>
                       <td style={{ padding: uiTokens.space.xs }}>{mod.orderIndex ?? "—"}</td>
                       <td style={{ padding: uiTokens.space.xs }}>{mod.status || "—"}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>
+                        <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
+                          <LinkButton href={`/module-lessons/${mod.id}`} size="sm" style={{ color: "#83b9b9", border: "1px solid #398f8f" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                            </svg>
+                          </LinkButton>
+                          <LinkButton href={`/edit-module/${mod.id}`} size="sm" style={{ color: "#83b9b9", border: "1px solid #398f8f" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
+                          </LinkButton>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

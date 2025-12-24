@@ -89,7 +89,7 @@ const FIELD_GROUPS = [
   {
     id: "layer1-identity",
     title: "Identity & structure",
-    keys: ["slideId", "slideType", "groupId", "orderIndex"],
+    keys: ["slideId", "slideType", "groupId", "orderIndex", "label"],
   },
   {
     id: "layer1-core",
@@ -198,7 +198,8 @@ const groupFieldsForDisplay = (fields: EditorField[]) => {
 
   const remaining = fields.filter((field) => !used.has(field.key));
   if (remaining.length > 0) {
-    grouped.push({ id: "other", title: "Other", keys: [], fields: remaining });
+    // Type assertion needed because "layer1-other" is not in the FIELD_GROUPS const array
+    grouped.push({ id: "layer1-other" as any, title: "Other" as any, keys: [] as any, fields: remaining });
   }
 
   return grouped;
@@ -416,11 +417,34 @@ export default function DefaultSlideEditor({
     onSavingChange?.(true);
 
     try {
+      // Validate required fields (label is required for new slides)
+      const labelField = editableFields.find((f) => f.key === "label");
+      const isNewSlide = !row.id; // New slides don't have an id yet
+      if (labelField && isNewSlide) {
+        const labelValue = values["label"];
+        const trimmedLabel = typeof labelValue === "string" ? labelValue.trim() : "";
+        if (!trimmedLabel) {
+          setSaveMessage("Slide label is required for CMS navigation.");
+          setSaving(false);
+          onSavingChange?.(false);
+          return;
+        }
+      }
+
       const currentProps = { ...(row.propsJson as any) };
       let jsonError: string | null = null;
       for (const field of editableFields) {
         const rawVal = values[field.key];
         const trimmedVal = typeof rawVal === "string" ? rawVal.trim() : rawVal;
+
+        // Don't delete required fields, but allow empty for backward compatibility on existing slides
+        if (field.required && field.key === "label") {
+          // label is required - already validated above, so ensure it's set
+          if (trimmedVal) {
+            currentProps[field.key] = trimmedVal;
+          }
+          continue;
+        }
 
         if (trimmedVal === "" || trimmedVal === undefined) {
           delete currentProps[field.key];
@@ -754,8 +778,26 @@ export default function DefaultSlideEditor({
   const visibleFieldItems = editableFields;
   const hiddenFieldStyle: CSSProperties = { backgroundColor: "#f0ede9" };
 
+  // Check if label is missing (for backward compatibility warning)
+  const labelValue = values["label"];
+  const hasLabel = labelValue && typeof labelValue === "string" && labelValue.trim().length > 0;
+  const isExistingSlide = !!row.id;
+
   return (
     <form onSubmit={handleSave} style={{ display: "grid", gap: uiTokens.space.lg }}>
+      {isExistingSlide && !hasLabel && (
+        <div
+          style={{
+            padding: uiTokens.space.md,
+            backgroundColor: "#fff3cd",
+            border: `1px solid #ffc107`,
+            borderRadius: uiTokens.radius.md,
+            color: "#856404",
+          }}
+        >
+          <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
+        </div>
+      )}
       {hiddenFields.length > 0 && (
         <Button
           type="button"

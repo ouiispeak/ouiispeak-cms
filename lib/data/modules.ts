@@ -7,7 +7,7 @@ import { toModule } from "../mappers/moduleMapper";
  * Standard fields to select from modules table
  * Centralized to avoid repetition across pages
  */
-const MODULE_FIELDS = "id, slug, title, level, order_index, status, visibility, description, module_goal, core_topics, author_notes";
+const MODULE_FIELDS = "id, slug, label, title, level, order_index, status, visibility, description, module_goal, core_topics, author_notes";
 
 /**
  * Type for module data returned from the database
@@ -15,7 +15,8 @@ const MODULE_FIELDS = "id, slug, title, level, order_index, status, visibility, 
 export type ModuleData = {
   id: string;
   slug: string;
-  title: string;
+  label: string | null;
+  title: string | null;
   level: string | null;
   order_index: number | null;
   status: string | null;
@@ -30,7 +31,8 @@ export type ModuleData = {
  * Type for creating a new module
  */
 export type CreateModuleInput = {
-  title: string;
+  label: string;
+  title?: string | null;
   slug: string;
   level?: string | null;
   order_index?: number | null;
@@ -103,7 +105,8 @@ export async function createModule(input: CreateModuleInput): Promise<ModuleResu
   // Validate input using schema
   // Apply defaults for required NOT NULL fields: status and visibility
   const validationResult = moduleInputSchema.safeParse({
-    title: input.title.trim(),
+    label: input.label.trim(),
+    title: input.title?.trim() || null,
     slug: input.slug.trim(),
     level: input.level?.trim() || null,
     order_index: input.order_index ?? null,
@@ -148,7 +151,8 @@ export async function updateModule(
   // Build update data object
   const updateData: Record<string, unknown> = {};
 
-  if (input.title !== undefined) updateData.title = input.title.trim();
+  if (input.label !== undefined) updateData.label = input.label.trim() || null;
+  if (input.title !== undefined) updateData.title = input.title?.trim() || null;
   if (input.slug !== undefined) updateData.slug = input.slug.trim();
   if (input.level !== undefined) updateData.level = input.level?.trim() || null;
   if (input.order_index !== undefined) updateData.order_index = input.order_index;

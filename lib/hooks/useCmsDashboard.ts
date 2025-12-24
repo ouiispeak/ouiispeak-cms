@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { loadDashboardData } from "../data/dashboard";
 import { buildCmsHierarchy, type CmsHierarchyMaps } from "../data/buildHierarchy";
 
@@ -9,12 +10,9 @@ export type DashboardLoadState =
 
 export function useCmsDashboard() {
   const [loadState, setLoadState] = useState<DashboardLoadState>({ status: "loading" });
+  const pathname = usePathname();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoadState({ status: "loading" });
 
     const result = await loadDashboardData();
@@ -36,11 +34,15 @@ export function useCmsDashboard() {
     );
 
     setLoadState({ status: "ready", maps });
-  }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    // Reload when pathname changes (user navigates back to dashboard)
+  }, [pathname, loadData]);
 
   return {
     loadState,
     reload: loadData,
   };
 }
-

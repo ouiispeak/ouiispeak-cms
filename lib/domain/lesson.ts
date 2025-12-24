@@ -5,7 +5,8 @@
 export type Lesson = {
   id: string;
   moduleId: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
   slug: string | null;
   orderIndex: number | null;
   estimatedMinutes: number | null;
@@ -34,6 +35,7 @@ export type Lesson = {
 export type LessonMinimal = {
   id: string;
   slug: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
 };
 

@@ -9,7 +9,8 @@ export function toModule(row: ModuleData): Module {
   return {
     id: row.id,
     slug: row.slug,
-    title: row.title,
+    label: row.label,
+    title: row.title ?? "",
     level: row.level,
     orderIndex: row.order_index,
     status: row.status,
@@ -27,6 +28,7 @@ export function toModule(row: ModuleData): Module {
 export function toModuleRowUpdate(input: Partial<Module>): Partial<ModuleData> {
   const update: Partial<ModuleData> = {};
 
+  if (input.label !== undefined) update.label = input.label;
   if (input.title !== undefined) update.title = input.title;
   if (input.slug !== undefined) update.slug = input.slug;
   if (input.level !== undefined) update.level = input.level;

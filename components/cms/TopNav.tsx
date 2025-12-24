@@ -23,11 +23,11 @@ export default function TopNav() {
 
   // Level colors: background and border/underline
   const levelColors = {
-    cefr: { bg: "#d9aea1", border: "#d09680" },
-    module: { bg: "#e3c3b9", border: "#d7a592" },
-    lesson: { bg: "#ecd7cf", border: "#deb4a5" },
-    group: { bg: "#f2e4de", border: "#e4c3b7" },
-    slide: { bg: "#f8f0ed", border: "#ebd2c9" },
+    cefr: { bg: "#83b9b9", border: "#398f8f" },
+    module: { bg: "#9cc7c7", border: "#6aabab" },
+    lesson: { bg: "#b5d5d5", border: "#6aabab" },
+    group: { bg: "#cde3e3", border: "#9cc7c7" },
+    slide: { bg: "#e6f1f1", border: "#b4d5d5" },
   };
 
   const navLinkStyle = (

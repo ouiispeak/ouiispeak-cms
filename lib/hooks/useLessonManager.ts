@@ -87,7 +87,8 @@ export function useLessonManager(lessonId: string | undefined) {
         // Create group with defaults
         const groupInput: CreateGroupInput = {
           lesson_id: lessonId,
-          title: input?.title ?? "New group",
+          label: input?.label ?? "New group",
+          title: input?.title ?? null,
           order_index: input?.order_index ?? nextOrderIndex,
           ...input,
         };
@@ -165,7 +166,8 @@ export function useLessonManager(lessonId: string | undefined) {
             // Create default Intro group directly
             const { data: newGroup, error: groupCreateError } = await createGroup({
               lesson_id: lid,
-              title: "Intro",
+              label: "Intro",
+              title: null,
               order_index: 1,
             });
             if (groupCreateError || !newGroup) {

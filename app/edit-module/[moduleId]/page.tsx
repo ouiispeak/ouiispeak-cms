@@ -32,6 +32,7 @@ export default function EditModulePage() {
   const moduleId = params?.moduleId;
 
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [level, setLevel] = useState("");
@@ -47,6 +48,7 @@ export default function EditModulePage() {
   const [message, setMessage] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const initialDataRef = useRef<{
+    label: string;
     title: string;
     slug: string;
     level: string;
@@ -64,6 +66,7 @@ export default function EditModulePage() {
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
     return (
+      label !== initial.label ||
       title !== initial.title ||
       slug !== initial.slug ||
       level !== initial.level ||
@@ -101,7 +104,8 @@ export default function EditModulePage() {
         return;
       }
 
-      setTitle(data.title);
+      setLabel(data.label ?? "");
+      setTitle(data.title ?? "");
       setSlug(data.slug);
       setLevel(data.level || "");
       setOrderIndex(data.orderIndex ?? 1);
@@ -114,7 +118,8 @@ export default function EditModulePage() {
 
       // Store initial values for comparison
       initialDataRef.current = {
-        title: data.title,
+        label: data.label ?? "",
+        title: data.title ?? "",
         slug: data.slug,
         level: data.level || "",
         orderIndex: data.orderIndex ?? 1,
@@ -136,9 +141,17 @@ export default function EditModulePage() {
     e.preventDefault();
     setMessage(null);
 
+    // Validate required fields (label is required for new modules)
+    const isNewModule = !moduleId;
+    if (isNewModule && !label.trim()) {
+      setMessage("Module label is required for CMS navigation.");
+      return;
+    }
+
     // Validate using schema
     const result = updateModuleSchema.safeParse({
-      title,
+      label: label.trim() || null,
+      title: title.trim() || undefined,
       slug,
       level,
       order_index: orderIndex,
@@ -158,28 +171,65 @@ export default function EditModulePage() {
 
     setSaving(true);
     try {
-      const { error } = await updateModule(moduleId, result.data);
+      const { data: updatedModule, error } = await updateModule(moduleId, result.data);
 
       if (error) {
         setMessage(error);
         return;
       }
 
+      if (!updatedModule) {
+        setMessage("Update succeeded but no data returned.");
+        return;
+      }
+
       setMessage("Module updated successfully!");
+      
+      // Reload module data from server to ensure we have the latest
+      const { data: reloadedData, error: reloadError } = await loadModuleById(moduleId);
+      
+      if (reloadError || !reloadedData) {
+        // If reload fails, use the updated module data we got back
+        setLabel(updatedModule.label ?? "");
+        setTitle(updatedModule.title ?? "");
+        setSlug(updatedModule.slug);
+        setLevel(updatedModule.level || "");
+        setOrderIndex(updatedModule.orderIndex ?? 1);
+        setDescription(updatedModule.description || "");
+        setStatus((updatedModule.status as "draft" | "published" | "archived") || "draft");
+        setVisibility((updatedModule.visibility as "private" | "beta" | "public") || "private");
+        setModuleGoal(updatedModule.moduleGoal || "");
+        setCoreTopics(updatedModule.coreTopics || "");
+        setAuthorNotes(updatedModule.authorNotes || "");
+      } else {
+        // Use reloaded data
+        setLabel(reloadedData.label ?? "");
+        setTitle(reloadedData.title ?? "");
+        setSlug(reloadedData.slug);
+        setLevel(reloadedData.level || "");
+        setOrderIndex(reloadedData.orderIndex ?? 1);
+        setDescription(reloadedData.description || "");
+        setStatus((reloadedData.status as "draft" | "published" | "archived") || "draft");
+        setVisibility((reloadedData.visibility as "private" | "beta" | "public") || "private");
+        setModuleGoal(reloadedData.moduleGoal || "");
+        setCoreTopics(reloadedData.coreTopics || "");
+        setAuthorNotes(reloadedData.authorNotes || "");
+      }
       
       // Update initial data ref after successful save
       if (initialDataRef.current) {
         initialDataRef.current = {
-          title,
-          slug,
-          level,
-          orderIndex,
-          description,
-          status,
-          visibility,
-          moduleGoal,
-          coreTopics,
-          authorNotes,
+          label: reloadedData?.label ?? updatedModule.label ?? "",
+          title: reloadedData?.title ?? updatedModule.title ?? "",
+          slug: reloadedData?.slug ?? updatedModule.slug,
+          level: reloadedData?.level ?? updatedModule.level ?? "",
+          orderIndex: reloadedData?.orderIndex ?? updatedModule.orderIndex ?? 1,
+          description: reloadedData?.description ?? updatedModule.description ?? "",
+          status: (reloadedData?.status ?? updatedModule.status) as "draft" | "published" | "archived" || "draft",
+          visibility: (reloadedData?.visibility ?? updatedModule.visibility) as "private" | "beta" | "public" || "private",
+          moduleGoal: reloadedData?.moduleGoal ?? updatedModule.moduleGoal ?? "",
+          coreTopics: reloadedData?.coreTopics ?? updatedModule.coreTopics ?? "",
+          authorNotes: reloadedData?.authorNotes ?? updatedModule.authorNotes ?? "",
         };
       }
     } finally {
@@ -208,7 +258,7 @@ export default function EditModulePage() {
       {loadState.status === "ready" && (
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #d7a592", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #6aabab", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
             <CmsOutlineView currentModuleId={moduleId} hasUnsavedChanges={hasUnsavedChanges} />
           </div>
           
@@ -223,25 +273,52 @@ export default function EditModulePage() {
               />
             </div>
             <BreadcrumbTrail moduleId={moduleId} />
-            <CmsSection title="Module Details" backgroundColor="#e3c3b9" borderColor="#d7a592">
+            <CmsSection title="Module Details" backgroundColor="#9cc7c7" borderColor="#6aabab">
               <form ref={formRef} onSubmit={handleSave}>
-            <FormField label="Module ID" borderColor="#d7a592">
+            <FormField label="Module ID" borderColor="#6aabab">
               <Input value={moduleId || ""} disabled readOnly />
             </FormField>
 
-            <FormField label="Title" required borderColor="#d7a592">
+            <FormField 
+              label="Label" 
+              required
+              borderColor="#6aabab"
+              infoTooltip="Internal name for this module used in the CMS and navigation. Not shown to learners."
+            >
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+            </FormField>
+
+            {moduleId && !label.trim() && (
+              <div
+                style={{
+                  padding: uiTokens.space.md,
+                  backgroundColor: "#fff3cd",
+                  border: `1px solid #ffc107`,
+                  borderRadius: uiTokens.radius.md,
+                  color: "#856404",
+                }}
+              >
+                <strong>Missing label:</strong> This module is missing a label. Please add one for proper CMS navigation.
+              </div>
+            )}
+
+            <FormField 
+              label="Title (optional - for student-facing content)" 
+              borderColor="#6aabab"
+              infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+            >
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Slug" required borderColor="#d7a592">
+            <FormField label="Slug" required borderColor="#6aabab">
               <Input value={slug} onChange={(e) => setSlug(e.target.value)} />
             </FormField>
 
-            <FormField label="Level" required borderColor="#d7a592">
+            <FormField label="Level" required borderColor="#6aabab">
               <Input value={level} onChange={(e) => setLevel(e.target.value)} />
             </FormField>
 
-            <FormField label="Order index" required borderColor="#d7a592">
+            <FormField label="Order index" required borderColor="#6aabab">
               <Input
                 type="number"
                 value={orderIndex}
@@ -249,7 +326,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Description (optional)" borderColor="#d7a592">
+            <FormField label="Description (optional)" borderColor="#6aabab">
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -257,7 +334,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Status" required borderColor="#d7a592">
+            <FormField label="Status" required borderColor="#6aabab">
               <Select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "draft" | "published" | "archived")}
@@ -268,7 +345,7 @@ export default function EditModulePage() {
               </Select>
             </FormField>
 
-            <FormField label="Visibility" required borderColor="#d7a592">
+            <FormField label="Visibility" required borderColor="#6aabab">
               <Select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value as "private" | "beta" | "public")}
@@ -279,7 +356,7 @@ export default function EditModulePage() {
               </Select>
             </FormField>
 
-            <FormField label="Module goal (optional)" borderColor="#d7a592">
+            <FormField label="Module goal (optional)" borderColor="#6aabab">
               <Textarea
                 value={moduleGoal}
                 onChange={(e) => setModuleGoal(e.target.value)}
@@ -287,7 +364,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Core topics (optional)" helper="Comma-separated list of topics" borderColor="#d7a592">
+            <FormField label="Core topics (optional)" helper="Comma-separated list of topics" borderColor="#6aabab">
               <Input
                 value={coreTopics}
                 onChange={(e) => setCoreTopics(e.target.value)}
@@ -295,7 +372,7 @@ export default function EditModulePage() {
               />
             </FormField>
 
-            <FormField label="Author notes (optional)" borderColor="#d7a592">
+            <FormField label="Author notes (optional)" borderColor="#6aabab">
               <Textarea
                 value={authorNotes}
                 onChange={(e) => setAuthorNotes(e.target.value)}

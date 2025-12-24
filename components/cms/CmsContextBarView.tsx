@@ -12,6 +12,7 @@ import type { Module } from "../../lib/domain/module";
 import type { LessonMinimal } from "../../lib/domain/lesson";
 import type { GroupMinimal } from "../../lib/domain/group";
 import type { SlideMinimal } from "../../lib/domain/slide";
+import { getModuleDisplayName } from "../../lib/utils/displayName";
 
 export interface CmsContextBarViewProps {
   loadingAncestors: boolean;
@@ -114,7 +115,8 @@ export default function CmsContextBarView({
                   <option value="">Jump to Module...</option>
                   {modules.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.title}
+                      {getModuleDisplayName(m)}
+                      {!m.label && m.title && ` (${m.title})`}
                     </option>
                   ))}
                 </Select>

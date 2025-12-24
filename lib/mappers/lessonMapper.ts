@@ -8,6 +8,7 @@ export function toLesson(row: LessonData): Lesson {
   return {
     id: row.id,
     moduleId: row.module_id,
+    label: row.label,
     title: row.title,
     slug: row.slug,
     orderIndex: row.order_index,
@@ -39,7 +40,8 @@ export function toLessonMinimal(row: LessonDataMinimal): LessonMinimal {
   return {
     id: row.id,
     slug: row.slug,
-    title: row.title,
+    label: row.label,
+    title: row.title ?? "",
   };
 }
 
@@ -50,6 +52,7 @@ export function toLessonRowUpdate(input: Partial<Lesson>): Partial<LessonData> {
   const update: Partial<LessonData> = {};
 
   if (input.moduleId !== undefined) update.module_id = input.moduleId;
+  if (input.label !== undefined) update.label = input.label;
   if (input.title !== undefined) update.title = input.title;
   if (input.slug !== undefined) update.slug = input.slug;
   if (input.orderIndex !== undefined) update.order_index = input.orderIndex;

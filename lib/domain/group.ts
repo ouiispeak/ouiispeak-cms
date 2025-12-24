@@ -5,7 +5,8 @@
 export type Group = {
   id: string;
   lessonId: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
   orderIndex: number | null;
   groupCode: string | null;
   shortSummary: string | null;
@@ -30,6 +31,7 @@ export type GroupMinimal = {
   id: string;
   lessonId: string | null;
   orderIndex: number | null;
-  title: string;
+  label: string | null;
+  title: string | null;
 };
 

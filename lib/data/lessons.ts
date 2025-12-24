@@ -7,12 +7,12 @@ import { toLesson, toLessonMinimal } from "../mappers/lessonMapper";
  * Standard fields to select from lessons table
  * Centralized to avoid repetition across pages
  */
-const LESSON_FIELDS_FULL = "id, module_id, title, slug, order_index, estimated_minutes, required_score, content, short_summary_admin, short_summary_student, course_organization_group, slide_contents, grouping_strategy_summary, activity_types, activity_description, signature_metaphors, main_grammar_topics, pronunciation_focus, vocabulary_theme, l1_l2_issues, prerequisites, learning_objectives, notes_for_teacher_or_ai";
+const LESSON_FIELDS_FULL = "id, module_id, label, title, slug, order_index, estimated_minutes, required_score, content, short_summary_admin, short_summary_student, course_organization_group, slide_contents, grouping_strategy_summary, activity_types, activity_description, signature_metaphors, main_grammar_topics, pronunciation_focus, vocabulary_theme, l1_l2_issues, prerequisites, learning_objectives, notes_for_teacher_or_ai";
 
 /**
  * Minimal fields for dropdowns/lists
  */
-const LESSON_FIELDS_MINIMAL = "id, slug, title";
+const LESSON_FIELDS_MINIMAL = "id, slug, label, title";
 
 /**
  * Type for lesson data returned from the database
@@ -20,7 +20,8 @@ const LESSON_FIELDS_MINIMAL = "id, slug, title";
 export type LessonData = {
   id: string;
   module_id: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
   slug: string | null;
   order_index: number | null;
   estimated_minutes: number | null;
@@ -49,7 +50,8 @@ export type LessonData = {
 export type LessonDataMinimal = {
   id: string;
   slug: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
 };
 
 /**
@@ -58,7 +60,8 @@ export type LessonDataMinimal = {
 export type CreateLessonInput = {
   module_id: string;
   slug: string;
-  title: string;
+  label: string;
+  title?: string | null;
   order_index?: number | null;
   estimated_minutes?: number | null;
   required_score?: number | null;
@@ -170,7 +173,8 @@ export async function createLesson(input: CreateLessonInput): Promise<LessonResu
   const validationResult = lessonInputSchema.safeParse({
     module_id: input.module_id,
     slug: input.slug,
-    title: input.title.trim(),
+    label: input.label.trim(),
+    title: input.title?.trim() || null,
     order_index: input.order_index ?? null,
     estimated_minutes: input.estimated_minutes ?? null,
     required_score: input.required_score ?? null,
@@ -200,7 +204,7 @@ export async function createLesson(input: CreateLessonInput): Promise<LessonResu
   const { data, error } = await supabase
     .from("lessons")
     .insert(validationResult.data)
-    .select("id, module_id, slug, title, order_index")
+    .select("id, module_id, slug, label, title, order_index")
     .maybeSingle();
 
   if (error) {
@@ -211,7 +215,7 @@ export async function createLesson(input: CreateLessonInput): Promise<LessonResu
     return { data: null, error: "Insert succeeded but no data returned" };
   }
 
-  return { data: { id: data.id, slug: data.slug, title: data.title } as LessonDataMinimal, error: null };
+  return { data: { id: data.id, slug: data.slug, label: data.label, title: data.title } as LessonDataMinimal, error: null };
 }
 
 /**
@@ -226,7 +230,11 @@ export async function updateLesson(
 
   if (input.module_id !== undefined) updateData.module_id = input.module_id;
   if (input.slug !== undefined) updateData.slug = input.slug;
-  if (input.title !== undefined) updateData.title = input.title.trim();
+  if (input.label !== undefined) {
+    // Handle null, empty string, or non-empty string
+    updateData.label = input.label ? (input.label.trim() || null) : null;
+  }
+  if (input.title !== undefined) updateData.title = input.title?.trim() || null;
   if (input.order_index !== undefined) updateData.order_index = input.order_index;
   if (input.estimated_minutes !== undefined) updateData.estimated_minutes = input.estimated_minutes;
   if (input.required_score !== undefined) updateData.required_score = input.required_score;
@@ -237,12 +245,16 @@ export async function updateLesson(
   if (input.slide_contents !== undefined) updateData.slide_contents = input.slide_contents?.trim() || null;
   if (input.grouping_strategy_summary !== undefined) updateData.grouping_strategy_summary = input.grouping_strategy_summary?.trim() || null;
   
-  // Normalize activity_types: convert array to string if needed
+  // Normalize activity_types: convert string to array if needed (database column is TEXT[])
   if (input.activity_types !== undefined) {
     if (Array.isArray(input.activity_types)) {
-      updateData.activity_types = input.activity_types.length > 0 ? input.activity_types.join(",") : null;
+      updateData.activity_types = input.activity_types.length > 0 ? input.activity_types : null;
+    } else if (typeof input.activity_types === "string" && input.activity_types.trim()) {
+      // Convert comma-separated string to array for database (column type is TEXT[])
+      const parts = input.activity_types.split(",").map(s => s.trim()).filter(s => s.length > 0);
+      updateData.activity_types = parts.length > 0 ? parts : null;
     } else {
-      updateData.activity_types = input.activity_types?.trim() || null;
+      updateData.activity_types = null;
     }
   }
   
@@ -257,18 +269,50 @@ export async function updateLesson(
   if (input.notes_for_teacher_or_ai !== undefined) updateData.notes_for_teacher_or_ai = input.notes_for_teacher_or_ai?.trim() || null;
 
   // Validate update data using schema (partial validation)
+  // Note: lessonInputSchema allows activity_types as string or array
   const validationResult = lessonInputSchema.partial().safeParse(updateData);
   if (!validationResult.success) {
     const firstError = validationResult.error.issues[0];
     return { data: null, error: `Validation error: ${firstError.message}` };
   }
 
+  // Ensure activity_types is an array (not string) before sending to Supabase (column type is TEXT[])
+  const finalUpdateData = { ...validationResult.data };
+  if (finalUpdateData.activity_types !== undefined && typeof finalUpdateData.activity_types === "string") {
+    // Convert string to array for database
+    const parts = finalUpdateData.activity_types.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    finalUpdateData.activity_types = parts.length > 0 ? parts : null;
+  }
+
+  // DEV-ONLY: Log the outgoing update payload
+  if (process.env.NODE_ENV === "development") {
+    console.log("[lesson save payload]", {
+      id,
+      payloadKeys: Object.keys(finalUpdateData),
+      hasLabel: "label" in finalUpdateData,
+      labelValue: finalUpdateData.label,
+      activityTypesType: typeof finalUpdateData.activity_types,
+      activityTypesValue: finalUpdateData.activity_types,
+      fullPayload: finalUpdateData,
+    });
+  }
+
   const { data, error } = await supabase
     .from("lessons")
-    .update(validationResult.data)
+    .update(finalUpdateData)
     .eq("id", id)
-    .select(LESSON_FIELDS_FULL)
-    .maybeSingle();
+    .select("id, label, title, " + LESSON_FIELDS_FULL)
+    .single();
+
+  // DEV-ONLY: Log the Supabase response
+  if (process.env.NODE_ENV === "development") {
+    const dataTyped = error ? null : (data as unknown as LessonData | null);
+    console.log("[lesson save result]", {
+      error: error ? { message: error.message, details: error.details, hint: error.hint, code: error.code } : null,
+      data: dataTyped ? { id: dataTyped.id, label: dataTyped.label, title: dataTyped.title } : null,
+      fullData: dataTyped,
+    });
+  }
 
   if (error) {
     return { data: null, error: error.message };
@@ -278,7 +322,7 @@ export async function updateLesson(
     return { data: null, error: `No lesson found with id "${id}"` };
   }
 
-  return { data: toLesson(data as LessonData), error: null };
+  return { data: toLesson(data as unknown as LessonData), error: null };
 }
 
 /**

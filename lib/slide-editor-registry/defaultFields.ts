@@ -6,6 +6,7 @@ export const DEFAULT_SLIDE_FIELDS: EditorField[] = [
   { key: "slideType", label: "Slide type", helpText: "Type key used to select the editor (read-only).", required: false, uiType: "text" },
   { key: "groupId", label: "Group UUID", helpText: "Owning group UUID (read-only).", required: false, uiType: "text" },
   { key: "orderIndex", label: "Order index", helpText: "Sequence position in the group.", required: false, uiType: "number" },
+  { key: "label", label: "Label", helpText: "Internal name for this slide used in the CMS and navigation. Not shown to learners.", required: true, uiType: "text" },
 
   { key: "title", label: "Title", helpText: "Primary heading for the slide.", required: false, uiType: "text" },
   { key: "subtitle", label: "Subtitle", helpText: "Secondary heading or subtopic.", required: false, uiType: "text" },

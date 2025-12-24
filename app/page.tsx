@@ -6,6 +6,8 @@ import { uiTokens } from "../lib/uiTokens";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { useCmsDashboard } from "../lib/hooks/useCmsDashboard";
 import { useCmsDeleteFlow } from "../lib/hooks/useCmsDeleteFlow";
+export const dynamic = "force-dynamic";
+
 import CmsDashboardTree from "../components/cms/CmsDashboardTree";
 import type { ModuleDeleteImpact, LessonDeleteImpact } from "../lib/data/deleteImpact";
 

@@ -7,12 +7,12 @@ import { toGroup, toGroupMinimal } from "../mappers/groupMapper";
  * Standard fields to select from lesson_groups table
  * Centralized to avoid repetition across pages
  */
-const GROUP_FIELDS_FULL = "id, lesson_id, title, order_index, group_code, short_summary, group_type, group_summary, group_goal, prerequisites, is_required_to_pass, passing_score_type, passing_score_value, max_score_value, extra_practice_notes, l1_l2, media_used_ids, group_slides_plan";
+const GROUP_FIELDS_FULL = "id, lesson_id, label, title, order_index, group_code, short_summary, group_type, group_summary, group_goal, prerequisites, is_required_to_pass, passing_score_type, passing_score_value, max_score_value, extra_practice_notes, l1_l2, media_used_ids, group_slides_plan";
 
 /**
  * Minimal fields for dropdowns/lists
  */
-const GROUP_FIELDS_MINIMAL = "id, lesson_id, order_index, title";
+const GROUP_FIELDS_MINIMAL = "id, lesson_id, order_index, label, title";
 
 /**
  * Type for group data returned from the database
@@ -20,7 +20,8 @@ const GROUP_FIELDS_MINIMAL = "id, lesson_id, order_index, title";
 export type GroupData = {
   id: string;
   lesson_id: string | null;
-  title: string;
+  label: string | null;
+  title: string | null;
   order_index: number | null;
   group_code: string | null;
   short_summary: string | null;
@@ -45,7 +46,8 @@ export type GroupDataMinimal = {
   id: string;
   lesson_id: string | null;
   order_index: number | null;
-  title: string;
+  label: string | null;
+  title: string | null;
 };
 
 /**
@@ -53,7 +55,8 @@ export type GroupDataMinimal = {
  */
 export type CreateGroupInput = {
   lesson_id: string;
-  title: string;
+  label: string;
+  title?: string | null;
   order_index?: number | null;
   group_code?: string | null;
   short_summary?: string | null;
@@ -137,7 +140,8 @@ export async function createGroup(input: CreateGroupInput): Promise<GroupResult<
   // Apply defaults for required NOT NULL fields
   const validationResult = groupInputSchema.safeParse({
     lesson_id: input.lesson_id,
-    title: input.title.trim(),
+    label: input.label.trim(),
+    title: input.title?.trim() || null,
     order_index: input.order_index ?? null,
     group_code: input.group_code?.trim() || null,
     short_summary: input.short_summary?.trim() || null,
@@ -163,7 +167,7 @@ export async function createGroup(input: CreateGroupInput): Promise<GroupResult<
   const { data, error } = await supabase
     .from("lesson_groups")
     .insert(validationResult.data)
-    .select("id, lesson_id, order_index, title")
+    .select("id, lesson_id, order_index, label, title")
     .maybeSingle();
 
   if (error) {
@@ -188,7 +192,8 @@ export async function updateGroup(
   const updateData: Record<string, unknown> = {};
 
   if (input.lesson_id !== undefined) updateData.lesson_id = input.lesson_id;
-  if (input.title !== undefined) updateData.title = input.title.trim();
+  if (input.label !== undefined) updateData.label = input.label.trim() || null;
+  if (input.title !== undefined) updateData.title = input.title?.trim() || null;
   if (input.order_index !== undefined) updateData.order_index = input.order_index;
   if (input.group_code !== undefined) updateData.group_code = input.group_code?.trim() || null;
   if (input.short_summary !== undefined) updateData.short_summary = input.short_summary?.trim() || null;

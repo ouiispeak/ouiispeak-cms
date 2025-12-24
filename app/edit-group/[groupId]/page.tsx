@@ -39,6 +39,7 @@ export default function EditGroupPage() {
   const [lessons, setLessons] = useState<LessonMinimal[]>([]);
   const [lessonId, setLessonId] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
 
   // New fields
@@ -63,6 +64,7 @@ export default function EditGroupPage() {
   const initialDataRef = useRef<{
     lessonId: string;
     orderIndex: number;
+    label: string;
     title: string;
     groupCode: string;
     shortSummary: string;
@@ -87,6 +89,7 @@ export default function EditGroupPage() {
     return (
       lessonId !== initial.lessonId ||
       orderIndex !== initial.orderIndex ||
+      label !== initial.label ||
       title !== initial.title ||
       groupCode !== initial.groupCode ||
       shortSummary !== initial.shortSummary ||
@@ -146,7 +149,8 @@ export default function EditGroupPage() {
 
       setLessonId(data.lessonId ?? "");
       setOrderIndex(data.orderIndex ?? 1);
-      setTitle(data.title);
+      setLabel(data.label ?? "");
+      setTitle(data.title ?? "");
 
       // New fields
       setGroupCode(data.groupCode ?? "");
@@ -171,7 +175,8 @@ export default function EditGroupPage() {
       initialDataRef.current = {
         lessonId: data.lessonId ?? "",
         orderIndex: data.orderIndex ?? 1,
-        title: data.title,
+        label: data.label ?? "",
+        title: data.title ?? "",
         groupCode: data.groupCode ?? "",
         shortSummary: data.shortSummary ?? "",
         groupType: data.groupType ?? "",
@@ -200,10 +205,18 @@ export default function EditGroupPage() {
     e.preventDefault();
     setMessage(null);
 
+    // Validate required fields (label is required for new groups)
+    const isNewGroup = !groupId;
+    if (isNewGroup && !label.trim()) {
+      setMessage("Group label is required for CMS navigation.");
+      return;
+    }
+
     // Validate using schema
     const result = updateGroupSchema.safeParse({
       lesson_id: lessonId,
-      title,
+      label: label.trim() || null,
+      title: title.trim() || undefined,
       order_index: orderIndex,
       group_code: groupCode || null,
       short_summary: shortSummary || null,
@@ -232,7 +245,8 @@ export default function EditGroupPage() {
       const { error } = await updateGroup(groupId, {
         lesson_id: result.data.lesson_id,
         order_index: result.data.order_index,
-        title: result.data.title,
+        label: result.data.label,
+        title: result.data.title ?? undefined,
         group_code: result.data.group_code,
         short_summary: result.data.short_summary,
         group_type: result.data.group_type,
@@ -261,6 +275,7 @@ export default function EditGroupPage() {
         initialDataRef.current = {
           lessonId,
           orderIndex,
+          label,
           title,
           groupCode,
           shortSummary,
@@ -304,7 +319,7 @@ export default function EditGroupPage() {
       {loadState.status === "ready" && (
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #e4c3b7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #9cc7c7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
           <CmsOutlineView currentGroupId={groupId} hasUnsavedChanges={hasUnsavedChanges} />
         </div>
         
@@ -326,12 +341,12 @@ export default function EditGroupPage() {
             </div>
           <BreadcrumbTrail groupId={groupId} />
             <form ref={formRef} onSubmit={handleSave}>
-          <CmsSection title="Group Details" backgroundColor="#f2e4de" borderColor="#e4c3b7">
-            <FormField label="Group ID" borderColor="#e4c3b7">
+          <CmsSection title="Group Details" backgroundColor="#cde3e3" borderColor="#9cc7c7">
+            <FormField label="Group ID" borderColor="#9cc7c7">
               <Input value={groupId || ""} disabled readOnly />
             </FormField>
 
-            <FormField label="Lesson" required borderColor="#e4c3b7">
+            <FormField label="Lesson" required borderColor="#9cc7c7">
               <Select value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
                 <option value="">Select a lesson…</option>
                 {lessons.map((l) => (
@@ -342,7 +357,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Order index" required borderColor="#e4c3b7">
+            <FormField label="Order index" required borderColor="#9cc7c7">
               <Input
                 type="number"
                 value={orderIndex}
@@ -350,15 +365,42 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group title" required borderColor="#e4c3b7">
+            <FormField 
+              label="Label" 
+              required
+              borderColor="#9cc7c7"
+              infoTooltip="Internal name for this group used in the CMS and navigation. Not shown to learners."
+            >
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+            </FormField>
+
+            {groupId && !label.trim() && (
+              <div
+                style={{
+                  padding: uiTokens.space.md,
+                  backgroundColor: "#fff3cd",
+                  border: `1px solid #ffc107`,
+                  borderRadius: uiTokens.radius.md,
+                  color: "#856404",
+                }}
+              >
+                <strong>Missing label:</strong> This group is missing a label. Please add one for proper CMS navigation.
+              </div>
+            )}
+
+            <FormField 
+              label="Title (optional - for student-facing content)" 
+              borderColor="#9cc7c7"
+              infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+            >
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </FormField>
 
-            <FormField label="Group code" borderColor="#e4c3b7">
+            <FormField label="Group code" borderColor="#9cc7c7">
               <Input value={groupCode} onChange={(e) => setGroupCode(e.target.value)} />
             </FormField>
 
-            <FormField label="Short summary" borderColor="#e4c3b7">
+            <FormField label="Short summary" borderColor="#9cc7c7">
               <Textarea
                 value={shortSummary}
                 onChange={(e) => setShortSummary(e.target.value)}
@@ -366,7 +408,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group summary" borderColor="#e4c3b7">
+            <FormField label="Group summary" borderColor="#9cc7c7">
               <Textarea
                 value={groupSummary}
                 onChange={(e) => setGroupSummary(e.target.value)}
@@ -374,7 +416,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Group goal" borderColor="#e4c3b7">
+            <FormField label="Group goal" borderColor="#9cc7c7">
               <Textarea
                 value={groupGoal}
                 onChange={(e) => setGroupGoal(e.target.value)}
@@ -382,7 +424,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Prerequisites" borderColor="#e4c3b7">
+            <FormField label="Prerequisites" borderColor="#9cc7c7">
               <Textarea
                 value={prerequisites}
                 onChange={(e) => setPrerequisites(e.target.value)}
@@ -404,7 +446,7 @@ export default function EditGroupPage() {
               Group structure
             </h2>
 
-            <FormField label="Group type" borderColor="#e4c3b7">
+            <FormField label="Group type" borderColor="#9cc7c7">
               <Select value={groupType} onChange={(e) => setGroupType(e.target.value)}>
                 <option value="">Select a type…</option>
                 <option value="title">Title</option>
@@ -416,7 +458,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Is required to pass" borderColor="#e4c3b7">
+            <FormField label="Is required to pass" borderColor="#9cc7c7">
               <label style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
                 <input
                   type="checkbox"
@@ -428,7 +470,7 @@ export default function EditGroupPage() {
               </label>
             </FormField>
 
-            <FormField label="Passing score type" borderColor="#e4c3b7">
+            <FormField label="Passing score type" borderColor="#9cc7c7">
               <Select value={passingScoreType} onChange={(e) => setPassingScoreType(e.target.value)}>
                 <option value="">Select a type…</option>
                 <option value="percent">percent</option>
@@ -437,7 +479,7 @@ export default function EditGroupPage() {
               </Select>
             </FormField>
 
-            <FormField label="Passing score value" borderColor="#e4c3b7">
+            <FormField label="Passing score value" borderColor="#9cc7c7">
               <Input
                 type="number"
                 value={passingScoreValue ?? ""}
@@ -445,7 +487,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Max score value" borderColor="#e4c3b7">
+            <FormField label="Max score value" borderColor="#9cc7c7">
               <Input
                 type="number"
                 value={maxScoreValue ?? ""}
@@ -455,7 +497,7 @@ export default function EditGroupPage() {
 
             <FormField
               label="Planned slide sequence (structure only)"
-              borderColor="#e4c3b7"
+              borderColor="#9cc7c7"
               helper='This is the intended slide structure for this group. It is used for planning and validation. Actual slides are created separately. For example: ["title-slide", "text-slide", "ai-speak-repeat"]'
             >
               <Textarea
@@ -465,7 +507,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="Extra practice notes" borderColor="#e4c3b7">
+            <FormField label="Extra practice notes" borderColor="#9cc7c7">
               <Textarea
                 value={extraPracticeNotes}
                 onChange={(e) => setExtraPracticeNotes(e.target.value)}
@@ -473,7 +515,7 @@ export default function EditGroupPage() {
               />
             </FormField>
 
-            <FormField label="L1 > L2 issues" borderColor="#e4c3b7">
+            <FormField label="L1 > L2 issues" borderColor="#9cc7c7">
               <Textarea
                 value={l1L2}
                 onChange={(e) => setL1L2(e.target.value)}
@@ -483,7 +525,7 @@ export default function EditGroupPage() {
 
             <FormField
               label="Media used ids"
-              borderColor="#e4c3b7"
+              borderColor="#9cc7c7"
               helper="Comma-separated IDs or paths"
             >
               <Input

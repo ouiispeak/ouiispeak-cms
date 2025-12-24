@@ -20,7 +20,7 @@ export default function PreviewInPlayerButton({
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth={1.5}
-      stroke="#f6f5f3"
+      stroke="#ffffff"
       style={{ width: 18, height: 18 }}
       aria-hidden="true"
     >

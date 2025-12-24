@@ -15,9 +15,11 @@ export default function RawJsonEditor({
   orderIndex,
   groupId,
   slideType,
+  schema,
   onSaveSuccess,
   saveSlide,
   onUnsavedChangesChange,
+  onSavingChange,
 }: SlideEditorProps) {
   const [jsonText, setJsonText] = useState(() => {
     try {

@@ -38,8 +38,8 @@ export default function SlideTypesPage() {
   return (
     <CmsPageShell title="Slide type registry">
       <CmsSection
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         title="Registry overview"
         description="Registered slide types and the editors that handle them. Add new types to the registry to plug in custom authoring experiences without touching this page."
       >
@@ -56,8 +56,8 @@ export default function SlideTypesPage() {
       </CmsSection>
 
       <CmsSection
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         title="Registered slide types"
         description="Each entry resolves to an editor component and a simple field schema for UI metadata."
       >
@@ -87,7 +87,7 @@ export default function SlideTypesPage() {
                 href={`/cms/slide-types/${editor.type}/edit`}
                 size="sm"
                 style={{
-                  color: "#f8f0ed",
+                  color: "#e6f1f1",
                   border: "none",
                   display: "inline-flex",
                   alignItems: "center",
@@ -101,7 +101,7 @@ export default function SlideTypesPage() {
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
-                  stroke="#f8f0ed"
+                  stroke="#e6f1f1"
                   style={{ width: 16, height: 16 }}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -111,7 +111,7 @@ export default function SlideTypesPage() {
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={1.5}
-                  stroke="#f8f0ed"
+                  stroke="#e6f1f1"
                   style={{ width: 16, height: 16 }}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -123,8 +123,8 @@ export default function SlideTypesPage() {
       </CmsSection>
 
       <CmsSection
-        backgroundColor="#f8f0ed"
-        borderColor="#f2e1db"
+        backgroundColor="#e6f1f1"
+        borderColor="#b4d5d5"
         title="Fallback editor"
         description="Used when a slide type is not yet registered. Mirrors the current raw JSON workflow."
       >

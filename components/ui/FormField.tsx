@@ -20,7 +20,7 @@ export default function FormField({ label, children, helper, required, borderCol
     ? cloneElement(children as React.ReactElement<any>, { borderColor })
     : children;
   
-  const infoButtonColor = "#d7a592";
+  const infoButtonColor = "#398f8f";
   
   return (
     <div style={{ marginBottom: uiTokens.space.md }}>
@@ -62,7 +62,7 @@ export default function FormField({ label, children, helper, required, borderCol
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
-                stroke="#d7a592"
+                stroke="#398f8f"
                 style={{
                   width: 16,
                   height: 16,

@@ -2,6 +2,7 @@
 
 import { uiTokens } from "../../lib/uiTokens";
 import { useCmsContextBarData } from "./useCmsContextBarData";
+import { getModuleDisplayName } from "../../lib/utils/displayName";
 
 type BreadcrumbTrailProps = {
   moduleId?: string | null;
@@ -29,19 +30,19 @@ export default function BreadcrumbTrail({ moduleId, lessonId, groupId, slideId }
   if (!loadingAncestors) {
     if (ancestors.type === "module") {
       addSegment(`Level ${ancestors.module.level?.toUpperCase() || "?"}`);
-      addSegment(`Module ${ancestors.module.orderIndex ?? ancestors.module.title}`);
+      addSegment(`Module ${ancestors.module.orderIndex ?? ""}: ${getModuleDisplayName(ancestors.module)}`);
     } else if (ancestors.type === "lesson") {
       addSegment(`Level ${ancestors.ancestors.module.level?.toUpperCase() || "?"}`);
-      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ancestors.ancestors.module.title}`);
+      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ""}: ${getModuleDisplayName(ancestors.ancestors.module)}`);
       addSegment(`Lesson ${ancestors.ancestors.lesson.orderIndex ?? ancestors.ancestors.lesson.title}`);
     } else if (ancestors.type === "group") {
       addSegment(`Level ${ancestors.ancestors.module.level?.toUpperCase() || "?"}`);
-      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ancestors.ancestors.module.title}`);
+      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ""}: ${getModuleDisplayName(ancestors.ancestors.module)}`);
       addSegment(`Lesson ${ancestors.ancestors.lesson.orderIndex ?? ancestors.ancestors.lesson.title}`);
       addSegment(`Group ${ancestors.ancestors.group.orderIndex ?? ancestors.ancestors.group.title}`);
     } else if (ancestors.type === "slide") {
       addSegment(`Level ${ancestors.ancestors.module.level?.toUpperCase() || "?"}`);
-      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ancestors.ancestors.module.title}`);
+      addSegment(`Module ${ancestors.ancestors.module.orderIndex ?? ""}: ${getModuleDisplayName(ancestors.ancestors.module)}`);
       addSegment(`Lesson ${ancestors.ancestors.lesson.orderIndex ?? ancestors.ancestors.lesson.title}`);
       if (ancestors.ancestors.group) {
         addSegment(`Group ${ancestors.ancestors.group.orderIndex ?? ancestors.ancestors.group.title}`);

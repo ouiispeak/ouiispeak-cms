@@ -5,7 +5,8 @@
 export type Module = {
   id: string;
   slug: string;
-  title: string;
+  label: string | null;
+  title: string | null;
   level: string | null;
   orderIndex: number | null;
   status: string | null;

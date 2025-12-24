@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../Button";
 import { uiTokens } from "../../lib/uiTokens";
 import { useCmsDashboard } from "../../lib/hooks/useCmsDashboard";
+import { getModuleDisplayName } from "../../lib/utils/displayName";
 
 const LEVELS = ["A0", "A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
@@ -212,7 +213,7 @@ export default function CmsOutlineView({
                 href={`/manage-modules/${lvl.toLowerCase()}`}
                 style={{
                   textDecoration: "none",
-                  color: isCurrentLevel ? uiTokens.color.text : uiTokens.color.textMuted,
+                  color: isCurrentLevel ? "#398f8f" : uiTokens.color.textMuted,
                   fontWeight: isCurrentLevel ? 600 : 400,
                 }}
                 onClick={(e) => {
@@ -229,7 +230,7 @@ export default function CmsOutlineView({
                 }}
                 onMouseEnter={(e) => {
                   if (!isCurrentLevel) {
-                    e.currentTarget.style.color = "#a95f43";
+                    e.currentTarget.style.color = "#398f8f";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -264,7 +265,7 @@ export default function CmsOutlineView({
                             color: uiTokens.color.textMuted,
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.color = "#a95f43";
+                            e.currentTarget.style.color = "#398f8f";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.color = uiTokens.color.textMuted;
@@ -276,7 +277,7 @@ export default function CmsOutlineView({
                           href={`/edit-module/${module.id}`}
                           style={{
                             textDecoration: "none",
-                            color: isCurrentModule ? uiTokens.color.text : uiTokens.color.textMuted,
+                            color: isCurrentModule ? "#398f8f" : uiTokens.color.textMuted,
                             fontWeight: isCurrentModule ? 600 : 400,
                           }}
                           onClick={(e) => {
@@ -293,7 +294,7 @@ export default function CmsOutlineView({
                           }}
                           onMouseEnter={(e) => {
                             if (!isCurrentModule) {
-                              e.currentTarget.style.color = "#a95f43";
+                              e.currentTarget.style.color = "#398f8f";
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -302,7 +303,12 @@ export default function CmsOutlineView({
                             }
                           }}
                         >
-                          {module.title}
+                          {getModuleDisplayName(module)}
+                          {!module.label && module.title && (
+                            <span style={{ color: uiTokens.color.textMuted, fontSize: uiTokens.font.meta.size, marginLeft: uiTokens.space.xs }}>
+                              ({module.title})
+                            </span>
+                          )}
                         </Link>
                       </div>
 
@@ -329,7 +335,7 @@ export default function CmsOutlineView({
                                       color: uiTokens.color.textMuted,
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.color = "#a95f43";
+                                      e.currentTarget.style.color = "#398f8f";
                                     }}
                                     onMouseLeave={(e) => {
                                       e.currentTarget.style.color = uiTokens.color.textMuted;
@@ -341,7 +347,7 @@ export default function CmsOutlineView({
                                     href={`/edit-lesson/${lesson.id}`}
                                     style={{
                                       textDecoration: "none",
-                                      color: isCurrentLesson ? uiTokens.color.text : uiTokens.color.textMuted,
+                                      color: isCurrentLesson ? "#398f8f" : uiTokens.color.textMuted,
                                       fontWeight: isCurrentLesson ? 600 : 400,
                                     }}
                                     onClick={(e) => {
@@ -358,7 +364,7 @@ export default function CmsOutlineView({
                                     }}
                                     onMouseEnter={(e) => {
                                       if (!isCurrentLesson) {
-                                        e.currentTarget.style.color = "#a95f43";
+                                        e.currentTarget.style.color = "#398f8f";
                                       }
                                     }}
                                     onMouseLeave={(e) => {
@@ -393,7 +399,7 @@ export default function CmsOutlineView({
                                                 color: uiTokens.color.textMuted,
                                               }}
                                               onMouseEnter={(e) => {
-                                                e.currentTarget.style.color = "#a95f43";
+                                                e.currentTarget.style.color = "#398f8f";
                                               }}
                                               onMouseLeave={(e) => {
                                                 e.currentTarget.style.color = uiTokens.color.textMuted;
@@ -405,7 +411,7 @@ export default function CmsOutlineView({
                                               href={`/edit-group/${group.id}`}
                                               style={{
                                                 textDecoration: "none",
-                                                color: isCurrentGroup ? uiTokens.color.text : uiTokens.color.textMuted,
+                                                color: isCurrentGroup ? "#398f8f" : uiTokens.color.textMuted,
                                                 fontWeight: isCurrentGroup ? 600 : 400,
                                               }}
                                               onClick={(e) => {
@@ -422,7 +428,7 @@ export default function CmsOutlineView({
                                               }}
                                               onMouseEnter={(e) => {
                                                 if (!isCurrentGroup) {
-                                                  e.currentTarget.style.color = "#a95f43";
+                                                  e.currentTarget.style.color = "#398f8f";
                                                 }
                                               }}
                                               onMouseLeave={(e) => {
@@ -449,7 +455,7 @@ export default function CmsOutlineView({
                                                       href={`/edit-slide/${slide.id}`}
                                                       style={{
                                                         textDecoration: "none",
-                                                        color: isCurrentSlide ? uiTokens.color.text : uiTokens.color.textMuted,
+                                                        color: isCurrentSlide ? "#398f8f" : uiTokens.color.textMuted,
                                                         fontWeight: isCurrentSlide ? 600 : 400,
                                                       }}
                                                       onClick={(e) => {
@@ -466,7 +472,7 @@ export default function CmsOutlineView({
                                                       }}
                                                       onMouseEnter={(e) => {
                                                         if (!isCurrentSlide) {
-                                                          e.currentTarget.style.color = "#a95f43";
+                                                          e.currentTarget.style.color = "#398f8f";
                                                         }
                                                       }}
                                                       onMouseLeave={(e) => {
@@ -517,7 +523,7 @@ export default function CmsOutlineView({
                                                 }}
                                                 onMouseEnter={(e) => {
                                                   if (!isCurrentSlide) {
-                                                    e.currentTarget.style.color = "#a95f43";
+                                                    e.currentTarget.style.color = "#398f8f";
                                                   }
                                                 }}
                                                 onMouseLeave={(e) => {

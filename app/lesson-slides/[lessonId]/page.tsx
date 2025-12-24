@@ -1,510 +1,255 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Button } from "../../../components/Button";
 import CmsPageShell from "../../../components/cms/CmsPageShell";
 import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
+import FormField from "../../../components/ui/FormField";
+import Input from "../../../components/ui/Input";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import StatusMessage from "../../../components/ui/StatusMessage";
 import LinkButton from "../../../components/ui/LinkButton";
-import Select from "../../../components/ui/Select";
-import ConfirmDialog from "../../../components/ui/ConfirmDialog";
 import { uiTokens } from "../../../lib/uiTokens";
+import { loadGroupsByLesson, createGroup } from "../../../lib/data/groups";
+import { createGroupSchema } from "../../../lib/schemas/groupSchema";
+import { getGroupDisplayName } from "../../../lib/utils/displayName";
 import type { GroupMinimal } from "../../../lib/domain/group";
-import type { LessonManagementSlide } from "../../../lib/data/lessonManagement";
-import { useLessonManager } from "../../../lib/hooks/useLessonManager";
-import { loadLessonManagement } from "../../../lib/data/lessonManagement";
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; slides: LessonManagementSlide[]; groups: GroupMinimal[]; slideTypes: string[]; lessonTitle: string };
 
 export default function LessonSlidesPage() {
   const params = useParams<{ lessonId: string }>();
   const lessonId = params?.lessonId;
 
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [busySlideId, setBusySlideId] = useState<string | null>(null);
-  const [deleteSlideId, setDeleteSlideId] = useState<string | null>(null);
+  const [groups, setGroups] = useState<GroupMinimal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const manager = useLessonManager(lessonId);
+  const [label, setLabel] = useState("");
+  const [title, setTitle] = useState("");
+  const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
-  async function load() {
-    if (!lessonId) {
-      setState({ status: "error", message: "No lessonId provided in URL." });
-      return;
-    }
-
-    setState({ status: "loading" });
-
-    const { data, error } = await loadLessonManagement(lessonId);
-
-    if (error) {
-      setState({ status: "error", message: error });
-      return;
-    }
-
-    if (!data) {
-      setState({ status: "error", message: "No data returned" });
-      return;
-    }
-
-    setState({
-      status: "ready",
-      slides: data.slides,
-      groups: data.groups,
-      slideTypes: data.slideTypes,
-      lessonTitle: data.lesson.title,
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => {
+      const orderA = a.orderIndex ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.orderIndex ?? Number.MAX_SAFE_INTEGER;
+      return orderA - orderB;
     });
-  }
+  }, [groups]);
+
+  const nextOrderIndex = useMemo(() => {
+    return (
+      sortedGroups.reduce((max, g) => {
+        const value = g.orderIndex ?? 0;
+        return value > max ? value : max;
+      }, 0) + 1
+    );
+  }, [sortedGroups]);
+
+  const hasUnsavedChanges = useMemo(
+    () =>
+      Boolean(
+        label ||
+        title ||
+        orderIndex !== (nextOrderIndex || 0)
+      ),
+    [label, title, orderIndex, nextOrderIndex]
+  );
 
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonId]);
-
-  async function insertSlide({
-    lessonId: lid,
-    groupId,
-    type,
-  }: {
-    lessonId: string;
-    groupId: string | null;
-    type: string;
-  }) {
-    if (!lid) return;
-    if (state.status !== "ready") return;
-
-    const result = await manager.addSlide({
-      lessonId: lid,
-      groupId,
-      type,
-    });
-
-    if (!result.success) {
-      alert(result.error ?? "Failed to create slide");
+    if (!lessonId) {
+      setError("No lessonId provided in URL.");
+      setLoading(false);
       return;
     }
 
-    // Reload data after successful creation (navigation happens in hook)
-    await load();
-  }
+    async function load() {
+      setLoading(true);
+      setError(null);
 
-  async function addGroup() {
-    if (!lessonId) return;
-    if (state.status !== "ready") return;
+      const { data, error: loadError } = await loadGroupsByLesson(lessonId);
 
-    const result = await manager.addGroup();
-
-    if (!result.success) {
-      alert(result.error ?? "Failed to create group");
-      return;
-    }
-
-    // Reload data
-    await load();
-  }
-
-  async function renameGroup(groupId: string, currentTitle: string) {
-    const newTitle = window.prompt("Rename group:", currentTitle);
-    
-    if (newTitle === null) return; // User cancelled
-
-    const result = await manager.renameGroup(groupId, newTitle);
-
-    if (!result.success) {
-      alert(result.error ?? "Failed to rename group");
-      return;
-    }
-
-    // Reload data
-    await load();
-  }
-
-  function handleDeleteClick(slideId: string) {
-    if (busySlideId) return;
-    setDeleteSlideId(slideId);
-  }
-
-  async function handleDeleteConfirm() {
-    if (!deleteSlideId) return;
-
-    setBusySlideId(deleteSlideId);
-    try {
-      const result = await manager.deleteSlide(deleteSlideId);
-
-      if (!result.success) {
-        alert(result.error ?? "Failed to delete slide");
+      if (loadError) {
+        setError(loadError);
+        setLoading(false);
         return;
       }
 
-      // refresh the list
-      await load();
-      setDeleteSlideId(null);
-    } finally {
-      setBusySlideId(null);
-    }
-  }
-
-  function handleDeleteCancel() {
-    setDeleteSlideId(null);
-  }
-
-  const grouped = useMemo(() => {
-    if (state.status !== "ready") return null;
-
-    const groupOrder = new Map<string, number>();
-    state.groups.forEach((g, idx) => groupOrder.set(g.id, idx));
-
-    const byGroup = new Map<string, LessonManagementSlide[]>();
-    const ungrouped: LessonManagementSlide[] = [];
-
-    for (const s of state.slides) {
-      if (s.groupId) {
-        const arr = byGroup.get(s.groupId) ?? [];
-        arr.push(s);
-        byGroup.set(s.groupId, arr);
-      } else {
-        ungrouped.push(s);
-      }
+      setGroups(data ?? []);
+      setLoading(false);
     }
 
-    for (const [gid, arr] of byGroup.entries()) {
-      arr.sort((a, b) => {
-        const ao = a.orderIndex ?? 0;
-        const bo = b.orderIndex ?? 0;
-        if (ao !== bo) return ao - bo;
-        return a.id.localeCompare(b.id);
-      });
-      byGroup.set(gid, arr);
+    load();
+  }, [lessonId]);
+
+  useEffect(() => {
+    setOrderIndex(nextOrderIndex || 0);
+  }, [nextOrderIndex]);
+
+  const handleCreate = async (e: FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    setError(null);
+
+    if (!lessonId) {
+      setMessage("No lesson selected.");
+      return;
     }
 
-    ungrouped.sort((a, b) => {
-      const ao = a.orderIndex ?? 0;
-      const bo = b.orderIndex ?? 0;
-      if (ao !== bo) return ao - bo;
-      return a.id.localeCompare(b.id);
+    const parsedOrderIndex = Number(orderIndex);
+
+    const validation = createGroupSchema.safeParse({
+      lesson_id: lessonId,
+      label,
+      title: title || null,
+      order_index: parsedOrderIndex,
     });
 
-    const orderedGroups = state.groups.map((g) => ({
-      group: g,
-      slides: byGroup.get(g.id) ?? [],
-    }));
+    if (!validation.success) {
+      setMessage(validation.error.issues[0]?.message || "Validation error");
+      return;
+    }
 
-    const extraGroupIds = [...byGroup.keys()].filter((gid) => !groupOrder.has(gid));
-    extraGroupIds.sort();
+    setSaving(true);
+    const { error: insertError } = await createGroup({
+      lesson_id: lessonId,
+      label: validation.data.label,
+      title: validation.data.title ?? undefined,
+      order_index: validation.data.order_index,
+    });
+    setSaving(false);
 
-    const extraGroups = extraGroupIds.map((gid) => ({
-      group: { id: gid, title: "Unknown group", orderIndex: null, lessonId: null } as GroupMinimal,
-      slides: byGroup.get(gid) ?? [],
-    }));
+    if (insertError) {
+      setMessage(insertError);
+      return;
+    }
 
-    return { orderedGroups, extraGroups, ungrouped };
-  }, [state]);
+    setMessage("Group created!");
+    setLabel("");
+    setTitle("");
+    
+    // Reload groups to include new record
+    const { data: refreshed, error: refreshError } = await loadGroupsByLesson(lessonId);
+    if (refreshError) {
+      setError(refreshError);
+    } else {
+      setGroups(refreshed ?? []);
+    }
+  };
+
+  const handleSaveButtonClick = () => {
+    if (formRef.current) {
+      formRef.current.requestSubmit();
+    }
+  };
 
   return (
-    <>
-      <ConfirmDialog
-        open={deleteSlideId !== null}
-        title="Delete Slide"
-        description={
-          deleteSlideId ? (
-            <>
-              Are you sure you want to delete this slide?
-              <br />
-              <code className="codeText" style={{ fontSize: uiTokens.font.meta.size }}>
-                slide_id: {deleteSlideId}
-              </code>
-            </>
-          ) : null
-        }
-        danger={true}
-        requireText="DELETE SLIDE"
-        onConfirm={handleDeleteConfirm}
-        onCancel={handleDeleteCancel}
-      />
-      <CmsPageShell
-        title="Lesson Slides"
-        meta={
-          state.status === "ready" ? (
-            <>
-              {state.lessonTitle}
-              <br />
-              <span className="metaText">
-                Lesson id: <code className="codeText">{lessonId}</code>
-              </span>
-            </>
-          ) : undefined
-        }
-        actions={
-        <>
-          <Button size="sm" onClick={addGroup}>
-            + Add group
-          </Button>
-          {lessonId && (
-            <LinkButton
-              href={`${process.env.NEXT_PUBLIC_PLAYER_BASE_URL}/lecons/db/${lessonId}`}
-              variant="secondary"
-              size="sm"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open in Lesson Player
-            </LinkButton>
-          )}
-        </>
-      }
-    >
-      {state.status === "loading" && <p>Loading…</p>}
-      {state.status === "error" && <p style={{ color: uiTokens.color.danger }}>Error: {state.message}</p>}
+    <CmsPageShell title="Manage Lesson">
+      <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+        {/* Left column - outline view */}
+        <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #6aabab", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <CmsOutlineView currentLessonId={lessonId} />
+        </div>
+        
+        {/* Right column - content */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: uiTokens.space.md }}>
+          <CmsSection
+            title="Add group"
+            backgroundColor="#b5d5d5"
+            borderColor="#6aabab"
+            description="Create a group for this lesson."
+          >
+            <form ref={formRef} onSubmit={handleCreate}>
+              <FormField 
+                label="Label" 
+                required
+                infoTooltip="Internal name for this group used in the CMS and navigation. Not shown to learners."
+              >
+                <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+              </FormField>
 
-      {state.status === "ready" && grouped && (
-        <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
-          {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #deb4a5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
-            <CmsOutlineView currentLessonId={lessonId} />
-          </div>
-          
-          {/* Right column - content */}
-          <div style={{ flex: 1 }}>
-            {grouped.orderedGroups.map(({ group, slides }) => (
-            <CmsSection
-              key={group.id}
-              backgroundColor="#ecd7cf"
-              title={
-                <>
-                  {group.title}{" "}
-                  <span style={{ opacity: 0.6, fontWeight: 400, fontSize: uiTokens.font.meta.size }}>(group)</span>
-                </>
-              }
-              actions={
-                <>
-                  <Button variant="secondary" size="sm" onClick={() => renameGroup(group.id, group.title)}>
-                    Rename
-                  </Button>
-                  <Select
-                    onChange={(e) => {
-                      const slideType = e.target.value;
-                      if (slideType) {
-                        insertSlide({ lessonId: lessonId!, groupId: group.id, type: slideType });
-                        e.target.value = ""; // Reset dropdown
-                      }
-                    }}
-                    style={{ fontSize: uiTokens.font.meta.size, padding: "4px 8px" }}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>
-                      + Add slide
-                    </option>
-                    {state.slideTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </>
-              }
-            >
+              <FormField 
+                label="Title (optional - for student-facing content)" 
+                infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+              >
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </FormField>
 
-              {slides.length === 0 ? (
-                <div style={{ opacity: 0.6, fontSize: 13 }}>No slides in this group yet.</div>
-              ) : (
-                <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                  {slides.map((s) => {
-                    const title =
-                      s?.propsJson && typeof s.propsJson === "object"
-                        ? (s.propsJson as any).title
-                        : undefined;
+              <FormField label="Order index" required>
+                <Input
+                  type="number"
+                  value={orderIndex}
+                  onChange={(e) => setOrderIndex(Number(e.target.value))}
+                />
+              </FormField>
 
-                    const isBusy = busySlideId === s.id;
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: uiTokens.space.md }}>
+                <SaveChangesButton
+                  onClick={handleSaveButtonClick}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  saving={saving}
+                  label="Create group"
+                />
+              </div>
+            </form>
+            {message && (
+              <StatusMessage variant={message.toLowerCase().includes("error") ? "error" : "success"}>
+                {message}
+              </StatusMessage>
+            )}
+          </CmsSection>
 
-                    return (
-                      <li
-                        key={s.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          padding: "10px 0",
-                          borderBottom: "1px solid #eee",
-                          gap: 12,
-                        }}
-                      >
-                        <div style={{ minWidth: 0 }}>
-                          <strong>{s.type}</strong>
-                          {title && <div style={{ fontSize: 13, opacity: 0.7 }}>{title}</div>}
-                          <div style={{ fontSize: 12, opacity: 0.6 }}>
-                            <code>{s.id}</code>
-                          </div>
-                        </div>
+          <CmsSection
+            title="Groups"
+            backgroundColor="#b5d5d5"
+            borderColor="#6aabab"
+            description={lessonId ? `Showing groups for this lesson` : undefined}
+          >
+            {loading && <p>Loading groups…</p>}
+            {error && <p style={{ color: uiTokens.color.danger }}>{error}</p>}
 
-                        <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
-                          <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost" style={{ border: "none" }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#192026" style={{ width: 16, height: 16 }}>
+            {!loading && sortedGroups.length === 0 && <p>No groups yet.</p>}
+
+            {!loading && sortedGroups.length > 0 && (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ textAlign: "left", borderBottom: `1px solid ${uiTokens.color.border}` }}>
+                    <th style={{ padding: uiTokens.space.xs }}>Label</th>
+                    <th style={{ padding: uiTokens.space.xs }}>Title</th>
+                    <th style={{ padding: uiTokens.space.xs }}>Order</th>
+                    <th style={{ padding: uiTokens.space.xs }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedGroups.map((group) => (
+                    <tr key={group.id} style={{ borderBottom: `1px solid ${uiTokens.color.border}` }}>
+                      <td style={{ padding: uiTokens.space.xs }}>{getGroupDisplayName(group)}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>{group.title || "—"}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>{group.orderIndex ?? "—"}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>
+                        <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
+                          <LinkButton href={`/group-slides/${group.id}`} size="sm" style={{ color: "#b5d5d5", border: "1px solid #6aabab" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                            </svg>
+                          </LinkButton>
+                          <LinkButton href={`/edit-group/${group.id}`} size="sm" style={{ color: "#b5d5d5", border: "1px solid #6aabab" }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                             </svg>
                           </LinkButton>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => handleDeleteClick(s.id)}
-                            disabled={!!busySlideId}
-                            title={isBusy ? "Deleting…" : "Delete"}
-                            style={{ border: "none" }}
-                          >
-                            {isBusy ? (
-                              "Deleting…"
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#f8f0ed" style={{ width: 16, height: 16 }}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                              </svg>
-                            )}
-                          </Button>
                         </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CmsSection>
-          ))}
-
-          {grouped.extraGroups.length > 0 && (
-            <CmsSection title="Unknown groups" backgroundColor="#ecd7cf">
-              {grouped.extraGroups.map(({ group, slides }) => (
-                <div key={group.id} style={{ marginBottom: 14 }}>
-                  <div style={{ opacity: 0.7, fontSize: 13, marginBottom: 6 }}>
-                    group_id: <code>{group.id}</code>
-                  </div>
-                  <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                    {slides.map((s) => {
-                      const isBusy = busySlideId === s.id;
-                      return (
-                        <li
-                          key={s.id}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "10px 0",
-                            borderBottom: "1px solid #eee",
-                            gap: 12,
-                          }}
-                        >
-                          <div style={{ minWidth: 0 }}>
-                            <strong>{s.type}</strong>
-                            <div style={{ fontSize: 12, opacity: 0.6 }}>
-                              <code>{s.id}</code>
-                            </div>
-                          </div>
-
-                          <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
-                            <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
-                              Edit
-                            </LinkButton>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleDeleteClick(s.id)}
-                              disabled={!!busySlideId}
-                              title={isBusy ? "Deleting…" : "Delete"}
-                            >
-                              {isBusy ? (
-                                "Deleting…"
-                              ) : (
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M3 6h18" />
-                                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                </svg>
-                              )}
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </CmsSection>
-          )}
-
-          {grouped.ungrouped.length > 0 && (
-            <CmsSection title="Ungrouped slides" backgroundColor="#ecd7cf">
-              <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-                {grouped.ungrouped.map((s) => {
-                  const isBusy = busySlideId === s.id;
-                  return (
-                    <li
-                      key={s.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "10px 0",
-                        borderBottom: "1px solid #eee",
-                        gap: 12,
-                      }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <strong>{s.type}</strong>
-                        <div style={{ fontSize: 12, opacity: 0.6 }}>
-                          <code>{s.id}</code>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
-                        <LinkButton href={`/edit-slide/${s.id}`} size="sm" variant="ghost">
-                          Edit
-                        </LinkButton>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDeleteClick(s.id)}
-                          disabled={!!busySlideId}
-                          title={isBusy ? "Deleting…" : "Delete"}
-                        >
-                          {isBusy ? (
-                            "Deleting…"
-                          ) : (
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18" />
-                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                            </svg>
-                          )}
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </CmsSection>
-          )}
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CmsSection>
         </div>
-      )}
+      </div>
     </CmsPageShell>
-    </>
   );
 }

@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { aiSpeakRepeatSlideSchema } from "../../lib/realSlideSchema";
 import CmsPageShell from "../../components/cms/CmsPageShell";
 import CmsSection from "../../components/ui/CmsSection";
 import FormField from "../../components/ui/FormField";
@@ -16,6 +15,8 @@ import type { LessonMinimal } from "../../lib/domain/lesson";
 import { loadGroupsByLesson } from "../../lib/data/groups";
 import type { GroupMinimal } from "../../lib/domain/group";
 import { createSlide } from "../../lib/data/slides";
+import { getSelectableSlideTypesWithLabels } from "../../lib/slide-editor-registry/presets";
+import Link from "next/link";
 
 type CreatedSlide = {
   id: string;
@@ -37,11 +38,14 @@ function NewSlideForm() {
   const [lessonId, setLessonId] = useState(lessonIdParam || "");
   const [groupId, setGroupId] = useState(groupIdParam || "");
   const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [slideType, setSlideType] = useState<string>("");
 
   const [title, setTitle] = useState("Alphabet CMS test");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [createdSlide, setCreatedSlide] = useState<CreatedSlide | null>(null);
+
+  const selectableTypesWithLabels = getSelectableSlideTypesWithLabels();
 
   // Determine if fields are prefilled from query params
   const isLessonPrefilled = !!lessonIdParam;
@@ -115,47 +119,23 @@ function NewSlideForm() {
       return;
     }
 
+    if (!slideType) {
+      setMessage("Slide type is required.");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      // Minimal valid ai-speak-repeat props (same shape your slide schema expects)
-      const props = {
-        title: title.trim(),
-        subtitle: "Practice speaking with Raichel",
-        note: "Focus on rhythm and intonation.",
-        defaultLang: "en",
-        lines: [
-          [
-            { label: "Let's go", speech: { mode: "tts", lang: "en", text: "Let's go" } },
-            { label: "Come here", speech: { mode: "tts", lang: "en", text: "Come here" } },
-          ],
-          [{ label: "Sit down", speech: { mode: "tts", lang: "en", text: "Sit down" } }],
-        ],
-        gapClass: "gap-4",
-        hideTitle: false,
-        onCompleteAtIndex: 0,
-      };
-
-      // Validate before writing (professional safety)
-      const parsed = aiSpeakRepeatSlideSchema.safeParse({
-        id: "temp",
-        groupId,
-        type: "ai-speak-repeat",
-        props,
-        aidHook: null,
-      });
-
-      if (!parsed.success) {
-        console.error(parsed.error.format());
-        setMessage("Validation failed. Check console.");
-        return;
-      }
+      // Minimal valid props based on slide type
+      // For now, use empty props - the editor will handle proper initialization
+      const props = {};
 
       const { data, error } = await createSlide({
         lesson_id: lessonId,
         group_id: groupId,
         order_index: orderIndex,
-        type: "ai-speak-repeat",
+        type: slideType,
         props_json: props,
         aid_hook: null,
       });
@@ -255,7 +235,44 @@ function NewSlideForm() {
             />
           </FormField>
 
-          <FormField label="Slide title (ai-speak-repeat)" required>
+          <FormField label="Slide type" required>
+            {selectableTypesWithLabels.length === 0 ? (
+              <div style={{ 
+                padding: uiTokens.space.md, 
+                backgroundColor: uiTokens.color.bgAlt,
+                borderRadius: uiTokens.radius.md,
+                border: `1px solid ${uiTokens.color.border}`,
+                textAlign: "center",
+              }}>
+                <p style={{ margin: 0, marginBottom: uiTokens.space.sm }}>
+                  No slide types available. Create a slide type first.
+                </p>
+                <Link 
+                  href="/cms/slide-types" 
+                  style={{ 
+                    color: uiTokens.color.primary,
+                    textDecoration: "underline",
+                  }}
+                >
+                  Go to Slide Types
+                </Link>
+              </div>
+            ) : (
+              <Select
+                value={slideType}
+                onChange={(e) => setSlideType(e.target.value)}
+              >
+                <option value="">Select a slide type…</option>
+                {selectableTypesWithLabels.map(({ key, label }) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+
+          <FormField label="Slide title" required>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </FormField>
 

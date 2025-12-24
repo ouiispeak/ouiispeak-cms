@@ -15,6 +15,7 @@ import {
 } from "../../../../../lib/slide-editor-registry/presets";
 import { getSlideEditorDefinition } from "../../../../../lib/slide-editor-registry";
 import DefaultSlideEditor from "../../../../../components/slide-editors/DefaultSlideEditor";
+import { SchemaDebugPanel } from "../../../../../components/debug/SchemaDebugPanel";
 import type { Slide } from "../../../../../lib/domain/slide";
 import {
   resolveSlideTypeVisibility,
@@ -57,7 +58,7 @@ const FIELD_GROUPS = [
   {
     id: "layer1-identity",
     title: "Identity & structure",
-    keys: ["slideId", "slideType", "groupId", "orderIndex"],
+    keys: ["slideId", "slideType", "groupId", "orderIndex", "label"],
   },
   {
     id: "layer1-core",
@@ -581,17 +582,24 @@ export default function EditSlideTypePresetPage() {
         backgroundColor={livePreviewSection.backgroundColor}
         borderColor={livePreviewSection.borderColor}
       >
-        <DefaultSlideEditor
-          row={{ ...previewSlide, propsJson: previewProps }}
-          orderIndex={1}
-          groupId={null}
-          slideType={slideType}
-          schema={previewSchema}
-          onSaveSuccess={() => {}}
-          saveSlide={async () => ({ success: true })}
-          onUnsavedChangesChange={() => {}}
-          onSavingChange={() => {}}
-        />
+        <>
+          <DefaultSlideEditor
+            row={{ ...previewSlide, propsJson: previewProps }}
+            orderIndex={1}
+            groupId={null}
+            slideType={slideType}
+            schema={previewSchema}
+            onSaveSuccess={() => {}}
+            saveSlide={async () => ({ success: true })}
+            onUnsavedChangesChange={() => {}}
+            onSavingChange={() => {}}
+          />
+          <SchemaDebugPanel
+            typeKey={slideType}
+            schemaSource="visibleSchema"
+            actualSchema={previewSchema}
+          />
+        </>
       </CmsSection>
     </CmsPageShell>
   );

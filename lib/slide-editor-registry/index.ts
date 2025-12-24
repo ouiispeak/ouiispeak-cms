@@ -130,15 +130,24 @@ export function getSlideEditorDefinition(type?: string | null): SlideEditorDefin
 
   const normalizedType = type.trim();
 
-  if (normalizedType === "text-slide" || normalizedType === "text") {
+  // Check registry first (includes "text-slide" which has its own definition)
+  if (slideEditorRegistry[normalizedType]) {
+    return slideEditorRegistry[normalizedType];
+  }
+
+  // Check aliases (but NOT "text-slide" - that's already handled above)
+  if (slideEditorAliases[normalizedType]) {
+    return slideEditorAliases[normalizedType];
+  }
+
+  // Special case: "text" maps to default, but "text-slide" should use its own definition
+  // (handled above by registry check)
+  if (normalizedType === "text") {
     return defaultSlideEditorDefinition;
   }
 
-  return (
-    slideEditorRegistry[normalizedType] ??
-    slideEditorAliases[normalizedType] ??
-    rawJsonEditorDefinition
-  );
+  // Fallback to raw JSON editor for unknown types
+  return rawJsonEditorDefinition;
 }
 
 export function listSlideEditorDefinitions(): SlideEditorDefinition[] {

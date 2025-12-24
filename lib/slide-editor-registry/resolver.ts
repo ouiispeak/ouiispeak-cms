@@ -28,6 +28,11 @@ const CURRENT_VERSION = 1;
  * - For default: effectiveHidden = defaultHidden
  * - effectiveVisible = allFields - effectiveHidden
  *
+ * IMPORTANT:
+ * Hiding a field only affects the editor UI.
+ * Slide data is never deleted automatically.
+ * See ADR-001 for schema evolution rules.
+ *
  * @param typeKey - The slide type key (e.g., "default", "ai-speak-repeat")
  * @param allFields - All available fields from the registry
  * @param presets - The preset configuration

@@ -15,6 +15,7 @@ import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton"
 import { useSlideEditor } from "../../../lib/hooks/useSlideEditor";
 import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
 import { getSlideEditorDefinition, getVisibleSchemaForType } from "../../../lib/slide-editor-registry";
+import { SchemaDebugPanel } from "../../../components/debug/SchemaDebugPanel";
 
 export default function EditSlidePage() {
   const params = useParams<{ slideId: string }>();
@@ -87,7 +88,7 @@ export default function EditSlidePage() {
       {loadState.status === "ready" && (
         <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
           {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #f2e1db", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #b4d5d5", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
             <CmsOutlineView currentSlideId={slideId} hasUnsavedChanges={hasUnsavedChanges} />
           </div>
           
@@ -109,10 +110,10 @@ export default function EditSlidePage() {
             </div>
             <BreadcrumbTrail slideId={slideId} />
             {/* Slide type input */}
-            <CmsSection title="Slide Type" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+            <CmsSection title="Slide Type" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
             <FormField 
               label="Slide UUID" 
-              borderColor="#f2e1db"
+              borderColor="#b4d5d5"
               infoTooltip="Unique identifier for this slide. Used internally by the system for saving progress, notes, scoring, and debugging. Not shown to students."
             >
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -151,7 +152,7 @@ export default function EditSlidePage() {
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
-                    color: "#d7a592",
+                    color: "#b4d5d5",
                     opacity: 0.7,
                     transition: "opacity 0.2s",
                   }}
@@ -168,7 +169,7 @@ export default function EditSlidePage() {
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
-                    stroke="#d7a592"
+                    stroke="#b4d5d5"
                     style={{
                       width: 16,
                       height: 16,
@@ -187,7 +188,7 @@ export default function EditSlidePage() {
             <FormField 
               label="Slide type" 
               required 
-              borderColor="#f2e1db"
+              borderColor="#b4d5d5"
               infoTooltip="Determines which slide component/template is used. Controls what fields, behaviors, and interactions this slide supports (e.g. text, AI speak, quiz, choice). This field can only be changed from the manage group page."
             >
               <Input
@@ -201,10 +202,10 @@ export default function EditSlidePage() {
           </CmsSection>
 
           {/* Order and Group controls */}
-          <CmsSection title="Placement" backgroundColor="#f8f0ed" borderColor="#f2e1db">
+          <CmsSection title="Placement" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
             <FormField 
               label="Group" 
-              borderColor="#f2e1db"
+              borderColor="#b4d5d5"
               infoTooltip="The group this slide belongs to. Groups define the pedagogical phase (intro, practice, test, wrap-up) and scoring logic."
             >
               <Select
@@ -221,7 +222,7 @@ export default function EditSlidePage() {
             </FormField>
             <FormField 
               label="Group UUID" 
-              borderColor="#f2e1db"
+              borderColor="#b4d5d5"
               infoTooltip="Unique identifier for the group this slide belongs to. Used internally by the system."
             >
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -238,7 +239,7 @@ export default function EditSlidePage() {
                     cursor: "pointer",
                     display: "inline-flex",
                     alignItems: "center",
-                    color: "#d7a592",
+                    color: "#b4d5d5",
                     opacity: 0.7,
                     transition: "opacity 0.2s",
                   }}
@@ -255,7 +256,7 @@ export default function EditSlidePage() {
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
-                    stroke="#d7a592"
+                    stroke="#b4d5d5"
                     style={{
                       width: 16,
                       height: 16,
@@ -273,7 +274,7 @@ export default function EditSlidePage() {
             <FormField 
               label="Order index" 
               required 
-              borderColor="#f2e1db"
+              borderColor="#b4d5d5"
               infoTooltip="The position of this slide within its group. Lower numbers appear first. Used to build the slide sequence."
             >
               <Input
@@ -288,20 +289,32 @@ export default function EditSlidePage() {
           {(() => {
             const editorDefinition = getSlideEditorDefinition(loadState.row.type);
             const EditorComponent = editorDefinition.editorComponent;
+            // Always use visible schema from resolver - it respects visibility presets
             const visibleSchema = getVisibleSchemaForType(loadState.row.type);
             const editorProps = {
               row: loadState.row,
               orderIndex,
               groupId: selectedGroupId || null,
               slideType,
-              schema: visibleSchema.fields.length > 0 ? visibleSchema : editorDefinition.schema,
+              // Always use visibleSchema - it's computed from resolveSlideTypeVisibility()
+              // and respects default hidden fields inheritance
+              schema: visibleSchema,
               onSaveSuccess: reloadSlide,
               saveSlide: saveSlideWithIndicator,
               onUnsavedChangesChange: setEditorHasUnsavedChanges,
               onSavingChange: setEditorSaving,
             };
 
-            return <EditorComponent {...editorProps} />;
+            return (
+              <>
+                <EditorComponent {...editorProps} />
+                <SchemaDebugPanel
+                  typeKey={loadState.row.type}
+                  schemaSource="visibleSchema"
+                  actualSchema={visibleSchema}
+                />
+              </>
+            );
           })()}
           </div>
         </div>

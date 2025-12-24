@@ -20,16 +20,28 @@ export default function AiSpeakRepeatEditor({
   orderIndex,
   groupId,
   slideType,
+  schema,
   onSaveSuccess,
   saveSlide,
   onUnsavedChangesChange,
+  onSavingChange,
 }: SlideEditorProps) {
+  // Respect visibility presets: only render fields that are in the schema
+  const visibleFieldKeys = new Set(schema.fields.map((f) => f.key));
+  const shouldShowLabel = visibleFieldKeys.has("label");
+  const shouldShowTitle = visibleFieldKeys.has("title");
+  const shouldShowSubtitle = visibleFieldKeys.has("subtitle");
+  const shouldShowNote = visibleFieldKeys.has("note");
+  const shouldShowDefaultLang = visibleFieldKeys.has("defaultLang");
+  const shouldShowPhrases = visibleFieldKeys.has("phrases");
   const [innerState, setInnerState] = useState<
     | { status: "loading" }
     | { status: "error"; message: string }
     | { status: "ready"; slide: RealAiSpeakRepeatSlide }
   >({ status: "loading" });
 
+  const props = (row.propsJson as any) || {};
+  const [label, setLabel] = useState(props.label || "");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [note, setNote] = useState("");
@@ -53,6 +65,7 @@ export default function AiSpeakRepeatEditor({
   });
 
   const initialDataRef = useRef<{
+    label: string;
     title: string;
     subtitle: string;
     note: string;
@@ -92,7 +105,9 @@ export default function AiSpeakRepeatEditor({
     }
 
     const slide = result.data;
+    const props = (row.propsJson as any) || {};
 
+    setLabel(props.label ?? "");
     setTitle(slide.props.title);
     setSubtitle(slide.props.subtitle ?? "");
     setNote(slide.props.note ?? "");
@@ -107,6 +122,7 @@ export default function AiSpeakRepeatEditor({
     
     // Store initial values for comparison
     initialDataRef.current = {
+      label: props.label ?? "",
       title: slide.props.title,
       subtitle: slide.props.subtitle ?? "",
       note: slide.props.note ?? "",
@@ -138,6 +154,7 @@ export default function AiSpeakRepeatEditor({
     if (!initialDataRef.current || innerState.status !== "ready") return false;
     const initial = initialDataRef.current;
     return (
+      label !== initial.label ||
       title !== initial.title ||
       subtitle !== initial.subtitle ||
       note !== initial.note ||
@@ -158,7 +175,7 @@ export default function AiSpeakRepeatEditor({
       metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
       metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
     );
-  }, [title, subtitle, note, defaultLang, phrasesText, metadata, innerState.status]);
+  }, [label, title, subtitle, note, defaultLang, phrasesText, metadata, innerState.status]);
   
   // Notify parent of unsaved changes
   useEffect(() => {
@@ -178,6 +195,15 @@ export default function AiSpeakRepeatEditor({
     onSavingChange?.(true);
 
     try {
+      // Validate required fields (label is required for new slides)
+      const isNewSlide = !row.id;
+      if (isNewSlide && !label.trim()) {
+        setSaveMessage("Slide label is required for CMS navigation.");
+        setSaving(false);
+        onSavingChange?.(false);
+        return;
+      }
+
       // Turn textarea back into lines[][]
       const phraseList = phrasesText
         .split("\n")
@@ -197,6 +223,7 @@ export default function AiSpeakRepeatEditor({
 
       const newProps = {
         ...existingSlide.props,
+        label: label.trim() || undefined,
         title,
         subtitle: subtitle || undefined,
         note: note || undefined,
@@ -274,6 +301,7 @@ export default function AiSpeakRepeatEditor({
       
       // Update initial data ref after successful save
       initialDataRef.current = {
+        label,
         title,
         subtitle,
         note,
@@ -322,57 +350,98 @@ export default function AiSpeakRepeatEditor({
         }
       >
         <form onSubmit={handleSave}>
-          <FormField 
-            label="Slide title" 
-            required 
-            borderColor="#f2e1db"
-            infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
-          >
-            <Input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </FormField>
+          {shouldShowLabel && (
+            <FormField 
+              label="Label" 
+              required
+              borderColor="#f2e1db"
+              infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners."
+            >
+              <Input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                required
+              />
+            </FormField>
+          )}
 
-          <FormField 
-            label="Subtitle" 
-            borderColor="#f2e1db"
-            infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
-          >
-            <Input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-            />
-          </FormField>
+          {shouldShowTitle && (
+            <FormField 
+              label="Slide title" 
+              required 
+              borderColor="#f2e1db"
+              infoTooltip="Main heading shown to the student. Should clearly state what the learner is about to do or focus on."
+            >
+              <Input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </FormField>
+          )}
 
-          <FormField label="Note" borderColor="#f2e1db">
-            <Input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </FormField>
+          {shouldShowSubtitle && (
+            <FormField 
+              label="Subtitle" 
+              borderColor="#f2e1db"
+              infoTooltip="Supporting or clarifying text shown under the title. Used for instructions, context, or tone. Leave empty if unnecessary."
+            >
+              <Input
+                type="text"
+                value={subtitle}
+                onChange={(e) => setSubtitle(e.target.value)}
+              />
+            </FormField>
+          )}
 
-          <FormField label="Default language" required borderColor="#f2e1db">
-            <Input
-              type="text"
-              value={defaultLang}
-              onChange={(e) => setDefaultLang(e.target.value)}
-            />
-          </FormField>
+          {shouldShowNote && (
+            <FormField label="Note" borderColor="#f2e1db">
+              <Input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </FormField>
+          )}
 
-          <FormField label="Phrases (one per line)" required borderColor="#f2e1db">
-            <Textarea
-              value={phrasesText}
-              onChange={(e) => setPhrasesText(e.target.value)}
-              rows={6}
-              style={{ fontFamily: "monospace" }}
-            />
-          </FormField>
+          {shouldShowDefaultLang && (
+            <FormField label="Default language" required borderColor="#f2e1db">
+              <Input
+                type="text"
+                value={defaultLang}
+                onChange={(e) => setDefaultLang(e.target.value)}
+              />
+            </FormField>
+          )}
+
+          {shouldShowPhrases && (
+            <FormField label="Phrases (one per line)" required borderColor="#f2e1db">
+              <Textarea
+                value={phrasesText}
+                onChange={(e) => setPhrasesText(e.target.value)}
+                rows={6}
+                style={{ fontFamily: "monospace" }}
+              />
+            </FormField>
+          )}
 
         </form>
+
+        {row.id && !label.trim() && (
+          <div
+            style={{
+              padding: uiTokens.space.md,
+              backgroundColor: "#fff3cd",
+              border: `1px solid #ffc107`,
+              borderRadius: uiTokens.radius.md,
+              color: "#856404",
+              marginTop: uiTokens.space.md,
+            }}
+          >
+            <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
+          </div>
+        )}
 
         {saveMessage && (
           <p
@@ -390,6 +459,7 @@ export default function AiSpeakRepeatEditor({
         row={row}
         slideType={slideType}
         onMetadataChange={setMetadata}
+        visibleFieldKeys={visibleFieldKeys}
       />
 
       <CmsSection

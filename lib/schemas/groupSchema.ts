@@ -17,7 +17,8 @@ export const PassingScoreType = z.enum(["percent", "raw", "none"]);
  */
 export const createGroupSchema = z.object({
   lesson_id: z.string().min(1, "Lesson is required."),
-  title: z.string().trim().min(1, "Title is required."),
+  label: z.string().trim().min(1, "Label is required for CMS navigation."),
+  title: z.string().trim().nullable().optional(),
   order_index: z.number().int().positive(),
   group_code: z.string().trim().nullable().optional(),
   short_summary: z.string().trim().nullable().optional(),
@@ -74,7 +75,8 @@ export const updateGroupSchema = createGroupSchema.partial();
  */
 export const groupInputSchema = z.object({
   lesson_id: z.string(),
-  title: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  title: z.string().trim().nullable(),
   order_index: z.number().int().nullable(),
   group_code: z.string().trim().nullable(),
   short_summary: z.string().trim().nullable(),

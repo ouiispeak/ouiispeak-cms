@@ -8,7 +8,8 @@ import { z } from "zod";
 export const createLessonSchema = z.object({
   module_id: z.string().min(1, "Module is required."),
   slug: z.string().trim().min(1, "Slug is required."),
-  title: z.string().trim().min(1, "Title is required."),
+  label: z.string().trim().min(1, "Label is required for CMS navigation."),
+  title: z.string().trim().nullable().optional(),
   order_index: z.number().int().positive(),
   estimated_minutes: z.number().int().positive().nullable().optional(),
   required_score: z.number().nullable().optional(),
@@ -53,7 +54,8 @@ export const updateLessonSchema = createLessonSchema.partial();
 export const lessonInputSchema = z.object({
   module_id: z.string(),
   slug: z.string().trim(),
-  title: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  title: z.string().trim().nullable(),
   order_index: z.number().int().nullable(),
   estimated_minutes: z.number().int().nullable(),
   required_score: z.number().nullable(),

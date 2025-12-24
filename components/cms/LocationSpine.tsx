@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCmsContextBarData } from "./useCmsContextBarData";
 import { uiTokens } from "../../lib/uiTokens";
+import { getModuleDisplayName, getLessonDisplayName, getGroupDisplayName, getSlideDisplayName } from "../../lib/utils/displayName";
 
 interface LocationSpineProps {
   moduleId?: string;
@@ -154,7 +155,7 @@ export default function LocationSpine({
       isCurrent: false,
     });
     trail.push({
-      label: ancestors.module.title,
+      label: getModuleDisplayName(ancestors.module),
       href: isManageLessons ? `/module-lessons/${ancestors.module.id}` : `/edit-module/${ancestors.module.id}`,
       isCurrent: true,
     });
@@ -172,7 +173,7 @@ export default function LocationSpine({
       isCurrent: false,
     });
     trail.push({
-      label: ancestors.ancestors.lesson.title,
+      label: getLessonDisplayName(ancestors.ancestors.lesson),
       href: `/lesson-slides/${ancestors.ancestors.lesson.id}`,
       isCurrent: true,
     });
@@ -191,7 +192,7 @@ export default function LocationSpine({
       isCurrent: false,
     });
     trail.push({
-      label: ancestors.ancestors.group.title,
+      label: getGroupDisplayName(ancestors.ancestors.group),
       href: isManageSlides ? `/group-slides/${ancestors.ancestors.group.id}` : `/edit-group/${ancestors.ancestors.group.id}`,
       isCurrent: true,
     });
@@ -199,9 +200,7 @@ export default function LocationSpine({
     // Level / Edit Slide / Slide Type / Slide Title
     const level = ancestors.ancestors.module.level?.toUpperCase() || "Unknown";
     const slide = ancestors.ancestors.slide;
-    const slideTitle = slide?.propsJson && typeof slide.propsJson === "object"
-      ? (slide.propsJson as any).title
-      : undefined;
+    const slideTitle = slide ? getSlideDisplayName(slide) : undefined;
     
     trail.push({
       label: level,
@@ -296,7 +295,7 @@ export default function LocationSpine({
                 textDecoration: "none",
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.color = "#a95f43";
+                e.currentTarget.style.color = "#398f8f";
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.color = uiTokens.color.textMuted;

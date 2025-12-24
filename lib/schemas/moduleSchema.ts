@@ -15,7 +15,8 @@ export const ModuleVisibility = z.enum(["private", "beta", "public"]);
  * Matches the current form fields and validation rules
  */
 export const createModuleSchema = z.object({
-  title: z.string().trim().min(1, "Title is required."),
+  label: z.string().trim().min(1, "Label is required for CMS navigation."),
+  title: z.string().trim().nullable().optional(),
   slug: z.string().trim().min(1, "Slug is required."),
   level: z.string().trim().min(1, "Level is required."),
   order_index: z.number().int().positive(),
@@ -38,7 +39,8 @@ export const updateModuleSchema = createModuleSchema.partial();
  * Converts empty strings to null for optional fields
  */
 export const moduleInputSchema = z.object({
-  title: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  title: z.string().trim().nullable(),
   slug: z.string().trim().min(1),
   level: z.string().trim().nullable(),
   order_index: z.number().int().nullable(),

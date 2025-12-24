@@ -18,6 +18,7 @@ function NewModuleForm() {
   const searchParams = useSearchParams();
   const levelParam = searchParams?.get("level");
   
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [level, setLevel] = useState(levelParam || "A1");
@@ -46,7 +47,8 @@ function NewModuleForm() {
     
     // Validate using schema
     const result = createModuleSchema.safeParse({
-      title,
+      label,
+      title: title || null,
       slug: finalSlug,
       level,
       order_index: orderIndex,
@@ -62,7 +64,8 @@ function NewModuleForm() {
     setSaving(true);
     try {
       const { data, error } = await createModule({
-        title: result.data.title,
+        label: result.data.label,
+        title: result.data.title ?? undefined,
         slug: result.data.slug,
         level: result.data.level,
         order_index: result.data.order_index,
@@ -75,6 +78,7 @@ function NewModuleForm() {
       }
 
       setMessage("Module created!");
+      setLabel("");
       setTitle("");
       setSlug("");
       setDescription("");
@@ -89,7 +93,18 @@ function NewModuleForm() {
     <CmsPageShell title="Create module" maxWidth="md">
       <CmsSection>
         <form onSubmit={handleCreate}>
-          <FormField label="Title" required>
+          <FormField 
+            label="Label" 
+            required
+            infoTooltip="Internal name for this module used in the CMS and navigation. Not shown to learners."
+          >
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+          </FormField>
+
+          <FormField 
+            label="Title (optional - for student-facing content)" 
+            infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+          >
             <Input value={title} onChange={(e) => autoSlugFromTitle(e.target.value)} />
           </FormField>
 

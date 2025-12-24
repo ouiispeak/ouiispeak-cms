@@ -21,7 +21,7 @@ type CreatedGroup = {
   id: string;
   lesson_id: string;
   order_index: number;
-  title: string;
+  title: string | null;
 };
 
 function NewGroupForm() {
@@ -33,6 +33,7 @@ function NewGroupForm() {
 
   const [lessonId, setLessonId] = useState(lessonIdParam || "");
   const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
 
   // New fields
@@ -88,7 +89,8 @@ function NewGroupForm() {
     // Validate using schema
     const result = createGroupSchema.safeParse({
       lesson_id: lessonId,
-      title,
+      label: label.trim(),
+      title: title || null,
       order_index: orderIndex,
       group_code: groupCode || null,
       short_summary: shortSummary || null,
@@ -118,7 +120,8 @@ function NewGroupForm() {
       const { data, error } = await createGroup({
         lesson_id: result.data.lesson_id,
         order_index: result.data.order_index,
-        title: result.data.title,
+        label: result.data.label,
+        title: result.data.title ?? undefined,
         group_code: result.data.group_code,
         short_summary: result.data.short_summary,
         group_type: result.data.group_type,
@@ -150,7 +153,7 @@ function NewGroupForm() {
         id: data.id,
         lesson_id: data.lessonId ?? "",
         order_index: data.orderIndex ?? 1,
-        title: data.title,
+        title: data.title ?? null,
       });
       setMessage("Group created successfully.");
     } finally {
@@ -199,7 +202,18 @@ function NewGroupForm() {
             />
           </FormField>
 
-          <FormField label="Group title" required>
+          <FormField 
+            label="Label" 
+            required
+            infoTooltip="Internal name for this group used in the CMS and navigation. Not shown to learners."
+          >
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+          </FormField>
+
+          <FormField 
+            label="Title (optional - for student-facing content)" 
+            infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+          >
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </FormField>
 

@@ -13,7 +13,7 @@ export default function LevelAspectsPage() {
     <CmsPageShell>
       <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
         {/* Left column - outline view */}
-          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #d09680", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #398f8f", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
           <CmsOutlineView currentLevel={level} />
         </div>
         

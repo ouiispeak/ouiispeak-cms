@@ -1,8 +1,9 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { supabase } from "../supabase";
 import { loadModules } from "./modules";
 import { loadLessonsByModule } from "./lessons";
 import { loadGroupsByLesson } from "./groups";
-import { toLessonMinimal } from "../mappers/lessonMapper";
+import { toLesson } from "../mappers/lessonMapper";
 import { toSlideMinimal } from "../mappers/slideMapper";
 import type { Module } from "../domain/module";
 import type { LessonForHierarchy, SlideForHierarchy } from "./buildHierarchy";
@@ -33,6 +34,7 @@ export type DashboardData = {
  * Returns domain types (camelCase)
  */
 export async function loadDashboardData(): Promise<DashboardResult<DashboardData>> {
+  noStore();
   try {
     // Load all modules
     const modulesResult = await loadModules();
@@ -52,12 +54,12 @@ export async function loadDashboardData(): Promise<DashboardResult<DashboardData
       const result = lessonResults[i];
       if (result.data) {
         for (const lessonData of result.data as LessonData[]) {
+          const lesson = toLesson(lessonData);
           lessons.push({
-            ...toLessonMinimal({
-              id: lessonData.id,
-              slug: lessonData.slug,
-              title: lessonData.title,
-            }),
+            id: lesson.id,
+            slug: lesson.slug,
+            label: lesson.label,
+            title: lesson.title,
             moduleId: modules[i].id,
             orderIndex: lessonData.order_index,
           });

@@ -21,7 +21,8 @@ type CreatedLesson = {
   id: string;
   module_id: string;
   slug: string;
-  title: string;
+  label: string | null;
+  title: string | null;
   order_index: number;
 };
 
@@ -34,6 +35,7 @@ function NewLessonForm() {
 
   const [moduleId, setModuleId] = useState(moduleIdParam || "");
   const [lessonSlugPart, setLessonSlugPart] = useState(""); // e.g. "lesson-1"
+  const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
@@ -85,7 +87,8 @@ function NewLessonForm() {
     const result = createLessonSchema.safeParse({
       module_id: moduleId,
       slug: fullSlug,
-      title,
+      label: label.trim(),
+      title: title || null,
       order_index: orderIndex,
       estimated_minutes: estimatedMinutes || null,
       required_score: null,
@@ -119,7 +122,8 @@ function NewLessonForm() {
       const { data, error } = await createLesson({
         module_id: result.data.module_id,
         slug: result.data.slug,
-        title: result.data.title,
+        label: result.data.label,
+        title: result.data.title ?? undefined,
         order_index: result.data.order_index,
         estimated_minutes: result.data.estimated_minutes,
         required_score: result.data.required_score,
@@ -158,7 +162,8 @@ function NewLessonForm() {
         id: data.id,
         module_id: moduleId,
         slug: data.slug ?? "",
-        title: data.title,
+        label: data.label ?? null,
+        title: data.title ?? null,
         order_index: orderIndex,
       });
       setMessage("Lesson created successfully.");
@@ -209,7 +214,18 @@ function NewLessonForm() {
             />
           </FormField>
 
-          <FormField label="Lesson title" required>
+          <FormField 
+            label="Label" 
+            required
+            infoTooltip="Internal name for this lesson used in the CMS and navigation. Not shown to learners."
+          >
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} required />
+          </FormField>
+
+          <FormField 
+            label="Title (optional - for student-facing content)" 
+            infoTooltip="Student-facing title. Only shown to learners if provided. Leave empty if not needed."
+          >
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </FormField>
 
