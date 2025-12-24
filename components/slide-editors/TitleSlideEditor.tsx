@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, FormEvent, useEffect, useRef, useMemo } from "react";
-import { Button } from "../Button";
 import CmsSection from "../ui/CmsSection";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
@@ -151,11 +150,6 @@ export default function TitleSlideEditor({
   }, [hasUnsavedChanges, onUnsavedChangesChange]);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
-  const [rawJsonText, setRawJsonText] = useState(() => JSON.stringify(row.propsJson ?? {}, null, 2));
-  const [rawJsonParseError, setRawJsonParseError] = useState<string | null>(null);
-  const [rawJsonSaving, setRawJsonSaving] = useState(false);
-  const [rawJsonSaveMessage, setRawJsonSaveMessage] = useState<string | null>(null);
 
   const renderFieldInput = (field: EditorField) => {
     const val = (values as any)[field.key] ?? "";
@@ -340,139 +334,6 @@ export default function TitleSlideEditor({
         onMetadataChange={setMetadata}
         visibleFieldKeys={schemaFieldKeys}
       />
-
-      <CmsSection backgroundColor="#e6f1f1" borderColor="#b4d5d5">
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          onClick={() => setRawJsonExpanded(!rawJsonExpanded)}
-          style={{
-            marginBottom: rawJsonExpanded ? 16 : 0,
-          }}
-        >
-          {rawJsonExpanded ? "▼" : "▶"} Raw props_json (advanced)
-        </Button>
-
-        {rawJsonExpanded && (
-          <div>
-            <textarea
-              value={rawJsonText}
-              onChange={(e) => {
-                setRawJsonText(e.target.value);
-                setRawJsonParseError(null);
-              }}
-              rows={15}
-              style={{
-                width: "100%",
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                fontFamily: "monospace",
-                fontSize: 13,
-              }}
-            />
-            {rawJsonParseError && (
-              <p style={{ color: "red", marginTop: 8, fontSize: 13 }}>
-                {rawJsonParseError}
-              </p>
-            )}
-            <div style={{ marginTop: uiTokens.space.xs, display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                type="button"
-                onClick={async () => {
-                  setRawJsonParseError(null);
-                  setRawJsonSaveMessage(null);
-                  setRawJsonSaving(true);
-                  onSavingChange?.(true);
-
-                  try {
-                    let parsedJson: unknown;
-                    try {
-                      parsedJson = JSON.parse(rawJsonText);
-                    } catch (parseErr) {
-                      setRawJsonParseError("Invalid JSON: " + (parseErr instanceof Error ? parseErr.message : String(parseErr)));
-                      return;
-                    }
-
-                    const trimmedType = slideType.trim();
-
-                    // Build meta_json from current metadata state
-                    const metaJson: any = {};
-                    if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
-                    if (metadata.activityName) metaJson.activityName = metadata.activityName;
-                    if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
-                      metaJson.requires = {};
-                      if (metadata.requiresExternalTTS) {
-                        metaJson.requires.externalTTS = true;
-                      }
-                    }
-                    if (metadata.buttons.length > 0) {
-                      metaJson.buttons = metadata.buttons;
-                    }
-                    if (metadata.tags.length > 0) {
-                      metaJson.tags = metadata.tags;
-                    }
-                    if (metadata.difficultyHint) {
-                      metaJson.difficultyHint = metadata.difficultyHint;
-                    }
-                    if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
-                      metaJson.reviewWeight = metadata.reviewWeight;
-                    }
-                    if (metadata.showScoreToLearner) {
-                      metaJson.showScoreToLearner = true;
-                    }
-
-                    const result = await saveSlide({
-                      props_json: parsedJson,
-                      type: trimmedType,
-                      code: metadata.code || null,
-                      meta_json: Object.keys(metaJson).length > 0 ? metaJson : {},
-                      is_activity: metadata.isActivity,
-                      score_type: metadata.scoreType || "none",
-                      passing_score_value: metadata.passingScoreValue,
-                      max_score_value: metadata.maxScoreValue,
-                      pass_required_for_next: metadata.passRequiredForNext,
-                    });
-
-                    if (!result.success) {
-                      setRawJsonSaveMessage("Update error: " + (result.error || "Unknown error"));
-                      return;
-                    }
-
-                    setRawJsonSaveMessage("Saved successfully!");
-                    // Update the textarea to reflect the saved value (in case it was normalized)
-                    setRawJsonText(JSON.stringify(parsedJson, null, 2));
-                  } finally {
-                    setRawJsonSaving(false);
-                    onSavingChange?.(false);
-                  }
-                }}
-                disabled={rawJsonSaving}
-              >
-                {rawJsonSaving ? "Saving…" : "Save JSON"}
-              </Button>
-            </div>
-            {rawJsonSaveMessage && (
-              <p
-                style={{
-                  marginTop: uiTokens.space.xs,
-                  color: rawJsonSaveMessage.includes("error") ? uiTokens.color.danger : "green",
-                  fontSize: uiTokens.font.meta.size,
-                }}
-              >
-                {rawJsonSaveMessage}
-              </p>
-            )}
-          </div>
-        )}
-      </CmsSection>
-
-      <CmsSection title="Raw DB row (debug)" backgroundColor="#e6f1f1" borderColor="#b4d5d5">
-        <pre className="codeText" style={{ fontSize: uiTokens.font.code.size }}>
-          {JSON.stringify(row, null, 2)}
-        </pre>
-      </CmsSection>
     </>
   );
 }

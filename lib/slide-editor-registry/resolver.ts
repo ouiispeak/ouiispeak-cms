@@ -153,18 +153,6 @@ export function resolveSlideTypeVisibility(
         typeHiddenKeys.add(key);
       }
     });
-    
-    // DIAGNOSTICS (temporary - remove before final)
-    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-      console.log(`[SlideTypeVisibility] ${normalizedType}:`, {
-        defaultVisibleKeysCount: defaultVisibleKeys.size,
-        typeVisibleKeysCount: typeVisibleKeys.size,
-        effectiveVisibleKeysCount: visibleKeys.size,
-        sampleDefaultVisible: Array.from(defaultVisibleKeys).slice(0, 5),
-        sampleTypeVisible: Array.from(typeVisibleKeys).slice(0, 5),
-        sampleEffectiveVisible: Array.from(visibleKeys).slice(0, 5),
-      });
-    }
   }
 
   return {
