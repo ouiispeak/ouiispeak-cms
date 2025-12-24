@@ -81,27 +81,39 @@ export async function loadDashboardData(): Promise<DashboardResult<DashboardData
     }
 
     // Load slides for all lessons (with propsJson for title extraction)
-    const { data: slidesData, error: slidesError } = await supabase
-      .from("slides")
-      .select("id, lesson_id, group_id, order_index, type, props_json")
-      .in("lesson_id", lessonIds.length > 0 ? lessonIds : ["__no_match__"])
-      .order("order_index", { ascending: true });
+    // Skip query if no valid lesson IDs (empty DB or no lessons)
+    let slides: SlideForHierarchy[] = [];
+    if (lessonIds.length > 0) {
+      // Validate that all lesson IDs are valid UUIDs before querying
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validLessonIds = lessonIds.filter((id) => id && uuidRegex.test(id));
+      
+      if (validLessonIds.length > 0) {
+        const { data: slidesData, error: slidesError } = await supabase
+          .from("slides")
+          .select("id, lesson_id, group_id, order_index, type, props_json")
+          .in("lesson_id", validLessonIds)
+          .order("order_index", { ascending: true });
 
-    if (slidesError) {
-      return { data: null, error: `Slides error: ${slidesError.message}` };
+        if (slidesError) {
+          return { data: null, error: `Slides error: ${slidesError.message}` };
+        }
+
+        // Map slides to domain types with propsJson
+        slides = (slidesData ?? []).map((row: any) => ({
+          ...toSlideMinimal({
+            id: row.id,
+            lesson_id: row.lesson_id,
+            group_id: row.group_id,
+            order_index: row.order_index,
+            type: row.type,
+          }),
+          propsJson: row.props_json,
+        }));
+      }
+      // If no valid UUIDs, slides remains empty array (no error)
     }
-
-    // Map slides to domain types with propsJson
-    const slides: SlideForHierarchy[] = (slidesData ?? []).map((row: any) => ({
-      ...toSlideMinimal({
-        id: row.id,
-        lesson_id: row.lesson_id,
-        group_id: row.group_id,
-        order_index: row.order_index,
-        type: row.type,
-      }),
-      propsJson: row.props_json,
-    }));
+    // If no lesson IDs at all, slides remains empty array (no error)
 
     return {
       data: {
