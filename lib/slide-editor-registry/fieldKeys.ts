@@ -96,10 +96,3 @@ export function isSpecialMetadataFieldKey(key: string): boolean {
   return SPECIAL_METADATA_KEYS.has(key);
 }
 
-/**
- * Helper function to check if a system field can be copied.
- */
-export function isCopyableSystemField(key: string): boolean {
-  return COPYABLE_SYSTEM_FIELDS.has(key);
-}
-

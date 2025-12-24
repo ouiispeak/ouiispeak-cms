@@ -4,7 +4,6 @@ import {
   resolveSlideTypeVisibility,
   type SlideTypePresetsConfig,
   getDefaultPresetsConfig,
-  migratePresetToVisibleFieldKeys,
 } from "./resolver";
 import { loadPresetsFromStorage } from "./presetStorage";
 

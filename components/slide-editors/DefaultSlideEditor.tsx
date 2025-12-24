@@ -6,7 +6,6 @@ import Input from "../ui/Input";
 import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
-import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import MissingLabelWarning from "./shared/MissingLabelWarning";
 import SaveMessage from "./shared/SaveMessage";
@@ -123,8 +122,6 @@ export default function DefaultSlideEditor({
     row.passRequiredForNext,
   ]);
 
-  // Use schema.fields as the ONLY source of truth - no DEFAULT_SLIDE_FIELDS
-  const schemaFieldKeys = useMemo(() => new Set(schema.fields.map((f) => f.key)), [schema.fields]);
   // Render ONLY fields from schema.fields - no DEFAULT_SLIDE_FIELDS, no hidden fields list
   const renderedFields = useMemo(() => {
     return schema.fields; // Schema already contains only visible fields (hidden fields filtered by resolver)
@@ -136,10 +133,6 @@ export default function DefaultSlideEditor({
   const editableFields = useMemo(
     () => renderedFields.filter((field) => !isMetadataField(field.key) && !isSystemField(field.key)),
     [renderedFields]
-  );
-  const metadataFieldKeySet = useMemo(
-    () => new Set(metadataFields.map((field) => field.key)),
-    [metadataFields]
   );
   const authoringMetadataFieldKeySet = useMemo(() => {
     const keys = new Set<string>();
@@ -159,7 +152,6 @@ export default function DefaultSlideEditor({
     }),
     [groupId, orderIndex, row.groupId, row.id, row.orderIndex, row.type, slideType]
   );
-  const isDefaultType = slideType.trim() === "default";
   const groupedRenderedFields = useMemo(
     () => groupFieldsForDisplay(renderedFields),
     [renderedFields]
@@ -462,9 +454,6 @@ export default function DefaultSlideEditor({
       </FormField>
     );
   };
-
-  const hasMetadataFields = metadataFields.length > 0;
-  const visibleFieldItems = editableFields;
 
   // Check if label is missing (for backward compatibility warning)
   const labelValue = values["label"];

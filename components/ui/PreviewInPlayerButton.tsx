@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { uiTokens } from "../../lib/uiTokens";
 

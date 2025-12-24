@@ -37,10 +37,3 @@ export const SELECT_OPTIONS_BY_KEY: Record<string, SelectOption[]> = {
   ],
 };
 
-/**
- * Gets select options for a field key, or undefined if no options exist.
- */
-export function getSelectOptions(fieldKey: string): SelectOption[] | undefined {
-  return SELECT_OPTIONS_BY_KEY[fieldKey];
-}
-

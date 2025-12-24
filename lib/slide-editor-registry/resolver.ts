@@ -181,28 +181,5 @@ export function getDefaultPresetsConfig(): SlideTypePresetsConfig {
   };
 }
 
-/**
- * Converts a legacy preset (using hiddenFieldKeys) to the new format (using visibleFieldKeys for non-default types).
- * This is a migration helper - new presets should use visibleFieldKeys for non-default types.
- */
-export function migratePresetToVisibleFieldKeys(
-  typeKey: string,
-  hiddenFieldKeys: string[],
-  allFields: EditorField[]
-): { visibleFieldKeys: string[] } {
-  const allFieldKeys = new Set(allFields.map((f) => f.key));
-  const hiddenSet = new Set(hiddenFieldKeys);
-  
-  // Compute visible fields: all fields NOT in hiddenFieldKeys
-  const visibleFieldKeys: string[] = [];
-  allFields.forEach((field) => {
-    if (!hiddenSet.has(field.key) && allFieldKeys.has(field.key)) {
-      visibleFieldKeys.push(field.key);
-    }
-  });
-  
-  return { visibleFieldKeys };
-}
-
 export { CURRENT_VERSION };
 

@@ -1,5 +1,5 @@
 import type { SlideTypePresetsConfig } from "./resolver";
-import { getDefaultPresetsConfig, CURRENT_VERSION } from "./resolver";
+import { getDefaultPresetsConfig } from "./resolver";
 
 const STORAGE_KEY = "slideTypePresets";
 
