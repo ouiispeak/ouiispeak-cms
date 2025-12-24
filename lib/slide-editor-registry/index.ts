@@ -1,7 +1,5 @@
 import AiSpeakRepeatEditor from "../../components/slide-editors/AiSpeakRepeatEditor";
 import DefaultSlideEditor from "../../components/slide-editors/DefaultSlideEditor";
-import TextSlideEditor from "../../components/slide-editors/TextSlideEditor";
-import TitleSlideEditor from "../../components/slide-editors/TitleSlideEditor";
 import RawJsonEditor from "../../components/slide-editors/RawJsonEditor";
 import { DEFAULT_SLIDE_FIELDS } from "./defaultFields";
 import { getVisibleFieldsForType } from "./presets";
@@ -29,12 +27,12 @@ const slideEditorRegistry: Record<string, SlideEditorDefinition> = {
   "title-slide": {
     type: "title-slide",
     label: "Title slide",
-    editorComponent: TitleSlideEditor,
+    editorComponent: DefaultSlideEditor,
   },
   "text-slide": {
     type: "text-slide",
     label: "Text slide",
-    editorComponent: TextSlideEditor,
+    editorComponent: DefaultSlideEditor,
   },
 };
 
@@ -50,20 +48,14 @@ export function getSlideEditorDefinition(type?: string | null): SlideEditorDefin
 
   const normalizedType = type.trim();
 
-  // Check registry first (includes "text-slide" which has its own definition)
+  // Check registry first
   if (slideEditorRegistry[normalizedType]) {
     return slideEditorRegistry[normalizedType];
   }
 
-  // Check aliases (but NOT "text-slide" - that's already handled above)
+  // Check aliases
   if (slideEditorAliases[normalizedType]) {
     return slideEditorAliases[normalizedType];
-  }
-
-  // Special case: "text" maps to default, but "text-slide" should use its own definition
-  // (handled above by registry check)
-  if (normalizedType === "text") {
-    return defaultSlideEditorDefinition;
   }
 
   // Fallback to raw JSON editor for unknown types
