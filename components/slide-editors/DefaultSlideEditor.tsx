@@ -8,6 +8,7 @@ import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
+import MissingLabelWarning from "./shared/MissingLabelWarning";
 import type { SlideEditorProps, AuthoringMetadataState, EditorField } from "./types";
 // Removed DEFAULT_SLIDE_FIELDS import - editors must ONLY use schema.fields
 import {
@@ -662,19 +663,7 @@ export default function DefaultSlideEditor({
 
   return (
     <form onSubmit={handleSave} style={{ display: "grid", gap: uiTokens.space.lg }}>
-      {isExistingSlide && !hasLabel && (
-        <div
-          style={{
-            padding: uiTokens.space.md,
-            backgroundColor: "#fff3cd",
-            border: `1px solid #ffc107`,
-            borderRadius: uiTokens.radius.md,
-            color: "#856404",
-          }}
-        >
-          <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
-        </div>
-      )}
+      <MissingLabelWarning show={isExistingSlide && !hasLabel} />
       {/* Always use grouped/categorized view for consistency across all slide types */}
       <div style={categoriesGrid}>
         {groupedRenderedFields.map((group) => {

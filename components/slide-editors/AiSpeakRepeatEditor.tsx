@@ -12,6 +12,7 @@ import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
+import MissingLabelWarning from "./shared/MissingLabelWarning";
 import type { SlideEditorProps } from "./types";
 import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
@@ -411,20 +412,10 @@ export default function AiSpeakRepeatEditor({
           })}
         </form>
 
-        {row.id && !((values as any)["label"] && typeof (values as any)["label"] === "string" && (values as any)["label"].trim().length > 0) && (
-          <div
-            style={{
-              padding: uiTokens.space.md,
-              backgroundColor: "#fff3cd",
-              border: `1px solid #ffc107`,
-              borderRadius: uiTokens.radius.md,
-              color: "#856404",
-              marginTop: uiTokens.space.md,
-            }}
-          >
-            <strong>Missing label:</strong> This slide is missing a label. Please add one for proper CMS navigation.
-          </div>
-        )}
+        <MissingLabelWarning
+          show={row.id && !((values as any)["label"] && typeof (values as any)["label"] === "string" && (values as any)["label"].trim().length > 0)}
+          style={{ marginTop: uiTokens.space.md }}
+        />
 
         {saveMessage && (
           <p
