@@ -36,16 +36,18 @@ const REQUIRED_ALWAYS_VISIBLE_KEYS = new Set<string>(["label"]);
  * - defaultVisibleKeys = allFields - defaultHiddenKeys
  * - Uses hiddenFieldKeys (everything visible except hidden)
  * 
- * For non-default types (PARENT GATING):
+ * For non-default types (PARENT GATING + OPT-IN):
  * - effectiveVisibleKeys = (defaultVisibleKeys ∩ typeVisibleKeys) ∪ requiredAlwaysVisibleKeys
  * - Default acts as parent gate: if hidden in Default, cannot be visible in child types
- * - Child types can only show fields that are visible in Default
+ * - Child types are OPT-IN: fields default to hidden and require explicit enablement
+ * - Child types can only opt-in to fields that are visible in Default
  * - Required keys (e.g., "label") are always visible regardless of settings
  * 
  * IMPORTANT:
  * - Hiding a field in Default makes it hidden in ALL child types (parent gate)
- * - Child types can only opt-in to fields that are visible in Default
- * - This is the ONLY way visibility is computed - no union, no "all fields" default
+ * - Making a field visible in Default does NOT make it visible in child types (opt-in)
+ * - Child types must explicitly add fields to their visibleFieldKeys to show them
+ * - If a child type has no preset, it defaults to empty visibleFieldKeys (all hidden)
  * 
  * @param typeKey - The slide type key (e.g., "default", "ai-speak-repeat")
  * @param allFields - All available fields from the registry
@@ -116,8 +118,9 @@ export function resolveSlideTypeVisibility(
           .map((f) => f.key)
       );
     } else {
-      // No preset: default to all fields (will be gated by defaultVisibleKeys)
-      typeVisibleKeys = new Set(allFieldKeys);
+      // No preset: default to empty set (opt-in behavior - all fields hidden by default)
+      // Child types must explicitly add fields to visibleFieldKeys to show them
+      typeVisibleKeys = new Set<string>();
     }
     
     // PARENT GATING: effectiveVisibleKeys = (defaultVisibleKeys ∩ typeVisibleKeys) ∪ requiredAlwaysVisibleKeys
@@ -146,10 +149,13 @@ export function resolveSlideTypeVisibility(
     });
     
     // Type-specific hidden keys (for display purposes)
+    // These are fields that are allowed by Default but NOT opted-in by this child type
     typeHiddenKeys = new Set<string>();
-    typeVisibleKeys.forEach((key) => {
-      if (!defaultVisibleKeys.has(key) && !REQUIRED_ALWAYS_VISIBLE_KEYS.has(key)) {
-        // This key is in type's allowlist but hidden by default (parent gate)
+    defaultVisibleKeys.forEach((key) => {
+      // Field is allowed by Default
+      if (!typeVisibleKeys.has(key) && !REQUIRED_ALWAYS_VISIBLE_KEYS.has(key)) {
+        // Field is NOT in child type's allowlist (not opted-in) and not required
+        // This means it's hidden in this child type but could be shown if opted-in
         typeHiddenKeys.add(key);
       }
     });
