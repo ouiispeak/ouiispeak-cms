@@ -24,6 +24,7 @@ import {
   COPYABLE_SYSTEM_FIELDS,
 } from "../../lib/slide-editor-registry/fieldKeys";
 import { SELECT_OPTIONS_BY_KEY } from "../../lib/slide-editor-registry/selectOptions";
+import { hasUnsavedChanges as checkUnsavedChanges } from "../../lib/slide-editor-registry/useUnsavedChanges";
 
 type FieldValueMap = Record<string, any>;
 
@@ -282,23 +283,7 @@ export default function DefaultSlideEditor({
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
     const init = initialDataRef.current;
-    const valueChanged = Object.keys(values).some((k) => (values as any)[k] !== (init.values as any)[k]);
-    const metaChanged =
-      metadata.code !== init.metadata.code ||
-      metadata.slideGoal !== init.metadata.slideGoal ||
-      metadata.activityName !== init.metadata.activityName ||
-      metadata.requiresExternalTTS !== init.metadata.requiresExternalTTS ||
-      JSON.stringify(metadata.buttons) !== JSON.stringify(init.metadata.buttons) ||
-      JSON.stringify(metadata.tags) !== JSON.stringify(init.metadata.tags) ||
-      metadata.difficultyHint !== init.metadata.difficultyHint ||
-      metadata.reviewWeight !== init.metadata.reviewWeight ||
-      metadata.showScoreToLearner !== init.metadata.showScoreToLearner ||
-      metadata.isActivity !== init.metadata.isActivity ||
-      metadata.scoreType !== init.metadata.scoreType ||
-      metadata.passingScoreValue !== init.metadata.passingScoreValue ||
-      metadata.maxScoreValue !== init.metadata.maxScoreValue ||
-      metadata.passRequiredForNext !== init.metadata.passRequiredForNext;
-    return valueChanged || metaChanged;
+    return checkUnsavedChanges(init.values, values, init.metadata, metadata);
   }, [values, metadata]);
 
   useEffect(() => {

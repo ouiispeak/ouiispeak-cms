@@ -10,6 +10,7 @@ import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import type { SlideEditorProps } from "./types";
 import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
+import { hasUnsavedChanges as checkUnsavedChanges } from "../../lib/slide-editor-registry/useUnsavedChanges";
 
 export default function RawJsonEditor({
   row,
@@ -59,22 +60,12 @@ export default function RawJsonEditor({
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
     const initial = initialDataRef.current;
-    return (
-      jsonText !== initial.jsonText ||
-      metadata.code !== initial.metadata.code ||
-      metadata.slideGoal !== initial.metadata.slideGoal ||
-      metadata.activityName !== initial.metadata.activityName ||
-      metadata.requiresExternalTTS !== initial.metadata.requiresExternalTTS ||
-      JSON.stringify(metadata.buttons) !== JSON.stringify(initial.metadata.buttons) ||
-      JSON.stringify(metadata.tags) !== JSON.stringify(initial.metadata.tags) ||
-      metadata.difficultyHint !== initial.metadata.difficultyHint ||
-      metadata.reviewWeight !== initial.metadata.reviewWeight ||
-      metadata.showScoreToLearner !== initial.metadata.showScoreToLearner ||
-      metadata.isActivity !== initial.metadata.isActivity ||
-      metadata.scoreType !== initial.metadata.scoreType ||
-      metadata.passingScoreValue !== initial.metadata.passingScoreValue ||
-      metadata.maxScoreValue !== initial.metadata.maxScoreValue ||
-      metadata.passRequiredForNext !== initial.metadata.passRequiredForNext
+    return checkUnsavedChanges(
+      {},
+      {},
+      initial.metadata,
+      metadata,
+      [{ initial: initial.jsonText, current: jsonText }]
     );
   }, [jsonText, metadata]);
   
