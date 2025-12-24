@@ -8,6 +8,7 @@ import CmsSection from "../../../components/ui/CmsSection";
 import FormField from "../../../components/ui/FormField";
 import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
+import CopyButton from "../../../components/ui/CopyButton";
 import { uiTokens } from "../../../lib/uiTokens";
 import BreadcrumbTrail from "../../../components/cms/BreadcrumbTrail";
 import SaveChangesButton from "../../../components/ui/SaveChangesButton";
@@ -21,21 +22,9 @@ export default function EditSlidePage() {
   const params = useParams<{ slideId: string }>();
   const slideId = params?.slideId;
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
-  const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorSaving, setEditorSaving] = useState(false);
   
-  const copyToClipboard = async (text: string, label: string, buttonId: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyConfirmation({ message: `${label} copied!`, buttonId });
-      setTimeout(() => {
-        setCopyConfirmation(null);
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-    }
-  };
 
   const {
     loadState,
@@ -118,70 +107,7 @@ export default function EditSlidePage() {
             >
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <Input value={slideId || ""} disabled readOnly style={{ paddingRight: "32px" }} />
-                {copyConfirmation && copyConfirmation.buttonId === "slide-uuid" && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "100%",
-                      right: "8px",
-                      marginBottom: "4px",
-                      padding: `${uiTokens.space.xs}px ${uiTokens.space.sm}px`,
-                      backgroundColor: "#333",
-                      color: "#fff",
-                      borderRadius: uiTokens.radius.sm,
-                      fontSize: uiTokens.font.meta.size,
-                      zIndex: 1000,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                      animation: "fadeIn 0.2s ease-in",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {copyConfirmation.message}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  id="slide-uuid"
-                  onClick={() => copyToClipboard(slideId || "", "Slide UUID", "slide-uuid")}
-                  style={{
-                    position: "absolute",
-                    right: "8px",
-                    background: "none",
-                    border: "none",
-                    padding: "4px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    color: "#b4d5d5",
-                    opacity: 0.7,
-                    transition: "opacity 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = "1";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = "0.7";
-                  }}
-                  title="Copy UUID"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="#b4d5d5"
-                    style={{
-                      width: 16,
-                      height: 16,
-                    }}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-                    />
-                  </svg>
-                </button>
+                <CopyButton text={slideId || ""} label="Slide UUID" title="Copy UUID" />
               </div>
             </FormField>
 
@@ -227,48 +153,7 @@ export default function EditSlidePage() {
             >
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <Input value={selectedGroupId || ""} disabled readOnly style={{ paddingRight: "32px" }} />
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(selectedGroupId || "", "Group UUID", "group-uuid")}
-                  style={{
-                    position: "absolute",
-                    right: "8px",
-                    background: "none",
-                    border: "none",
-                    padding: "4px",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    color: "#b4d5d5",
-                    opacity: 0.7,
-                    transition: "opacity 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = "1";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = "0.7";
-                  }}
-                  title="Copy UUID"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="#b4d5d5"
-                    style={{
-                      width: 16,
-                      height: 16,
-                    }}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-                    />
-                  </svg>
-                </button>
+                <CopyButton text={selectedGroupId || ""} label="Group UUID" title="Copy UUID" />
               </div>
             </FormField>
             <FormField 

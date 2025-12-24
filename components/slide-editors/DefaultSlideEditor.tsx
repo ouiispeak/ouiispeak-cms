@@ -10,6 +10,7 @@ import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import MissingLabelWarning from "./shared/MissingLabelWarning";
 import SaveMessage from "./shared/SaveMessage";
+import CopyButton from "../ui/CopyButton";
 import type { SlideEditorProps, AuthoringMetadataState, EditorField } from "./types";
 // Removed DEFAULT_SLIDE_FIELDS import - editors must ONLY use schema.fields
 import {
@@ -200,7 +201,6 @@ export default function DefaultSlideEditor({
   const [metadata, setMetadata] = useState<AuthoringMetadataState>(() => buildInitialMetadataState(row));
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
   const handleMetadataChange = useCallback((m: AuthoringMetadataState) => setMetadata(m), []);
   const handleAuthoringMetadataChange = useCallback((m: AuthoringMetadataState) => {
     setMetadata((prev) => {
@@ -298,15 +298,6 @@ export default function DefaultSlideEditor({
   };
   const updateMetadata = (next: Partial<AuthoringMetadataState>) => {
     setMetadata((prev) => ({ ...prev, ...next }));
-  };
-  const copyToClipboard = async (text: string, label: string, buttonId: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyConfirmation({ message: `${label} copied!`, buttonId });
-      setTimeout(() => setCopyConfirmation(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy text:", err);
-    }
   };
   const parseCommaList = (input: string) =>
     input
@@ -583,72 +574,7 @@ export default function DefaultSlideEditor({
             style={canCopy ? { paddingRight: "32px" } : undefined}
           />
           {canCopy && (
-            <>
-              {copyConfirmation && copyConfirmation.buttonId === buttonId && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "100%",
-                    right: "8px",
-                    marginBottom: "4px",
-                    padding: `${uiTokens.space.xs}px ${uiTokens.space.sm}px`,
-                    backgroundColor: "#333",
-                    color: "#fff",
-                    borderRadius: uiTokens.radius.sm,
-                    fontSize: uiTokens.font.meta.size,
-                    zIndex: 1000,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                    animation: "fadeIn 0.2s ease-in",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {copyConfirmation.message}
-                </div>
-              )}
-              <button
-                type="button"
-                id={buttonId}
-                title={`Copy ${labelText}`}
-                onClick={() => copyToClipboard(value, labelText, buttonId)}
-                style={{
-                  position: "absolute",
-                  right: "8px",
-                  background: "none",
-                  border: "none",
-                  padding: "4px",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  color: "#d7a592",
-                  opacity: 0.7,
-                  transition: "opacity 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = "1";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = "0.7";
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#d7a592"
-                  style={{
-                    width: 16,
-                    height: 16,
-                  }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-                  />
-                </svg>
-              </button>
-            </>
+            <CopyButton text={value} label={labelText} iconColor="#d7a592" title={`Copy ${labelText}`} />
           )}
         </div>
       </FormField>
