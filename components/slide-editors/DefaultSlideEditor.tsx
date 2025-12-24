@@ -15,6 +15,7 @@ import {
   categoryContainer,
   categoryTitle,
 } from "../../lib/styles/slideTypeEditStyles";
+import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
 
 type FieldValueMap = Record<string, any>;
 
@@ -246,22 +247,7 @@ export default function DefaultSlideEditor({
 }: SlideEditorProps) {
   // Use schema.fields as the ONLY source of truth - no DEFAULT_SLIDE_FIELDS
   const [values, setValues] = useState<FieldValueMap>(() => buildInitialValues(row, schema.fields));
-  const [metadata, setMetadata] = useState<AuthoringMetadataState>({
-    code: row.code || "",
-    slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
-    activityName: ((row.metaJson as any) || {}).activityName || "",
-    requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
-    buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
-    tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
-    difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
-    reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
-    showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
-    isActivity: row.isActivity || false,
-    scoreType: row.scoreType || "none",
-    passingScoreValue: row.passingScoreValue ?? null,
-    maxScoreValue: row.maxScoreValue ?? null,
-    passRequiredForNext: row.passRequiredForNext || false,
-  });
+  const [metadata, setMetadata] = useState<AuthoringMetadataState>(() => buildInitialMetadataState(row));
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [copyConfirmation, setCopyConfirmation] = useState<{ message: string; buttonId: string } | null>(null);
@@ -283,27 +269,13 @@ export default function DefaultSlideEditor({
   // Reset when row changes - use schema.fields ONLY
   useEffect(() => {
     const initialValues = buildInitialValues(row, schema.fields);
+    const initialMetadata = buildInitialMetadataState(row);
     initialDataRef.current = {
       values: initialValues,
-      metadata: {
-        code: row.code || "",
-        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
-        activityName: ((row.metaJson as any) || {}).activityName || "",
-        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
-        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
-        tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
-        difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
-        reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
-        showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
-        isActivity: row.isActivity || false,
-        scoreType: row.scoreType || "none",
-        passingScoreValue: row.passingScoreValue ?? null,
-        maxScoreValue: row.maxScoreValue ?? null,
-        passRequiredForNext: row.passRequiredForNext || false,
-      },
+      metadata: initialMetadata,
     };
     setValues(initialValues);
-    setMetadata(initialDataRef.current.metadata);
+    setMetadata(initialMetadata);
   }, [
     row.id,
     JSON.stringify(row.propsJson),
@@ -465,30 +437,7 @@ export default function DefaultSlideEditor({
       }
 
       // Build meta_json from metadata state
-      const metaJson: any = {};
-      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
-      if (metadata.activityName) metaJson.activityName = metadata.activityName;
-      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
-        metaJson.requires = {};
-        if (metadata.requiresExternalTTS) {
-          metaJson.requires.externalTTS = true;
-        }
-      }
-      if (metadata.buttons.length > 0) {
-        metaJson.buttons = metadata.buttons;
-      }
-      if (metadata.tags.length > 0) {
-        metaJson.tags = metadata.tags;
-      }
-      if (metadata.difficultyHint) {
-        metaJson.difficultyHint = metadata.difficultyHint;
-      }
-      if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
-        metaJson.reviewWeight = metadata.reviewWeight;
-      }
-      if (metadata.showScoreToLearner) {
-        metaJson.showScoreToLearner = true;
-      }
+      const metaJson = buildMetaJson(metadata);
 
       const result = await saveSlide({
         props_json: currentProps,

@@ -13,6 +13,7 @@ import { uiTokens } from "../../lib/uiTokens";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import type { SlideEditorProps } from "./types";
 import type { AuthoringMetadataState } from "./types";
+import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
 
 export default function AiSpeakRepeatEditor({
   row,
@@ -46,22 +47,7 @@ export default function AiSpeakRepeatEditor({
   });
   // Special handling for phrases: convert lines[][] to textarea text
   const [phrasesText, setPhrasesText] = useState("");
-  const [metadata, setMetadata] = useState<AuthoringMetadataState>({
-    code: row.code || "",
-    slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
-    activityName: ((row.metaJson as any) || {}).activityName || "",
-    requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
-    buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
-    tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
-    difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
-    reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
-    showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
-    isActivity: row.isActivity || false,
-    scoreType: row.scoreType || "none",
-    passingScoreValue: row.passingScoreValue ?? null,
-    maxScoreValue: row.maxScoreValue ?? null,
-    passRequiredForNext: row.passRequiredForNext || false,
-  });
+  const [metadata, setMetadata] = useState<AuthoringMetadataState>(() => buildInitialMetadataState(row));
 
   const initialDataRef = useRef<{
     values: Record<string, any>;
@@ -167,25 +153,11 @@ export default function AiSpeakRepeatEditor({
     setPhrasesText(flatPhrases);
     
     // Store initial values for comparison
+    const initialMetadata = buildInitialMetadataState(row);
     initialDataRef.current = {
       values: { ...newValues },
       phrasesText: flatPhrases,
-      metadata: {
-        code: row.code || "",
-        slideGoal: ((row.metaJson as any) || {}).slideGoal || "",
-        activityName: ((row.metaJson as any) || {}).activityName || "",
-        requiresExternalTTS: ((row.metaJson as any) || {}).requires?.externalTTS || false,
-        buttons: Array.isArray(((row.metaJson as any) || {}).buttons) ? ((row.metaJson as any) || {}).buttons : [],
-        tags: Array.isArray(((row.metaJson as any) || {}).tags) ? ((row.metaJson as any) || {}).tags : [],
-        difficultyHint: ((row.metaJson as any) || {}).difficultyHint || "",
-        reviewWeight: ((row.metaJson as any) || {}).reviewWeight ?? null,
-        showScoreToLearner: ((row.metaJson as any) || {}).showScoreToLearner || false,
-        isActivity: row.isActivity || false,
-        scoreType: row.scoreType || "none",
-        passingScoreValue: row.passingScoreValue ?? null,
-        maxScoreValue: row.maxScoreValue ?? null,
-        passRequiredForNext: row.passRequiredForNext || false,
-      },
+      metadata: initialMetadata,
     };
 
     setInnerState({ status: "ready", slide });
@@ -304,30 +276,7 @@ export default function AiSpeakRepeatEditor({
       const trimmedType = slideType.trim();
 
       // Build meta_json from metadata state
-      const metaJson: any = {};
-      if (metadata.slideGoal) metaJson.slideGoal = metadata.slideGoal;
-      if (metadata.activityName) metaJson.activityName = metadata.activityName;
-      if (metadata.requiresExternalTTS || metadata.buttons.length > 0) {
-        metaJson.requires = {};
-        if (metadata.requiresExternalTTS) {
-          metaJson.requires.externalTTS = true;
-        }
-      }
-      if (metadata.buttons.length > 0) {
-        metaJson.buttons = metadata.buttons;
-      }
-      if (metadata.tags.length > 0) {
-        metaJson.tags = metadata.tags;
-      }
-      if (metadata.difficultyHint) {
-        metaJson.difficultyHint = metadata.difficultyHint;
-      }
-      if (metadata.reviewWeight !== null && metadata.reviewWeight !== undefined) {
-        metaJson.reviewWeight = metadata.reviewWeight;
-      }
-      if (metadata.showScoreToLearner) {
-        metaJson.showScoreToLearner = true;
-      }
+      const metaJson = buildMetaJson(metadata);
 
       const result = await saveSlide({
         props_json: validated.props,
