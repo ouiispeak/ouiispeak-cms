@@ -46,9 +46,10 @@ export const createGroupSchema = z.object({
       return val;
     }
     // Parse JSON string
-    if (val.trim() === "") return null;
+    const trimmed = typeof val === "string" ? val.trim() : String(val).trim();
+    if (trimmed === "") return null;
     try {
-      const parsed = JSON.parse(val.trim());
+      const parsed = JSON.parse(trimmed);
       if (!Array.isArray(parsed)) {
         throw new Error("Planned slide sequence must be a JSON array.");
       }
@@ -57,7 +58,12 @@ export const createGroupSchema = z.object({
       }
       return parsed;
     } catch (parseError) {
-      throw new Error("Invalid JSON in planned slide sequence. Please check the format.");
+      // Provide more helpful error message
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      if (errorMessage.includes("JSON")) {
+        throw new Error(`Invalid JSON in planned slide sequence: ${errorMessage}. Please check the format.`);
+      }
+      throw new Error(`Invalid JSON in planned slide sequence: ${errorMessage}. Expected a JSON array of strings.`);
     }
   }),
 });
