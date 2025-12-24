@@ -7,6 +7,7 @@ import FormField from "../ui/FormField";
 import Textarea from "../ui/Textarea";
 import { uiTokens } from "../../lib/uiTokens";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
+import SaveMessage from "./shared/SaveMessage";
 import type { SlideEditorProps } from "./types";
 import type { AuthoringMetadataState } from "./types";
 import { buildInitialMetadataState, buildMetaJson } from "../../lib/slide-editor-registry/metadataHelpers";
@@ -181,16 +182,7 @@ export default function RawJsonEditor({
 
         </form>
 
-        {saveMessage && (
-          <p
-            style={{
-              marginTop: uiTokens.space.md,
-              color: saveMessage.includes("error") ? uiTokens.color.danger : "green",
-            }}
-          >
-            {saveMessage}
-          </p>
-        )}
+        <SaveMessage message={saveMessage} />
       </CmsSection>
 
       <AuthoringMetadataSection

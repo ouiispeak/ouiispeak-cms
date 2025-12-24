@@ -9,6 +9,7 @@ import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
 import AuthoringMetadataSection from "./AuthoringMetadataSection";
 import MissingLabelWarning from "./shared/MissingLabelWarning";
+import SaveMessage from "./shared/SaveMessage";
 import type { SlideEditorProps, AuthoringMetadataState, EditorField } from "./types";
 // Removed DEFAULT_SLIDE_FIELDS import - editors must ONLY use schema.fields
 import {
@@ -730,11 +731,7 @@ export default function DefaultSlideEditor({
 
       {/* Removed hidden fields section - schema.fields already contains only visible fields (filtered by resolver) */}
 
-      {saveMessage && (
-        <p style={{ margin: 0, color: saveMessage.includes("error") ? uiTokens.color.danger : uiTokens.color.text }}>
-          {saveMessage}
-        </p>
-      )}
+      <SaveMessage message={saveMessage} />
     </form>
   );
 }
