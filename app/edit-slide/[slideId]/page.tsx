@@ -95,22 +95,8 @@ export default function EditSlidePage() {
           description="Basic slide identification and structure"
         >
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Slide ID
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="System UUID for the slide (read-only). Used internally by the CMS to identify this slide."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Slide ID"
+            infoTooltip="System UUID for the slide (read-only). Used internally by the CMS to identify this slide."
           >
             <Input
               type="text"
@@ -124,22 +110,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Slide Type
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Type key used to select the editor (read-only). Determines which editor component is used to edit this slide."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Slide Type"
+            infoTooltip="Type key used to select the editor (read-only). Determines which editor component is used to edit this slide."
           >
             <Input
               type="text"
@@ -153,22 +125,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Group ID
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Owning group UUID (read-only). This slide belongs to this group in the lesson hierarchy."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Group ID"
+            infoTooltip="Owning group UUID (read-only). This slide belongs to this group in the lesson hierarchy."
           >
             <Input
               type="text"
@@ -182,22 +140,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Order Index
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Sequence position in the group (read-only). Determines the order this slide appears within its group."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Order Index"
+            infoTooltip="Sequence position in the group (read-only). Determines the order this slide appears within its group."
           >
             <Input
               type="number"
@@ -211,22 +155,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Label
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Internal name for this slide used in the CMS and navigation. Not shown to learners. Required for CMS organization."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Label"
+            infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners. Required for CMS organization."
             required
           >
             <Input
@@ -252,22 +182,8 @@ export default function EditSlidePage() {
           description="Main content shown to learners"
         >
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Title
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Primary heading for the slide. This is shown to learners as the main title of the slide."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Title"
+            infoTooltip="Primary heading for the slide. This is shown to learners as the main title of the slide."
           >
             <Input
               type="text"
@@ -281,22 +197,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Subtitle
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Secondary heading or subtopic. Shown to learners below the main title."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Subtitle"
+            infoTooltip="Secondary heading or subtopic. Shown to learners below the main title."
           >
             <Input
               type="text"
@@ -310,22 +212,8 @@ export default function EditSlidePage() {
           </FormField>
 
           <FormField 
-            label={
-              <div style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
-                Body
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="#9cc7c7"
-                  style={{ width: 16, height: 16, cursor: "help" }}
-                  title="Main slide copy shown to learners. This is the primary content text displayed on the slide."
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-                </svg>
-              </div>
-            }
+            label="Body"
+            infoTooltip="Main slide copy shown to learners. This is the primary content text displayed on the slide."
           >
             <Textarea
               value={body}
