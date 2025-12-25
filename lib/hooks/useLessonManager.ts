@@ -32,14 +32,13 @@ function defaultPropsForType(type: string): any {
     case "ai-speak-student-repeat":
       return {
         title: "New ai-speak-student-repeat slide",
-        lines: [
-          [
-            {
-              label: "Hello",
-              speech: { mode: "tts", lang: "en", text: "Hello" },
-            },
-          ],
-        ],
+        elements: [],
+      };
+    case "speech-match":
+      return {
+        title: "New speech-match slide",
+        subtitle: "Écoute et clique sur la lettre que tu entends",
+        elements: [],
       };
     default:
       return { title: `New ${trimmedType} slide` };

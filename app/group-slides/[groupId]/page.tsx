@@ -13,7 +13,7 @@ import StatusMessage from "../../../components/ui/StatusMessage";
 import LinkButton from "../../../components/ui/LinkButton";
 import { uiTokens } from "../../../lib/uiTokens";
 import { loadGroupById } from "../../../lib/data/groups";
-import { loadSlidesByGroup, createSlide } from "../../../lib/data/slides";
+import { loadSlidesByGroup, createSlide, loadSlideById } from "../../../lib/data/slides";
 import type { Group } from "../../../lib/domain/group";
 import { supabase } from "../../../lib/supabase";
 
@@ -39,6 +39,8 @@ export default function GroupSlidesPage() {
   const [orderIndex, setOrderIndex] = useState<number>(1);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [duplicatingSlideId, setDuplicatingSlideId] = useState<string | null>(null);
+  const [reorderingSlideId, setReorderingSlideId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const sortedSlides = useMemo(() => {
@@ -148,40 +150,73 @@ export default function GroupSlidesPage() {
     const parsedOrderIndex = Number(orderIndex);
 
     setSaving(true);
-    const { error: insertError } = await createSlide({
-      lesson_id: group.lessonId,
-      group_id: groupId,
-      type: slideType,
-      order_index: parsedOrderIndex,
-    });
-    setSaving(false);
 
-    if (insertError) {
-      setMessage(insertError);
-      return;
-    }
+    try {
+      // Step 1: Increment order_index for all slides at or after the insertion position
+      // This makes room for the new slide
+      const slidesToUpdate = sortedSlides.filter(
+        (slide) => slide.orderIndex !== null && slide.orderIndex >= parsedOrderIndex
+      );
 
-    setMessage("Slide created!");
-    setSlideType("");
-    
-    // Reload slides to include new record
-    const { data: slidesData, error: slidesError } = await supabase
-      .from("slides")
-      .select("id, lesson_id, group_id, order_index, type, props_json")
-      .eq("group_id", groupId)
-      .order("order_index", { ascending: true });
+      if (slidesToUpdate.length > 0) {
+        // Update each slide's order_index (increment by 1)
+        const updatePromises = slidesToUpdate.map((slide) =>
+          supabase
+            .from("slides")
+            .update({ order_index: slide.orderIndex! + 1 })
+            .eq("id", slide.id)
+        );
 
-    if (slidesError) {
-      setError(slidesError.message);
-    } else {
-      setSlides((slidesData ?? []).map((s: any) => ({
-        id: s.id,
-        lessonId: s.lesson_id,
-        groupId: s.group_id,
-        orderIndex: s.order_index,
-        type: s.type,
-        propsJson: s.props_json,
-      })));
+        const updateResults = await Promise.all(updatePromises);
+        const updateErrors = updateResults.filter((result) => result.error);
+        
+        if (updateErrors.length > 0) {
+          setMessage(`Error reordering slides: ${updateErrors[0].error?.message || "Unknown error"}`);
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Step 2: Create the new slide at the insertion position
+      const { error: insertError } = await createSlide({
+        lesson_id: group.lessonId,
+        group_id: groupId,
+        type: slideType,
+        order_index: parsedOrderIndex,
+      });
+
+      if (insertError) {
+        setMessage(`Error creating slide: ${insertError}`);
+        setSaving(false);
+        return;
+      }
+
+      setMessage("Slide created and inserted successfully!");
+      setSlideType("");
+      
+      // Reload slides to show updated order
+      const { data: slidesData, error: slidesError } = await supabase
+        .from("slides")
+        .select("id, lesson_id, group_id, order_index, type, props_json")
+        .eq("group_id", groupId)
+        .order("order_index", { ascending: true });
+
+      if (slidesError) {
+        setError(slidesError.message);
+      } else {
+        setSlides((slidesData ?? []).map((s: any) => ({
+          id: s.id,
+          lessonId: s.lesson_id,
+          groupId: s.group_id,
+          orderIndex: s.order_index,
+          type: s.type,
+          propsJson: s.props_json,
+        })));
+      }
+    } catch (err) {
+      setMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -191,11 +226,210 @@ export default function GroupSlidesPage() {
     }
   };
 
+  const handleDuplicate = async (slideId: string) => {
+    if (!groupId || !group) {
+      setMessage("No group selected.");
+      return;
+    }
+
+    if (!group.lessonId) {
+      setMessage("Group must have a lesson ID.");
+      return;
+    }
+
+    setDuplicatingSlideId(slideId);
+    setMessage(null);
+    setError(null);
+
+    try {
+      // Load the full slide data
+      const { data: slideData, error: loadError } = await loadSlideById(slideId);
+      
+      if (loadError || !slideData) {
+        setMessage(`Error loading slide: ${loadError || "Slide not found"}`);
+        return;
+      }
+
+      // Create duplicate with same data but new order_index
+      const { error: insertError } = await createSlide({
+        lesson_id: group.lessonId,
+        group_id: groupId,
+        type: slideData.type,
+        order_index: nextOrderIndex,
+        props_json: slideData.propsJson,
+        meta_json: slideData.metaJson,
+        aid_hook: slideData.aidHook ?? null,
+        code: slideData.code ?? null,
+        is_activity: slideData.isActivity ?? null,
+        score_type: slideData.scoreType ?? null,
+        passing_score_value: slideData.passingScoreValue ?? null,
+        max_score_value: slideData.maxScoreValue ?? null,
+        pass_required_for_next: slideData.passRequiredForNext ?? null,
+      });
+
+      if (insertError) {
+        setMessage(`Error duplicating slide: ${insertError}`);
+        return;
+      }
+
+      setMessage("Slide duplicated successfully!");
+      
+      // Reload slides to include new record
+      const { data: slidesData, error: slidesError } = await supabase
+        .from("slides")
+        .select("id, lesson_id, group_id, order_index, type, props_json")
+        .eq("group_id", groupId)
+        .order("order_index", { ascending: true });
+
+      if (slidesError) {
+        setError(slidesError.message);
+      } else {
+        setSlides((slidesData ?? []).map((s: any) => ({
+          id: s.id,
+          lessonId: s.lesson_id,
+          groupId: s.group_id,
+          orderIndex: s.order_index,
+          type: s.type,
+          propsJson: s.props_json,
+        })));
+      }
+    } catch (err) {
+      setMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDuplicatingSlideId(null);
+    }
+  };
+
+  const handleMoveSlide = async (slideId: string, direction: 'up' | 'down') => {
+    if (!groupId) {
+      setMessage("No group selected.");
+      return;
+    }
+
+    const slide = sortedSlides.find((s) => s.id === slideId);
+    if (!slide || slide.orderIndex === null) {
+      setMessage("Slide not found or has no order index.");
+      return;
+    }
+
+    const currentIndex = slide.orderIndex;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+    // Validate bounds
+    if (targetIndex < 0) {
+      setMessage("Slide is already at the top.");
+      return;
+    }
+
+    const maxIndex = sortedSlides.reduce((max, s) => {
+      const idx = s.orderIndex ?? 0;
+      return idx > max ? idx : max;
+    }, 0);
+
+    if (targetIndex > maxIndex) {
+      setMessage("Slide is already at the bottom.");
+      return;
+    }
+
+    setReorderingSlideId(slideId);
+    setMessage(null);
+    setError(null);
+
+    try {
+      // Find the slide that's currently at the target position
+      const targetSlide = sortedSlides.find((s) => s.orderIndex === targetIndex);
+
+      if (!targetSlide) {
+        setMessage("Target position not found.");
+        return;
+      }
+
+      // Swap the order_index values
+      // First, set the current slide to a temporary value to avoid conflicts
+      const tempIndex = maxIndex + 1000; // Use a high temporary value
+
+      // Step 1: Move current slide to temp position
+      const { error: tempError } = await supabase
+        .from("slides")
+        .update({ order_index: tempIndex })
+        .eq("id", slideId);
+
+      if (tempError) {
+        setMessage(`Error: ${tempError.message}`);
+        return;
+      }
+
+      // Step 2: Move target slide to current slide's position
+      const { error: targetError } = await supabase
+        .from("slides")
+        .update({ order_index: currentIndex })
+        .eq("id", targetSlide.id);
+
+      if (targetError) {
+        // Try to restore on error
+        await supabase
+          .from("slides")
+          .update({ order_index: currentIndex })
+          .eq("id", slideId);
+        setMessage(`Error: ${targetError.message}`);
+        return;
+      }
+
+      // Step 3: Move current slide to target position
+      const { error: finalError } = await supabase
+        .from("slides")
+        .update({ order_index: targetIndex })
+        .eq("id", slideId);
+
+      if (finalError) {
+        // Try to restore on error
+        await supabase
+          .from("slides")
+          .update({ order_index: currentIndex })
+          .eq("id", slideId);
+        await supabase
+          .from("slides")
+          .update({ order_index: targetIndex })
+          .eq("id", targetSlide.id);
+        setMessage(`Error: ${finalError.message}`);
+        return;
+      }
+
+      setMessage("Slide order updated successfully!");
+
+      // Reload slides to show updated order
+      const { data: slidesData, error: slidesError } = await supabase
+        .from("slides")
+        .select("id, lesson_id, group_id, order_index, type, props_json")
+        .eq("group_id", groupId)
+        .order("order_index", { ascending: true });
+
+      if (slidesError) {
+        setError(slidesError.message);
+      } else {
+        setSlides((slidesData ?? []).map((s: any) => ({
+          id: s.id,
+          lessonId: s.lesson_id,
+          groupId: s.group_id,
+          orderIndex: s.order_index,
+          type: s.type,
+          propsJson: s.props_json,
+        })));
+      }
+    } catch (err) {
+      setMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setReorderingSlideId(null);
+    }
+  };
+
   // Simple slide type options (can be expanded later)
   const slideTypeOptions = [
     { value: "text-slide", label: "Text Slide" },
     { value: "title-slide", label: "Title Slide" },
     { value: "ai-speak-repeat", label: "AI Speak Repeat" },
+    { value: "ai-speak-student-repeat", label: "AI Speak Student Repeat" },
+    { value: "speech-match", label: "Speech Match" },
   ];
 
   return (
@@ -226,12 +460,35 @@ export default function GroupSlidesPage() {
                   </Select>
               </FormField>
 
-              <FormField label="Order index" required>
+              <FormField 
+                label="Order index" 
+                required
+                infoTooltip="Position where the slide will be inserted. Slides at or after this position will automatically shift down by 1."
+              >
                 <Input
                   type="number"
                   value={orderIndex}
                   onChange={(e) => setOrderIndex(Number(e.target.value))}
+                  min="0"
                 />
+                <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+                  {(() => {
+                    const insertPos = Math.max(0, Math.floor(orderIndex));
+                    const slidesToShift = sortedSlides.filter(s => (s.orderIndex ?? 0) >= insertPos).length;
+                    
+                    if (sortedSlides.length === 0) {
+                      return "This will be the first slide (position 0).";
+                    } else if (insertPos < nextOrderIndex) {
+                      return (
+                        <span style={{ color: uiTokens.color.primary }}>
+                          This will insert the slide at position {insertPos} and shift {slidesToShift} slide{slidesToShift !== 1 ? 's' : ''} down.
+                        </span>
+                      );
+                    } else {
+                      return "This will add the slide at the end.";
+                    }
+                  })()}
+                </div>
               </FormField>
 
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: uiTokens.space.md }}>
@@ -280,11 +537,79 @@ export default function GroupSlidesPage() {
                       <td style={{ padding: uiTokens.space.xs }}><code className="codeText">{slide.type}</code></td>
                       <td style={{ padding: uiTokens.space.xs }}>{slide.orderIndex ?? "—"}</td>
                       <td style={{ padding: uiTokens.space.xs }}>
-                        <LinkButton href={`/edit-slide/${slide.id}`} size="sm">
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                          </svg>
-                        </LinkButton>
+                        <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
+                          {/* Move Up/Down buttons */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <button
+                              onClick={() => handleMoveSlide(slide.id, 'up')}
+                              disabled={reorderingSlideId === slide.id || slide.orderIndex === 0}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: (reorderingSlideId === slide.id || slide.orderIndex === 0) ? "not-allowed" : "pointer",
+                                padding: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                opacity: (reorderingSlideId === slide.id || slide.orderIndex === 0) ? 0.3 : 1,
+                              }}
+                              title="Move up"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 14, height: 14 }}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleMoveSlide(slide.id, 'down')}
+                              disabled={(() => {
+                                const maxIndex = sortedSlides.reduce((max, s) => Math.max(max, s.orderIndex ?? 0), 0);
+                                return reorderingSlideId === slide.id || slide.orderIndex === maxIndex;
+                              })()}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: (() => {
+                                  const maxIndex = sortedSlides.reduce((max, s) => Math.max(max, s.orderIndex ?? 0), 0);
+                                  return (reorderingSlideId === slide.id || slide.orderIndex === maxIndex) ? "not-allowed" : "pointer";
+                                })(),
+                                padding: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                opacity: (() => {
+                                  const maxIndex = sortedSlides.reduce((max, s) => Math.max(max, s.orderIndex ?? 0), 0);
+                                  return (reorderingSlideId === slide.id || slide.orderIndex === maxIndex) ? 0.3 : 1;
+                                })(),
+                              }}
+                              title="Move down"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 14, height: 14 }}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                              </svg>
+                            </button>
+                          </div>
+                          <LinkButton href={`/edit-slide/${slide.id}`} size="sm" title="Edit slide">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
+                          </LinkButton>
+                          <button
+                            onClick={() => handleDuplicate(slide.id)}
+                            disabled={duplicatingSlideId === slide.id}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: duplicatingSlideId === slide.id ? "not-allowed" : "pointer",
+                              padding: uiTokens.space.xs,
+                              display: "flex",
+                              alignItems: "center",
+                              opacity: duplicatingSlideId === slide.id ? 0.5 : 1,
+                            }}
+                            title="Duplicate slide"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: 16, height: 16 }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125h6.75c.621 0 1.125.504 1.125 1.125v3.75m0 0-3-3m3 3 3-3m-12.75 0v9.375c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V11.25c0-4.556-3.694-8.25-8.25-8.25S3.75 6.694 3.75 11.25v.375" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

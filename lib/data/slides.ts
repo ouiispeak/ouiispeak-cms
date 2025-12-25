@@ -147,7 +147,8 @@ export function defaultIsActivity(slideType: string, providedValue: boolean | nu
     return providedValue;
   }
   // Default: most slides are activities, except title and text slides
-const nonActivityTypes = ["default", "title-slide", "title", "text-slide", "text"];
+  // Activity types include: ai-speak-repeat, ai-speak-student-repeat, speech-match, etc.
+  const nonActivityTypes = ["default", "title-slide", "title", "text-slide", "text"];
   return !nonActivityTypes.includes(slideType.toLowerCase().trim());
 }
 
