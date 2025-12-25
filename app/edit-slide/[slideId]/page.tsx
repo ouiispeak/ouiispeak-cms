@@ -104,9 +104,6 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
-              System UUID for the slide (read-only).
-            </div>
           </FormField>
 
           <FormField 
@@ -119,9 +116,6 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
-              Type key used to select the editor (read-only).
-            </div>
           </FormField>
 
           <FormField 
@@ -134,9 +128,6 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
-              Owning group UUID (read-only).
-            </div>
           </FormField>
 
           <FormField 
@@ -149,9 +140,6 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
-              Sequence position in the group (read-only).
-            </div>
           </FormField>
 
           <FormField 
@@ -168,9 +156,6 @@ export default function EditSlidePage() {
               }}
               placeholder="Enter slide label"
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
-              Internal name for this slide used in the CMS and navigation. Not shown to learners.
-            </div>
           </FormField>
         </CmsSection>
 
