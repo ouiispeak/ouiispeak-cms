@@ -251,17 +251,26 @@ export default function EditSlideTypePresetPage() {
         const typePreset = next.presets[normalizedType] || {};
         
         // Get current visibleFieldKeys or compute from hiddenFieldKeys (backward compatibility)
+        // IMPORTANT: For non-default types, if no preset exists, start with what's CURRENTLY visible
+        // (which may include code defaults or just required keys)
         let visibleSet: Set<string>;
         if (typePreset.visibleFieldKeys && typePreset.visibleFieldKeys.length > 0) {
+          // Use explicit allowlist from preset
           visibleSet = new Set(typePreset.visibleFieldKeys);
-        } else {
+        } else if (typePreset.hiddenFieldKeys && typePreset.hiddenFieldKeys.length > 0) {
           // Backward compatibility: compute visibleFieldKeys from hiddenFieldKeys
-          const hiddenSet = new Set(typePreset.hiddenFieldKeys || []);
+          // Only do this if hiddenFieldKeys exists (legacy preset format)
+          const hiddenSet = new Set(typePreset.hiddenFieldKeys);
           visibleSet = new Set(
             DEFAULT_SLIDE_FIELDS
               .filter((f) => !hiddenSet.has(f.key))
               .map((f) => f.key)
           );
+        } else {
+          // No preset exists: start with what's currently visible according to resolver
+          // This ensures we don't accidentally add all fields when user clicks one field
+          const currentVisibility = resolveSlideTypeVisibility(normalizedType, DEFAULT_SLIDE_FIELDS, prev);
+          visibleSet = new Set(currentVisibility.visibleKeys);
         }
         
         if (hide) {
