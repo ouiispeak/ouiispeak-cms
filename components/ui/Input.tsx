@@ -20,7 +20,18 @@ export default function Input({ style, borderColor, ...props }: InputProps) {
         fontFamily: "'Atkinson Hyperlegible', Arial, sans-serif",
         backgroundColor: isLocked ? "#f0ede9" : uiTokens.color.bg,
         color: uiTokens.color.text,
+        outline: "none",
         ...style,
+      }}
+      onFocus={(e) => {
+        e.target.style.outline = `2px solid #9cc7c7`;
+        e.target.style.outlineOffset = "2px";
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        e.target.style.outline = "none";
+        e.target.style.outlineOffset = "";
+        props.onBlur?.(e);
       }}
     />
   );
