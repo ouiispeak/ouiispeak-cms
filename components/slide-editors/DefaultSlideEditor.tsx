@@ -517,7 +517,13 @@ export default function DefaultSlideEditor({
                 <div style={categoryTitle}>{group.title}</div>
               )}
               <div style={{ display: "grid", gap: uiTokens.space.sm }}>
-                {groupSystemFields.map((field) => renderSystemField(field))}
+                {groupSystemFields.map((field) => {
+                  // DEBUG: Log when system fields are rendered
+                  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+                    console.warn(`[DEBUG] ⚠️ Rendering system field "${field.key}" in group "${group.title}"`);
+                  }
+                  return renderSystemField(field);
+                })}
                 {groupEditableFields.map((field) => (
                   <FormField key={field.key} label={field.label} required={field.required} borderColor="#b4d5d5" infoTooltip={field.helpText}>
                     {renderFieldInput(field.key, field.uiType)}
