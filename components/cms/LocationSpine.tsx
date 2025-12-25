@@ -86,7 +86,7 @@ export default function LocationSpine({
 
   // On pages without context (e.g., dashboard, slide types), show a contextual anchor
   if (!moduleId && !lessonId && !groupId && !slideId && !level) {
-    const isSlideTypes = pathname?.includes("/cms/slide-types");
+    // const isSlideTypes = pathname?.includes("/cms/slide-types"); // Archived
     const heading = isSlideTypes ? "Slide Types:" : "Curriculum Map (A0–C2):";
     const subheading = isSlideTypes
       ? "Manage and edit slide types."

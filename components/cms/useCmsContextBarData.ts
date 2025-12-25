@@ -338,7 +338,7 @@ export function useCmsContextBarData({
   const handleSlideChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedSlideId = e.target.value;
     if (selectedSlideId) {
-      router.push(`/edit-slide/${selectedSlideId}`);
+      // router.push(`/edit-slide/${selectedSlideId}`); // Archived - coming soon
     }
   };
 
@@ -368,7 +368,7 @@ export function useCmsContextBarData({
         crumbs.push({ label: getGroupDisplayName(ancestors.ancestors.group), href: `/edit-group/${ancestors.ancestors.group.id}` });
       }
       const slideDisplayName = getSlideDisplayName(ancestors.ancestors.slide);
-      crumbs.push({ label: `Slide: ${ancestors.ancestors.slide.type}${slideDisplayName !== "unnamed" ? ` — ${slideDisplayName}` : ""}`, href: `/edit-slide/${ancestors.ancestors.slide.id}` });
+      crumbs.push({ label: `Slide: ${ancestors.ancestors.slide.type}${slideDisplayName !== "unnamed" ? ` — ${slideDisplayName}` : ""}`, href: "#" }); // Archived - coming soon
     }
 
     return crumbs;
@@ -429,10 +429,10 @@ export function useCmsContextBarData({
     // If slideId exists: show Prev/Next Slide
     if (currentSlideId) {
       if (prevSlide) {
-        actions.push({ label: "← Prev Slide", href: `/edit-slide/${prevSlide.id}` });
+        // actions.push({ label: "← Prev Slide", href: `/edit-slide/${prevSlide.id}` }); // Archived - coming soon
       }
       if (nextSlide) {
-        actions.push({ label: "Next Slide →", href: `/edit-slide/${nextSlide.id}` });
+        // actions.push({ label: "Next Slide →", href: `/edit-slide/${nextSlide.id}` }); // Archived - coming soon
       }
     }
 
@@ -440,8 +440,8 @@ export function useCmsContextBarData({
     if (currentLessonId) {
       actions.push({ label: "+ Add Group", href: `/new-group?lesson_id=${currentLessonId}` });
       const addSlideHref = currentGroupId
-        ? `/new-slide?lesson_id=${currentLessonId}&group_id=${currentGroupId}`
-        : `/new-slide?lesson_id=${currentLessonId}`;
+        ? `#` // Archived - coming soon
+        : `#`; // Archived - coming soon
       actions.push({ label: "+ Add Slide", href: addSlideHref });
     }
 

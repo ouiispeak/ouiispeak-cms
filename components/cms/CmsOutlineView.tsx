@@ -449,7 +449,9 @@ export default function CmsOutlineView({
                                                 return (
                                                   <li key={slide.id} style={{ marginBottom: uiTokens.space.xs }}>
                                                     <Link
-                                                      href={`/edit-slide/${slide.id}`}
+                                                      href="#"
+                                                      onClick={(e) => { e.preventDefault(); }}
+                                                      style={{ opacity: 0.5, cursor: "not-allowed" }}
                                                       style={{
                                                         textDecoration: "none",
                                                         color: isCurrentSlide ? "#398f8f" : uiTokens.color.textMuted,
@@ -463,7 +465,7 @@ export default function CmsOutlineView({
                                                             "You have unsaved changes. Are you sure you want to leave?"
                                                           );
                                                           if (confirmed) {
-                                                            router.push(`/edit-slide/${slide.id}`);
+                                                            // router.push(`/edit-slide/${slide.id}`); // Archived - coming soon
                                                           }
                                                         }
                                                       }}
@@ -497,7 +499,9 @@ export default function CmsOutlineView({
                                           return (
                                             <li key={slide.id} style={{ marginBottom: uiTokens.space.xs }}>
                                               <Link
-                                                href={`/edit-slide/${slide.id}`}
+                                                href="#"
+                                                onClick={(e) => { e.preventDefault(); }}
+                                                style={{ opacity: 0.5, cursor: "not-allowed" }}
                                                 style={{
                                                   textDecoration: "none",
                                                   color: isCurrentSlide ? uiTokens.color.text : uiTokens.color.textMuted,
@@ -511,7 +515,7 @@ export default function CmsOutlineView({
                                                       "You have unsaved changes. Are you sure you want to leave?"
                                                     );
                                                     if (confirmed) {
-                                                      router.push(`/edit-slide/${slide.id}`);
+                                                      // router.push(`/edit-slide/${slide.id}`); // Archived - coming soon
                                                     }
                                                   }
                                                 }}
