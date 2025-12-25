@@ -162,14 +162,24 @@ export default function DefaultSlideEditor({
   );
   const groupedRenderedFields = useMemo(() => {
     const grouped = groupFieldsForDisplay(renderedFields);
-    // DEBUG: Log what groups are created
+    // DEBUG: Log what groups are created with full details
     if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-      console.log(`[DEBUG] Grouped fields for "${slideType}":`, grouped.map(g => ({
+      console.log(`[DEBUG] Grouped fields for "${slideType}":`, JSON.stringify(grouped.map(g => ({
         id: g.id,
         title: g.title,
         fieldKeys: g.fields.map(f => f.key),
-        allGroupKeys: g.keys,
-      })));
+        allGroupKeys: Array.from(g.keys),
+        fieldCount: g.fields.length,
+      })), null, 2));
+      // Also log each group separately for clarity
+      grouped.forEach((g, idx) => {
+        console.log(`[DEBUG] Group ${idx + 1}: "${g.title}"`, {
+          id: g.id,
+          fieldsInSchema: g.fields.map(f => f.key),
+          allKeysInGroupDefinition: Array.from(g.keys),
+          systemFields: g.fields.filter(f => isSystemField(f.key)).map(f => f.key),
+        });
+      });
     }
     return grouped;
   }, [renderedFields, slideType]);
