@@ -214,13 +214,13 @@ export default function LocationSpine({
     });
     trail.push({
       label: slide.type || "Slide",
-      href: `/edit-slide/${slide.id}`,
+      href: "#", // Archived - coming soon
       isCurrent: false,
     });
     if (slideTitle) {
       trail.push({
         label: slideTitle,
-        href: `/edit-slide/${slide.id}`,
+        href: "#", // Archived - coming soon
         isCurrent: true,
       });
     } else {
