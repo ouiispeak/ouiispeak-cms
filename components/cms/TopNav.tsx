@@ -19,7 +19,6 @@ export default function TopNav() {
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
   // Slide menu kept but editing functionality archived
-  const isSlideTypesActive = pathname.startsWith("/cms/slide-types");
 
   // Level colors: background and border/underline
   const levelColors = {
@@ -106,26 +105,6 @@ export default function TopNav() {
       >
         CMS Dashboard
       </Link>
-      <Link
-        href="/cms/slide-types"
-        style={{
-          ...navLinkStyle(isSlideTypesActive),
-        }}
-        onMouseEnter={(e) => {
-          if (!isSlideTypesActive) {
-            Object.assign(e.currentTarget.style, hoverStyle);
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSlideTypesActive) {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = uiTokens.color.textMuted;
-          }
-        }}
-      >
-        Slide Types
-      </Link>
-      {divider}
       <span style={navLinkStyle(isCefrActive, false, "cefr")}>
         CEFR
       </span>
