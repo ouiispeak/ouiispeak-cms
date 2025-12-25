@@ -326,8 +326,8 @@ export default function EditSlideTypePresetPage() {
         title="Field visibility"
         description={
           isDefaultType
-            ? "Hide fields to declutter the editor. Hidden fields act as a parent gate - they will be hidden in ALL child slide types AND removed from their allowlists. When re-enabled, fields remain hidden in child types until manually enabled. Hidden fields stay saved; they are just not shown in the UI."
-            : "Hide fields to declutter the editor. Fields hidden in Default cannot be shown here (parent gate). You can only show fields that are visible in Default. Hidden fields stay saved; they are just not shown in the UI."
+            ? "Control which fields are available to child slide types. Fields in 'Available' can be used by child types (title, text, ai-speak, etc.). Fields in 'Unavailable' cannot be accessed by any child type. Moving a field to Unavailable will remove it from all child types. Moving a field to Available makes it accessible to child types, but they must still opt-in to make it visible."
+            : "Control which available fields are visible in this slide type's form. Fields in 'Visible' appear when editing slides of this type. Fields in 'Hidden' are available from Default but not shown in this type's form. You can only show fields that are Available in Default (parent gate)."
         }
         backgroundColor={fieldVisibilitySection.backgroundColor}
         borderColor={fieldVisibilitySection.borderColor}
@@ -340,7 +340,7 @@ export default function EditSlideTypePresetPage() {
       >
         <div style={twoColumnGrid}>
           <div style={columnContainer}>
-            <h3 style={columnTitle}>Visible fields</h3>
+            <h3 style={columnTitle}>{isDefaultType ? "Available fields" : "Visible fields"}</h3>
             <div style={categoriesGrid}>
               {visibleGroups.map((group) => (
                 <div key={group.id} style={categoryContainer}>
@@ -357,14 +357,14 @@ export default function EditSlideTypePresetPage() {
                           )}
                           {isDefaultType && field.key !== "label" && (
                             <div className="metaText" style={{ fontSize: 11, color: "#856404", marginTop: 4 }}>
-                              Hiding will remove from all slide types
+                              Moving to Unavailable will remove from all slide types
                             </div>
                           )}
                         </div>
                         <button
                           type="button"
                           onClick={() => toggleHide(field.key, true)}
-                          aria-label={`Hide ${field.label}${isDefaultType && field.key !== "label" ? " (will remove from all slide types)" : ""}`}
+                          aria-label={`${isDefaultType ? "Move to Unavailable" : "Hide"} ${field.label}${isDefaultType && field.key !== "label" ? " (will remove from all slide types)" : ""}`}
                           style={hideButton}
                         >
                           <svg
@@ -384,14 +384,14 @@ export default function EditSlideTypePresetPage() {
               ))}
               {visibleFields.length === 0 && (
                 <div className="metaText" style={emptyState}>
-                  No visible fields.
+                  {isDefaultType ? "No available fields." : "No visible fields."}
                 </div>
               )}
             </div>
           </div>
 
           <div style={columnContainer}>
-            <h3 style={columnTitle}>Hidden fields</h3>
+            <h3 style={columnTitle}>{isDefaultType ? "Unavailable fields" : "Hidden fields"}</h3>
             {isDefaultType ? (
               <div style={categoriesGrid}>
                 {hiddenGroups.map((group) => (
@@ -411,7 +411,7 @@ export default function EditSlideTypePresetPage() {
                           <button
                             type="button"
                             onClick={() => toggleHide(field.key, false)}
-                            aria-label={`Show ${field.label}`}
+                            aria-label={`Move to Available ${field.label}`}
                             style={showButton}
                           >
                             <svg
@@ -431,7 +431,7 @@ export default function EditSlideTypePresetPage() {
                 ))}
                 {hiddenFields.length === 0 && (
                   <div className="metaText" style={emptyState}>
-                    No hidden fields.
+                    {isDefaultType ? "No unavailable fields." : "No hidden fields."}
                   </div>
                 )}
               </div>
@@ -511,7 +511,7 @@ export default function EditSlideTypePresetPage() {
                           <button
                             type="button"
                             onClick={() => toggleHide(field.key, false)}
-                            aria-label={`Show ${field.label}`}
+                            aria-label={`${isDefaultType ? "Move to Available" : "Show"} ${field.label}`}
                             style={showButton}
                           >
                             <svg
@@ -531,7 +531,7 @@ export default function EditSlideTypePresetPage() {
                 ))}
                 {hiddenFields.length === 0 && (
                   <div className="metaText" style={emptyState}>
-                    No hidden fields.
+                    {isDefaultType ? "No unavailable fields." : "No hidden fields."}
                   </div>
                 )}
               </div>

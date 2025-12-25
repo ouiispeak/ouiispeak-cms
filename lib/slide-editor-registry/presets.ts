@@ -24,14 +24,23 @@ function computeVisibleFieldKeys(hiddenFieldKeys: string[]): string[] {
 }
 
 // Code-defined presets (fallback defaults). These are merged with localStorage presets.
-// For "default": uses hiddenFieldKeys (everything visible except hidden)
-// For non-default types: uses visibleFieldKeys (explicit allowlist, no inheritance)
+// OPT-IN MODEL: Fields start hidden by default, users explicitly enable what they need.
+// For "default": uses hiddenFieldKeys (everything hidden except what's not in the list)
+// For non-default types: uses visibleFieldKeys (explicit allowlist, minimal opt-in)
 export const CODE_DEFAULT_PRESETS: Record<string, SlideTypePresetsConfig["presets"][string]> = {
-  default: { hiddenFieldKeys: [] },
-  "text-slide": { visibleFieldKeys: computeVisibleFieldKeys([]) },
-  text: { visibleFieldKeys: computeVisibleFieldKeys([]) },
-  "title-slide": { visibleFieldKeys: computeVisibleFieldKeys(["body", "note", "phrases", "defaultLang"]) },
-  "ai-speak-repeat": { visibleFieldKeys: computeVisibleFieldKeys(["body", "note"]) },
+  // Default: All fields hidden except "label" (required field)
+  // This means hiddenFieldKeys contains all fields EXCEPT "label"
+  default: {
+    hiddenFieldKeys: DEFAULT_SLIDE_FIELDS
+      .filter((field) => field.key !== "label")
+      .map((field) => field.key),
+  },
+  // Child types: Start with minimal visible fields (only required "label")
+  // Users must opt-in to additional fields from Default's Available list
+  "text-slide": { visibleFieldKeys: ["label"] },
+  text: { visibleFieldKeys: ["label"] },
+  "title-slide": { visibleFieldKeys: ["label"] },
+  "ai-speak-repeat": { visibleFieldKeys: ["label"] },
 };
 
 /**
