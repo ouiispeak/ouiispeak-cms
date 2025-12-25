@@ -104,8 +104,8 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
-              Used by: [title, text, ai-speak]
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
 
@@ -119,8 +119,8 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
-              Used by: [title, text, ai-speak]
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
 
@@ -134,8 +134,8 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
-              Used by: [title, text, ai-speak]
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
 
@@ -149,8 +149,8 @@ export default function EditSlidePage() {
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
-              Used by: [title, text, ai-speak]
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
 
@@ -168,8 +168,8 @@ export default function EditSlidePage() {
               }}
               placeholder="Enter slide label"
             />
-            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size }}>
-              Used by: [title, text, ai-speak]
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
         </CmsSection>
