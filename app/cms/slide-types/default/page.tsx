@@ -5,7 +5,8 @@ import CmsPageShell from "../../../../components/cms/CmsPageShell";
 import CmsSection from "../../../../components/ui/CmsSection";
 import { uiTokens } from "../../../../lib/uiTokens";
 import { CANONICAL_FIELDS, REQUIRED_FIELD_KEY, type CanonicalField } from "../../../../lib/slide-editor-registry-v2/canonicalFields";
-import { createDefaultAvailability, type DefaultFieldAvailability } from "../../../../lib/slide-editor-registry-v2/types";
+import type { DefaultFieldAvailability } from "../../../../lib/slide-editor-registry-v2/types";
+import { getDefaultAvailability } from "../../../../lib/slide-editor-registry-v2/defaultAvailability";
 import { Button } from "../../../../components/Button";
 
 /**
@@ -18,7 +19,8 @@ import { Button } from "../../../../components/Button";
  */
 export default function DefaultSlideTypeEditor() {
   // State: which fields are Available
-  const [availability, setAvailability] = useState<DefaultFieldAvailability>(() => createDefaultAvailability());
+  // Always start with code defaults (opt-in model: only "label" available)
+  const [availability, setAvailability] = useState<DefaultFieldAvailability>(() => getDefaultAvailability());
 
   // Separate fields into Available and Unavailable
   const { availableFields, unavailableFields } = useMemo(() => {
