@@ -29,20 +29,28 @@ export function loadPresetsFromStorage(): SlideTypePresetsConfig {
       typeof parsed.presets === "object" &&
       parsed.presets !== null
     ) {
-      // Validate each preset has hiddenFieldKeys array
+      // Validate each preset - support both hiddenFieldKeys (default type) and visibleFieldKeys (non-default types)
       const presets = parsed.presets as Record<string, unknown>;
-      const validatedPresets: Record<string, { hiddenFieldKeys: string[] }> = {};
+      const validatedPresets: Record<string, { hiddenFieldKeys?: string[]; visibleFieldKeys?: string[] }> = {};
 
       for (const [key, value] of Object.entries(presets)) {
-        if (
-          typeof value === "object" &&
-          value !== null &&
-          "hiddenFieldKeys" in value &&
-          Array.isArray(value.hiddenFieldKeys)
-        ) {
-          validatedPresets[key] = {
-            hiddenFieldKeys: value.hiddenFieldKeys.filter((k: unknown) => typeof k === "string"),
-          };
+        if (typeof value === "object" && value !== null) {
+          const preset: { hiddenFieldKeys?: string[]; visibleFieldKeys?: string[] } = {};
+          
+          // Support hiddenFieldKeys (for default type)
+          if ("hiddenFieldKeys" in value && Array.isArray(value.hiddenFieldKeys)) {
+            preset.hiddenFieldKeys = value.hiddenFieldKeys.filter((k: unknown) => typeof k === "string");
+          }
+          
+          // Support visibleFieldKeys (for non-default types)
+          if ("visibleFieldKeys" in value && Array.isArray(value.visibleFieldKeys)) {
+            preset.visibleFieldKeys = value.visibleFieldKeys.filter((k: unknown) => typeof k === "string");
+          }
+          
+          // Only add preset if it has at least one valid key array
+          if (preset.hiddenFieldKeys || preset.visibleFieldKeys) {
+            validatedPresets[key] = preset;
+          }
         }
       }
 
