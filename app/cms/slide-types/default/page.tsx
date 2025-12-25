@@ -242,6 +242,33 @@ export default function DefaultSlideTypeEditor() {
             </div>
           </div>
         </div>
+
+        {/* Actions */}
+        <div
+          style={{
+            display: "flex",
+            gap: uiTokens.space.md,
+            marginTop: uiTokens.space.lg,
+            paddingTop: uiTokens.space.lg,
+            borderTop: `1px solid ${uiTokens.color.border}`,
+          }}
+        >
+          <Button
+            type="button"
+            onClick={() => {
+              // Reset to code defaults
+              setAvailability(getDefaultAvailability());
+            }}
+            variant="secondary"
+            size="md"
+          >
+            Reset to Defaults
+          </Button>
+          <div className="metaText" style={{ alignSelf: "center", color: uiTokens.color.textMuted }}>
+            {availableFields.length} field{availableFields.length !== 1 ? "s" : ""} available,{" "}
+            {unavailableFields.length} unavailable
+          </div>
+        </div>
       </CmsSection>
     </CmsPageShell>
   );
