@@ -57,16 +57,6 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
     presets: { ...stored.presets },
   };
 
-  // DEBUG: Log what was loaded from storage
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`[DEBUG] Loaded from localStorage:`, {
-      default: stored.presets.default,
-      "title-slide": stored.presets["title-slide"],
-      "text-slide": stored.presets["text-slide"],
-      "ai-speak-repeat": stored.presets["ai-speak-repeat"],
-    });
-  }
-
   // Always use code default for "default" type to ensure opt-in model is enforced
   // Old localStorage presets may have hiddenFieldKeys: [] (all visible), which conflicts with opt-in model
   // Code default has all fields hidden except "label" (opt-in model)
@@ -85,16 +75,6 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
     merged.presets[type] = preset;
   }
 
-  // DEBUG: Log final merged config
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`[DEBUG] Final merged config:`, {
-      default: merged.presets.default,
-      "title-slide": merged.presets["title-slide"],
-      "text-slide": merged.presets["text-slide"],
-      "ai-speak-repeat": merged.presets["ai-speak-repeat"],
-    });
-  }
-
   return merged;
 }
 
@@ -109,33 +89,8 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
 export function getVisibleFieldsForType(type?: string | null): EditorField[] {
   const normalized = (type || "default").trim() || "default";
   const config = getPresetsConfig();
-  
-  // DEBUG: Log preset configuration
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`[DEBUG] getVisibleFieldsForType("${type}") -> normalized: "${normalized}"`);
-    console.log(`[DEBUG] Default preset:`, config.presets.default);
-    console.log(`[DEBUG] ${normalized} preset:`, config.presets[normalized]);
-  }
-  
   const result = resolveSlideTypeVisibility(normalized, DEFAULT_SLIDE_FIELDS, config);
-  
-  // DEBUG: Log resolver result
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`[DEBUG] Resolver result for "${normalized}":`, {
-      visibleKeys: Array.from(result.visibleKeys),
-      visibleKeysCount: result.visibleKeys.size,
-      defaultHiddenKeys: Array.from(result.defaultHiddenKeys),
-    });
-  }
-  
-  const visibleFields = DEFAULT_SLIDE_FIELDS.filter((field) => result.visibleKeys.has(field.key));
-  
-  // DEBUG: Log final visible fields
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    console.log(`[DEBUG] Visible fields for "${normalized}":`, visibleFields.map(f => f.key));
-  }
-  
-  return visibleFields;
+  return DEFAULT_SLIDE_FIELDS.filter((field) => result.visibleKeys.has(field.key));
 }
 
 /**

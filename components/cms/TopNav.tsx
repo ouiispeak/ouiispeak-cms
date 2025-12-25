@@ -18,7 +18,7 @@ export default function TopNav() {
                        pathname.startsWith("/lesson-slides/");
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
-  const isSlideActive = pathname.startsWith("/edit-slide/");
+  // Slide menu kept but editing functionality archived
   const isSlideTypesActive = pathname.startsWith("/cms/slide-types");
 
   // Level colors: background and border/underline
@@ -135,11 +135,8 @@ export default function TopNav() {
       <span style={navLinkStyle(isLessonActive, false, "lesson")}>
         Lesson
       </span>
-      <span style={navLinkStyle(isGroupActive, false, "group")}>
+      <span style={navLinkStyle(isGroupActive, true, "group")}>
         Group
-      </span>
-      <span style={navLinkStyle(isSlideActive, true, "slide")}>
-        Slide
       </span>
     </nav>
   );

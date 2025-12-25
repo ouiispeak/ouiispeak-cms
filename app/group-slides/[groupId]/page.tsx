@@ -14,8 +14,6 @@ import LinkButton from "../../../components/ui/LinkButton";
 import { uiTokens } from "../../../lib/uiTokens";
 import { loadGroupById } from "../../../lib/data/groups";
 import { loadSlidesByGroup, createSlide } from "../../../lib/data/slides";
-import { getSelectableSlideTypesWithLabels } from "../../../lib/slide-editor-registry/presets";
-import { getSlideDisplayName } from "../../../lib/utils/displayName";
 import type { Group } from "../../../lib/domain/group";
 import { supabase } from "../../../lib/supabase";
 
@@ -193,7 +191,12 @@ export default function GroupSlidesPage() {
     }
   };
 
-  const selectableTypesWithLabels = getSelectableSlideTypesWithLabels();
+  // Simple slide type options (can be expanded later)
+  const slideTypeOptions = [
+    { value: "text-slide", label: "Text Slide" },
+    { value: "title-slide", label: "Title Slide" },
+    { value: "ai-speak-repeat", label: "AI Speak Repeat" },
+  ];
 
   return (
     <CmsPageShell title="Manage Group">
@@ -213,25 +216,14 @@ export default function GroupSlidesPage() {
           >
             <form ref={formRef} onSubmit={handleCreate}>
               <FormField label="Slide type" required>
-                {selectableTypesWithLabels.length === 0 ? (
-                  <div>
-                    <p style={{ color: uiTokens.color.danger, marginBottom: uiTokens.space.xs }}>
-                      No slide types available. Please create slide types first.
-                    </p>
-                    <LinkButton href="/cms/slide-types" size="sm">
-                      Go to Slide Types
-                    </LinkButton>
-                  </div>
-                ) : (
-                  <Select value={slideType} onChange={(e) => setSlideType(e.target.value)}>
-                    <option value="">Select a slide type…</option>
-                    {selectableTypesWithLabels.map(({ key, label }) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </Select>
-                )}
+                <Select value={slideType} onChange={(e) => setSlideType(e.target.value)}>
+                  <option value="">Select a slide type…</option>
+                  {slideTypeOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
               </FormField>
 
               <FormField label="Order index" required>
@@ -282,17 +274,13 @@ export default function GroupSlidesPage() {
                 <tbody>
                   {sortedSlides.map((slide) => (
                     <tr key={slide.id} style={{ borderBottom: `1px solid ${uiTokens.color.border}` }}>
-                      <td style={{ padding: uiTokens.space.xs }}>{getSlideDisplayName(slide)}</td>
+                      <td style={{ padding: uiTokens.space.xs }}>
+                        {(slide.propsJson as { label?: string })?.label || slide.id.slice(0, 8)}
+                      </td>
                       <td style={{ padding: uiTokens.space.xs }}><code className="codeText">{slide.type}</code></td>
                       <td style={{ padding: uiTokens.space.xs }}>{slide.orderIndex ?? "—"}</td>
                       <td style={{ padding: uiTokens.space.xs }}>
-                        <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
-                          <LinkButton href={`/edit-slide/${slide.id}`} size="sm" style={{ color: "#cde3e3", border: "1px solid #9cc7c7" }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                            </svg>
-                          </LinkButton>
-                        </div>
+                        <span className="metaText">Edit functionality coming soon</span>
                       </td>
                     </tr>
                   ))}

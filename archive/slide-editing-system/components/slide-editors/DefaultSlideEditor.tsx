@@ -124,16 +124,8 @@ export default function DefaultSlideEditor({
 
   // Render ONLY fields from schema.fields - no DEFAULT_SLIDE_FIELDS, no hidden fields list
   const renderedFields = useMemo(() => {
-    // DEBUG: Log what fields are in the schema
-    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-      console.log(`[DEBUG] DefaultSlideEditor schema.fields for type "${slideType}":`, schema.fields.map(f => f.key));
-      const systemFields = schema.fields.filter(f => isSystemField(f.key));
-      if (systemFields.length > 0) {
-        console.warn(`[DEBUG] ⚠️ System fields found in schema:`, systemFields.map(f => f.key));
-      }
-    }
     return schema.fields; // Schema already contains only visible fields (hidden fields filtered by resolver)
-  }, [schema.fields, slideType]);
+  }, [schema.fields]);
   const metadataFields = useMemo(
     () => renderedFields.filter((field) => isMetadataField(field.key)),
     [renderedFields]
@@ -160,29 +152,10 @@ export default function DefaultSlideEditor({
     }),
     [groupId, orderIndex, row.groupId, row.id, row.orderIndex, row.type, slideType]
   );
-  const groupedRenderedFields = useMemo(() => {
-    const grouped = groupFieldsForDisplay(renderedFields);
-    // DEBUG: Log what groups are created with full details
-    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-      console.log(`[DEBUG] Grouped fields for "${slideType}":`, JSON.stringify(grouped.map(g => ({
-        id: g.id,
-        title: g.title,
-        fieldKeys: g.fields.map(f => f.key),
-        allGroupKeys: Array.from(g.keys),
-        fieldCount: g.fields.length,
-      })), null, 2));
-      // Also log each group separately for clarity
-      grouped.forEach((g, idx) => {
-        console.log(`[DEBUG] Group ${idx + 1}: "${g.title}"`, {
-          id: g.id,
-          fieldsInSchema: g.fields.map(f => f.key),
-          allKeysInGroupDefinition: Array.from(g.keys),
-          systemFields: g.fields.filter(f => isSystemField(f.key)).map(f => f.key),
-        });
-      });
-    }
-    return grouped;
-  }, [renderedFields, slideType]);
+  const groupedRenderedFields = useMemo(
+    () => groupFieldsForDisplay(renderedFields),
+    [renderedFields]
+  );
 
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
@@ -500,17 +473,6 @@ export default function DefaultSlideEditor({
           const groupSpecialFields = group.fields.filter((field) => isSpecialMetadataField(field.key));
           const groupHasMetadataSection = group.fields.some((field) => isAuthoringMetadataField(field.key));
 
-          // DEBUG: Log what fields are in each group before rendering
-          if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-            console.log(`[DEBUG] Rendering group "${group.title}":`, {
-              allFieldsInGroup: group.fields.map(f => f.key),
-              systemFields: groupSystemFields.map(f => f.key),
-              editableFields: groupEditableFields.map(f => f.key),
-              specialFields: groupSpecialFields.map(f => f.key),
-              hasMetadataSection: groupHasMetadataSection,
-            });
-          }
-
           if (
             groupSystemFields.length === 0 &&
             groupEditableFields.length === 0 &&
@@ -538,13 +500,7 @@ export default function DefaultSlideEditor({
                 <div style={categoryTitle}>{group.title}</div>
               )}
               <div style={{ display: "grid", gap: uiTokens.space.sm }}>
-                {groupSystemFields.map((field) => {
-                  // DEBUG: Log when system fields are rendered
-                  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-                    console.warn(`[DEBUG] ⚠️ Rendering system field "${field.key}" in group "${group.title}"`);
-                  }
-                  return renderSystemField(field);
-                })}
+                {groupSystemFields.map((field) => renderSystemField(field))}
                 {groupEditableFields.map((field) => (
                   <FormField key={field.key} label={field.label} required={field.required} borderColor="#b4d5d5" infoTooltip={field.helpText}>
                     {renderFieldInput(field.key, field.uiType)}

@@ -240,9 +240,10 @@ export function useLessonManager(lessonId: string | undefined) {
           return { success: false, error: err };
         }
 
-        // Navigate to edit slide if requested
+        // Navigate to edit slide if requested (functionality archived - placeholder)
+        // TODO: Re-implement slide editing
         if (navigateToEdit) {
-          router.push(`/edit-slide/${data.id}`);
+          // router.push(`/edit-slide/${data.id}`);
         }
 
         return { success: true, slideId: data.id };
