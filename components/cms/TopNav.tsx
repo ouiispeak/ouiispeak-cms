@@ -18,7 +18,8 @@ export default function TopNav() {
                        pathname.startsWith("/lesson-slides/");
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
-  // Slide menu kept but editing functionality archived
+  const isSlideActive = pathname.startsWith("/manage-slides/") || 
+                        pathname.startsWith("/edit-slide/");
 
   // Level colors: background and border/underline
   const levelColors = {
@@ -114,9 +115,28 @@ export default function TopNav() {
       <span style={navLinkStyle(isLessonActive, false, "lesson")}>
         Lesson
       </span>
-      <span style={navLinkStyle(isGroupActive, true, "group")}>
+      <span style={navLinkStyle(isGroupActive, false, "group")}>
         Group
       </span>
+      <Link
+        href="/manage-slides"
+        style={{
+          ...navLinkStyle(isSlideActive, true, "slide"),
+        }}
+        onMouseEnter={(e) => {
+          if (!isSlideActive) {
+            Object.assign(e.currentTarget.style, hoverStyle);
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSlideActive) {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = uiTokens.color.textMuted;
+          }
+        }}
+      >
+        Manage Slides
+      </Link>
     </nav>
   );
 }

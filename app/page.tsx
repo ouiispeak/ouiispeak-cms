@@ -9,8 +9,6 @@ import { useCmsDeleteFlow } from "../lib/hooks/useCmsDeleteFlow";
 export const dynamic = "force-dynamic";
 
 import CmsDashboardTree from "../components/cms/CmsDashboardTree";
-import CmsSection from "../components/ui/CmsSection";
-import LinkButton from "../components/ui/LinkButton";
 import type { ModuleDeleteImpact, LessonDeleteImpact } from "../lib/data/deleteImpact";
 
 export default function CmsHome() {
@@ -138,22 +136,7 @@ export default function CmsHome() {
           />
 
           {loadState.status === "ready" && (
-            <>
-              <div style={{ marginBottom: uiTokens.space.lg }}>
-                <CmsSection backgroundColor="#83b9b9">
-                  <div style={{ padding: `${uiTokens.space.sm}px ${uiTokens.space.lg}px`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h2 style={{ fontSize: uiTokens.font.sectionTitle.size, fontWeight: 500, margin: 0, color: "#192026" }}>
-                      Manage Slides
-                    </h2>
-                    <LinkButton href="/manage-slides" size="sm" style={{ color: "#ffffff", border: "none" }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="#ffffff" style={{ width: 16, height: 16 }}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-                      </svg>
-                    </LinkButton>
-                  </div>
-                </CmsSection>
-              </div>
-              <CmsDashboardTree
+            <CmsDashboardTree
                 maps={loadState.maps}
                 openLevels={openLevels}
                 openModules={openModules}
