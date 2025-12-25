@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
 import { uiTokens } from "../../../lib/uiTokens";
 import FormField from "../../../components/ui/FormField";
@@ -45,7 +46,15 @@ export default function EditSlidePage() {
 
   return (
     <CmsPageShell title={`Edit Slide ${slideId ? `(${slideId.slice(0, 8)})` : ""}`}>
-      <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
+      <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
+        {/* Left column - outline view */}
+        <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #9cc7c7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
+          <CmsOutlineView currentSlideId={slideId} />
+        </div>
+        
+        {/* Right column - content */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: uiTokens.space.md }}>
+          <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
         {/* Identity & Structure Section */}
         <CmsSection
           title="Identity & Structure"
@@ -141,6 +150,8 @@ export default function EditSlidePage() {
           />
         </div>
       </form>
+        </div>
+      </div>
     </CmsPageShell>
   );
 }
