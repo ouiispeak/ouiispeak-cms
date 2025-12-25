@@ -57,6 +57,16 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
     presets: { ...stored.presets },
   };
 
+  // DEBUG: Log what was loaded from storage
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(`[DEBUG] Loaded from localStorage:`, {
+      default: stored.presets.default,
+      "title-slide": stored.presets["title-slide"],
+      "text-slide": stored.presets["text-slide"],
+      "ai-speak-repeat": stored.presets["ai-speak-repeat"],
+    });
+  }
+
   // Always use code default for "default" type to ensure opt-in model is enforced
   // Old localStorage presets may have hiddenFieldKeys: [] (all visible), which conflicts with opt-in model
   // Code default has all fields hidden except "label" (opt-in model)
@@ -73,6 +83,16 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
     // Always use code default for child types to enforce opt-in model
     // This ensures child types start with minimal fields and users must opt-in
     merged.presets[type] = preset;
+  }
+
+  // DEBUG: Log final merged config
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(`[DEBUG] Final merged config:`, {
+      default: merged.presets.default,
+      "title-slide": merged.presets["title-slide"],
+      "text-slide": merged.presets["text-slide"],
+      "ai-speak-repeat": merged.presets["ai-speak-repeat"],
+    });
   }
 
   return merged;
