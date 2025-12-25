@@ -194,6 +194,9 @@ export default function EditSlidePage() {
               }}
               placeholder="Enter slide title"
             />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title]
+            </div>
           </FormField>
 
           <FormField 
@@ -209,6 +212,9 @@ export default function EditSlidePage() {
               }}
               placeholder="Enter slide subtitle"
             />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title]
+            </div>
           </FormField>
 
           <FormField 
@@ -224,6 +230,9 @@ export default function EditSlidePage() {
               placeholder="Enter slide body text"
               rows={6}
             />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [text]
+            </div>
           </FormField>
         </CmsSection>
       </form>
