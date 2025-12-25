@@ -57,21 +57,25 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
     presets: { ...stored.presets },
   };
 
-  // Ensure default preset exists
-  if (!merged.presets.default) {
-    merged.presets.default = CODE_DEFAULT_PRESETS.default || { hiddenFieldKeys: [] };
-  }
+  // Always use code default for "default" type to ensure opt-in model is enforced
+  // Old localStorage presets may have hiddenFieldKeys: [] (all visible), which conflicts with opt-in model
+  // Code default has all fields hidden except "label" (opt-in model)
+  merged.presets.default = CODE_DEFAULT_PRESETS.default || { hiddenFieldKeys: [] };
 
   // Add code defaults for types not in storage OR types with empty/invalid presets
   for (const [type, preset] of Object.entries(CODE_DEFAULT_PRESETS)) {
+    if (type === "default") {
+      // Already handled above - always use code default
+      continue;
+    }
     const existingPreset = merged.presets[type];
     // Use code default if:
     // 1. No preset exists, OR
     // 2. Preset exists but has empty visibleFieldKeys (invalid state - should use code default)
     if (!existingPreset) {
       merged.presets[type] = preset;
-    } else if (type !== "default" && existingPreset.visibleFieldKeys && existingPreset.visibleFieldKeys.length === 0) {
-      // Non-default type with empty visibleFieldKeys - use code default instead
+    } else if (existingPreset.visibleFieldKeys && existingPreset.visibleFieldKeys.length === 0) {
+      // Type with empty visibleFieldKeys - use code default instead
       // This handles cases where localStorage has an invalid empty preset
       merged.presets[type] = preset;
     }
