@@ -1,0 +1,147 @@
+"use client";
+
+import { useParams } from "next/navigation";
+import CmsPageShell from "../../../components/cms/CmsPageShell";
+import CmsSection from "../../../components/ui/CmsSection";
+import { uiTokens } from "../../../lib/uiTokens";
+import FormField from "../../../components/ui/FormField";
+import Input from "../../../components/ui/Input";
+import Textarea from "../../../components/ui/Textarea";
+import SaveChangesButton from "../../../components/ui/SaveChangesButton";
+import StatusMessage from "../../../components/ui/StatusMessage";
+import { useState } from "react";
+
+/**
+ * Default Mock Slide Editor Page
+ * 
+ * This is a template slide editor that will be customized and applied to all slide types.
+ * Currently not connected to any data - just a mock UI structure.
+ */
+export default function EditSlidePage() {
+  const params = useParams<{ slideId: string }>();
+  const slideId = params?.slideId;
+
+  // Mock state - will be replaced with real data loading
+  const [label, setLabel] = useState("");
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+
+    // Mock save - will be replaced with real save logic
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    setSaving(false);
+    setMessage("Changes saved successfully!");
+    setHasUnsavedChanges(false);
+  };
+
+  return (
+    <CmsPageShell title={`Edit Slide ${slideId ? `(${slideId.slice(0, 8)})` : ""}`}>
+      <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
+        {/* Identity & Structure Section */}
+        <CmsSection
+          title="Identity & Structure"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Basic slide identification and structure"
+        >
+          <FormField label="Label" required>
+            <Input
+              type="text"
+              value={label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter slide label"
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
+              Internal name for this slide used in the CMS and navigation. Not shown to learners.
+            </div>
+          </FormField>
+        </CmsSection>
+
+        {/* Core Content Section */}
+        <CmsSection
+          title="Core Content"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Main content shown to learners"
+        >
+          <FormField label="Title">
+            <Input
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter slide title"
+            />
+          </FormField>
+
+          <FormField label="Subtitle">
+            <Input
+              type="text"
+              value={subtitle}
+              onChange={(e) => {
+                setSubtitle(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter slide subtitle"
+            />
+          </FormField>
+
+          <FormField label="Body">
+            <Textarea
+              value={body}
+              onChange={(e) => {
+                setBody(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter slide body text"
+              rows={6}
+            />
+          </FormField>
+        </CmsSection>
+
+        {/* Actions */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: uiTokens.space.md,
+            paddingTop: uiTokens.space.md,
+            borderTop: `1px solid ${uiTokens.color.border}`,
+          }}
+        >
+          {message && (
+            <StatusMessage variant={message.includes("error") ? "error" : "success"}>
+              {message}
+            </StatusMessage>
+          )}
+          <SaveChangesButton
+            onClick={() => {
+              const form = document.querySelector("form");
+              if (form) {
+                form.requestSubmit();
+              }
+            }}
+            hasUnsavedChanges={hasUnsavedChanges}
+            saving={saving}
+            label="Save Changes"
+          />
+        </div>
+      </form>
+    </CmsPageShell>
+  );
+}
+
