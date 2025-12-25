@@ -13,6 +13,7 @@ import {
   getPresetsConfigForEditor,
   serializePresetConfig,
   type SlideTypePreset,
+  getPresetsConfig,
 } from "../../../../../lib/slide-editor-registry/presets";
 import { getSlideEditorDefinition, listSlideEditorDefinitions } from "../../../../../lib/slide-editor-registry";
 import { SchemaDebugPanel } from "../../../../../components/debug/SchemaDebugPanel";
@@ -267,9 +268,11 @@ export default function EditSlideTypePresetPage() {
               .map((f) => f.key)
           );
         } else {
-          // No preset exists: start with what's currently visible according to resolver
+          // No preset exists OR preset has empty visibleFieldKeys: start with what's currently visible according to resolver
           // This ensures we don't accidentally add all fields when user clicks one field
-          const currentVisibility = resolveSlideTypeVisibility(normalizedType, DEFAULT_SLIDE_FIELDS, prev);
+          // Use merged config (with code defaults) instead of raw prev to ensure code defaults are included
+          const mergedConfig = getPresetsConfig();
+          const currentVisibility = resolveSlideTypeVisibility(normalizedType, DEFAULT_SLIDE_FIELDS, mergedConfig);
           visibleSet = new Set(currentVisibility.visibleKeys);
         }
         

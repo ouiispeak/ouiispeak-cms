@@ -36,8 +36,9 @@ export const CODE_DEFAULT_PRESETS: Record<string, SlideTypePresetsConfig["preset
 
 /**
  * Gets the current preset configuration (localStorage-backed, falls back to code defaults)
+ * Merges code defaults with stored presets, ensuring code defaults are used for empty/invalid presets
  */
-function getPresetsConfig(): SlideTypePresetsConfig {
+export function getPresetsConfig(): SlideTypePresetsConfig {
   const stored = loadPresetsFromStorage();
   const codeDefaults = getDefaultPresetsConfig();
 
@@ -52,9 +53,17 @@ function getPresetsConfig(): SlideTypePresetsConfig {
     merged.presets.default = CODE_DEFAULT_PRESETS.default || { hiddenFieldKeys: [] };
   }
 
-  // Add code defaults for types not in storage
+  // Add code defaults for types not in storage OR types with empty/invalid presets
   for (const [type, preset] of Object.entries(CODE_DEFAULT_PRESETS)) {
-    if (!merged.presets[type]) {
+    const existingPreset = merged.presets[type];
+    // Use code default if:
+    // 1. No preset exists, OR
+    // 2. Preset exists but has empty visibleFieldKeys (invalid state - should use code default)
+    if (!existingPreset) {
+      merged.presets[type] = preset;
+    } else if (type !== "default" && existingPreset.visibleFieldKeys && existingPreset.visibleFieldKeys.length === 0) {
+      // Non-default type with empty visibleFieldKeys - use code default instead
+      // This handles cases where localStorage has an invalid empty preset
       merged.presets[type] = preset;
     }
   }
