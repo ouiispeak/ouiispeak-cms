@@ -124,8 +124,16 @@ export default function DefaultSlideEditor({
 
   // Render ONLY fields from schema.fields - no DEFAULT_SLIDE_FIELDS, no hidden fields list
   const renderedFields = useMemo(() => {
+    // DEBUG: Log what fields are in the schema
+    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+      console.log(`[DEBUG] DefaultSlideEditor schema.fields for type "${slideType}":`, schema.fields.map(f => f.key));
+      const systemFields = schema.fields.filter(f => isSystemField(f.key));
+      if (systemFields.length > 0) {
+        console.warn(`[DEBUG] ⚠️ System fields found in schema:`, systemFields.map(f => f.key));
+      }
+    }
     return schema.fields; // Schema already contains only visible fields (hidden fields filtered by resolver)
-  }, [schema.fields]);
+  }, [schema.fields, slideType]);
   const metadataFields = useMemo(
     () => renderedFields.filter((field) => isMetadataField(field.key)),
     [renderedFields]

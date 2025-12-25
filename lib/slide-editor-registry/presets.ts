@@ -89,8 +89,33 @@ export function getPresetsConfig(): SlideTypePresetsConfig {
 export function getVisibleFieldsForType(type?: string | null): EditorField[] {
   const normalized = (type || "default").trim() || "default";
   const config = getPresetsConfig();
+  
+  // DEBUG: Log preset configuration
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(`[DEBUG] getVisibleFieldsForType("${type}") -> normalized: "${normalized}"`);
+    console.log(`[DEBUG] Default preset:`, config.presets.default);
+    console.log(`[DEBUG] ${normalized} preset:`, config.presets[normalized]);
+  }
+  
   const result = resolveSlideTypeVisibility(normalized, DEFAULT_SLIDE_FIELDS, config);
-  return DEFAULT_SLIDE_FIELDS.filter((field) => result.visibleKeys.has(field.key));
+  
+  // DEBUG: Log resolver result
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(`[DEBUG] Resolver result for "${normalized}":`, {
+      visibleKeys: Array.from(result.visibleKeys),
+      visibleKeysCount: result.visibleKeys.size,
+      defaultHiddenKeys: Array.from(result.defaultHiddenKeys),
+    });
+  }
+  
+  const visibleFields = DEFAULT_SLIDE_FIELDS.filter((field) => result.visibleKeys.has(field.key));
+  
+  // DEBUG: Log final visible fields
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    console.log(`[DEBUG] Visible fields for "${normalized}":`, visibleFields.map(f => f.key));
+  }
+  
+  return visibleFields;
 }
 
 /**
