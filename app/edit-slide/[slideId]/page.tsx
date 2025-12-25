@@ -31,6 +31,7 @@ export default function EditSlidePage() {
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [body, setBody] = useState("");
+  const [buttons, setButtons] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -232,6 +233,24 @@ export default function EditSlidePage() {
             />
             <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
               [text]
+            </div>
+          </FormField>
+
+          <FormField 
+            label="Buttons"
+            infoTooltip="Interactive buttons displayed on the slide. Used for navigation, actions, or choices."
+          >
+            <Textarea
+              value={buttons}
+              onChange={(e) => {
+                setButtons(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter button configuration"
+              rows={4}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
             </div>
           </FormField>
         </CmsSection>
