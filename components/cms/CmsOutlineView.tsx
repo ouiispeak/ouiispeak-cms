@@ -449,22 +449,20 @@ export default function CmsOutlineView({
                                                 return (
                                                   <li key={slide.id} style={{ marginBottom: uiTokens.space.xs }}>
                                                     <Link
-                                                      href="#"
+                                                      href={`/edit-slide/${slide.id}`}
                                                       onClick={(e) => {
-                                                        e.preventDefault();
                                                         if (hasUnsavedChanges && !isCurrentSlide) {
+                                                          e.preventDefault();
                                                           e.stopPropagation();
                                                           const confirmed = window.confirm(
                                                             "You have unsaved changes. Are you sure you want to leave?"
                                                           );
                                                           if (confirmed) {
-                                                            // router.push(`/edit-slide/${slide.id}`); // Archived - coming soon
+                                                            router.push(`/edit-slide/${slide.id}`);
                                                           }
                                                         }
                                                       }}
                                                       style={{
-                                                        opacity: 0.5,
-                                                        cursor: "not-allowed",
                                                         textDecoration: "none",
                                                         color: isCurrentSlide ? "#398f8f" : uiTokens.color.textMuted,
                                                         fontWeight: isCurrentSlide ? 600 : 400,
@@ -499,24 +497,22 @@ export default function CmsOutlineView({
                                           return (
                                             <li key={slide.id} style={{ marginBottom: uiTokens.space.xs }}>
                                               <Link
-                                                href="#"
+                                                href={`/edit-slide/${slide.id}`}
                                                 onClick={(e) => {
-                                                  e.preventDefault();
                                                   if (hasUnsavedChanges && !isCurrentSlide) {
+                                                    e.preventDefault();
                                                     e.stopPropagation();
                                                     const confirmed = window.confirm(
                                                       "You have unsaved changes. Are you sure you want to leave?"
                                                     );
                                                     if (confirmed) {
-                                                      // router.push(`/edit-slide/${slide.id}`); // Archived - coming soon
+                                                      router.push(`/edit-slide/${slide.id}`);
                                                     }
                                                   }
                                                 }}
                                                 style={{
-                                                  opacity: 0.5,
-                                                  cursor: "not-allowed",
                                                   textDecoration: "none",
-                                                  color: isCurrentSlide ? uiTokens.color.text : uiTokens.color.textMuted,
+                                                  color: isCurrentSlide ? "#398f8f" : uiTokens.color.textMuted,
                                                   fontWeight: isCurrentSlide ? 600 : 400,
                                                 }}
                                                 onMouseEnter={(e) => {

@@ -106,22 +106,10 @@ export default function TopNav() {
       >
         CMS Dashboard
       </Link>
-      <span style={navLinkStyle(isCefrActive, false, "cefr")}>
-        CEFR
-      </span>
-      <span style={navLinkStyle(isModuleActive, false, "module")}>
-        Module
-      </span>
-      <span style={navLinkStyle(isLessonActive, false, "lesson")}>
-        Lesson
-      </span>
-      <span style={navLinkStyle(isGroupActive, false, "group")}>
-        Group
-      </span>
       <Link
         href="/manage-slides"
         style={{
-          ...navLinkStyle(isSlideActive, true, "slide"),
+          ...navLinkStyle(isSlideActive, false, "slide"),
         }}
         onMouseEnter={(e) => {
           if (!isSlideActive) {
@@ -137,6 +125,18 @@ export default function TopNav() {
       >
         Manage Slides
       </Link>
+      <span style={navLinkStyle(isCefrActive, false, "cefr")}>
+        CEFR
+      </span>
+      <span style={navLinkStyle(isModuleActive, false, "module")}>
+        Module
+      </span>
+      <span style={navLinkStyle(isLessonActive, false, "lesson")}>
+        Lesson
+      </span>
+      <span style={navLinkStyle(isGroupActive, true, "group")}>
+        Group
+      </span>
     </nav>
   );
 }

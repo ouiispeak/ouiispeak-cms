@@ -7,10 +7,13 @@ import { uiTokens } from "../../lib/uiTokens";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import Textarea from "../../components/ui/Textarea";
+import Select from "../../components/ui/Select";
+import AudioFileSelector from "../../components/ui/AudioFileSelector";
 import SaveChangesButton from "../../components/ui/SaveChangesButton";
 import StatusMessage from "../../components/ui/StatusMessage";
 import PreviewInPlayerButton from "../../components/ui/PreviewInPlayerButton";
 import { useState } from "react";
+import { getGroupDisplayName } from "../../lib/utils/displayName";
 
 /**
  * Manage Slides Page
@@ -24,12 +27,17 @@ export default function ManageSlidesPage() {
   const [slideIdValue, setSlideIdValue] = useState("");
   const [slideType, setSlideType] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [groupName, setGroupName] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(0);
   const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [body, setBody] = useState("");
   const [buttons, setButtons] = useState("");
+  const [defaultLang, setDefaultLang] = useState("");
+  const [audioId, setAudioId] = useState("");
+  const [activityName, setActivityName] = useState("");
+  const [phrases, setPhrases] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -135,6 +143,21 @@ export default function ManageSlidesPage() {
             <Input
               type="text"
               value={groupId}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
+
+          <FormField 
+            label="Group Name"
+            infoTooltip="Name of the group this slide belongs to (read-only). Displayed for reference."
+          >
+            <Input
+              type="text"
+              value={groupName}
               readOnly
               style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
             />
@@ -254,6 +277,112 @@ export default function ManageSlidesPage() {
             />
             <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
               [title, text, ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
+
+        {/* Language and Localization Section */}
+        <CmsSection
+          title="Language and Localization"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Language settings for the slide"
+        >
+          <FormField 
+            label="Default Language"
+            infoTooltip="Default language for text-to-speech and content display. Choose English, French, or Both."
+          >
+            <Select
+              value={defaultLang}
+              onChange={(e) => {
+                setDefaultLang(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+            >
+              <option value="">Select language...</option>
+              <option value="english">English</option>
+              <option value="french">French</option>
+              <option value="both">Both</option>
+            </Select>
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
+
+        {/* Media Reference Section */}
+        <CmsSection
+          title="Media Reference"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Media assets referenced by this slide"
+        >
+          <FormField 
+            label="Audio ID"
+            infoTooltip="Reference ID or path for audio media used in this slide. Select from uploaded files using Browse or enter a path manually."
+          >
+            <AudioFileSelector
+              bucketName="lesson-audio"
+              value={audioId}
+              onChange={(value) => {
+                setAudioId(value);
+                setHasUnsavedChanges(true);
+              }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
+
+        {/* Speech & Audio Interaction Section */}
+        <CmsSection
+          title="Speech & Audio Interaction"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Speech and audio interaction content"
+        >
+          <FormField 
+            label="Phrases"
+            infoTooltip="Phrases for speech recognition and audio interaction. Enter one phrase per line."
+          >
+            <Textarea
+              value={phrases}
+              onChange={(e) => {
+                setPhrases(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter phrases, one per line"
+              rows={6}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
+
+        {/* Authoring Metadata Section */}
+        <CmsSection
+          title="Authoring Metadata"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Metadata for CMS organization and tracking"
+        >
+          <FormField 
+            label="Activity Name"
+            infoTooltip="Name of the activity for CMS organization and tracking."
+          >
+            <Input
+              type="text"
+              value={activityName}
+              onChange={(e) => {
+                setActivityName(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              placeholder="Enter activity name"
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [all slide types]
             </div>
           </FormField>
         </CmsSection>

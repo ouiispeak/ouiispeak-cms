@@ -151,7 +151,6 @@ export default function CmsHome() {
                 onDeleteGroup={(id, title) => handleDeleteClick("group", id, title)}
                 onDeleteSlide={(id, title) => handleDeleteClick("slide", id, title)}
               />
-            </>
           )}
         </div>
       </CmsPageShell>
