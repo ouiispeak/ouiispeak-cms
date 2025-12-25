@@ -47,6 +47,8 @@ export default function EditSlidePage() {
   const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
+  const [lessonEndMessage, setLessonEndMessage] = useState(""); // For lesson-end slides
+  const [lessonEndActions, setLessonEndActions] = useState(""); // For lesson-end slides (JSON string)
   const [body, setBody] = useState("");
   const [buttons, setButtons] = useState("");
   const [defaultLang, setDefaultLang] = useState("");
@@ -159,7 +161,16 @@ export default function EditSlidePage() {
       setOrderIndex(slide.orderIndex ?? 0);
       setLabel(props.label || "");
       setTitle(props.title || "");
-      setSubtitle(props.subtitle || "");
+      // For lesson-end slides, use message instead of subtitle
+      if (slide.type === "lesson-end") {
+        setLessonEndMessage(props.message || "");
+        setSubtitle(""); // Clear subtitle for lesson-end
+        setLessonEndActions(props.actions ? JSON.stringify(props.actions, null, 2) : "");
+      } else {
+        setSubtitle(props.subtitle || "");
+        setLessonEndMessage(""); // Clear message for non-lesson-end slides
+        setLessonEndActions("");
+      }
       setBody(props.body || "");
       setButtons(props.buttons ? JSON.stringify(props.buttons, null, 2) : "");
       setDefaultLang(props.defaultLang || "");
@@ -234,7 +245,9 @@ export default function EditSlidePage() {
       initialValuesRef.current = {
         label: props.label || "",
         title: props.title || "",
-        subtitle: props.subtitle || "",
+        subtitle: slide.type === "lesson-end" ? "" : (props.subtitle || ""),
+        lessonEndMessage: slide.type === "lesson-end" ? (props.message || "") : "",
+        lessonEndActions: slide.type === "lesson-end" ? (props.actions ? JSON.stringify(props.actions, null, 2) : "") : "",
         body: props.body || "",
         buttons: props.buttons ? JSON.stringify(props.buttons, null, 2) : "",
         defaultLang: props.defaultLang || "",
@@ -276,6 +289,8 @@ export default function EditSlidePage() {
       label !== initialValuesRef.current.label ||
       title !== initialValuesRef.current.title ||
       subtitle !== initialValuesRef.current.subtitle ||
+      lessonEndMessage !== initialValuesRef.current.lessonEndMessage ||
+      lessonEndActions !== initialValuesRef.current.lessonEndActions ||
       body !== initialValuesRef.current.body ||
       buttons !== initialValuesRef.current.buttons ||
       defaultLang !== initialValuesRef.current.defaultLang ||
@@ -294,7 +309,7 @@ export default function EditSlidePage() {
       JSON.stringify(elements) !== JSON.stringify(initialValuesRef.current.elements);
 
       setHasUnsavedChanges(hasChanges);
-  }, [label, title, subtitle, body, buttons, defaultLang, audioId, activityName, phrases, instructions, promptLabel, onCompleteAtIndex, elements, isInteractive, allowSkip, allowRetry, isActivity, maxAttempts, minAttemptsBeforeSkip, loadState]);
+  }, [label, title, subtitle, lessonEndMessage, lessonEndActions, body, buttons, defaultLang, audioId, activityName, phrases, instructions, promptLabel, onCompleteAtIndex, elements, isInteractive, allowSkip, allowRetry, isActivity, maxAttempts, minAttemptsBeforeSkip, loadState]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,16 +331,35 @@ export default function EditSlidePage() {
         }
       }
 
+      // Parse actions if provided (for lesson-end slides)
+      let actionsValue: unknown = null;
+      if (slideType === "lesson-end" && lessonEndActions.trim()) {
+        try {
+          actionsValue = JSON.parse(lessonEndActions);
+        } catch (parseError) {
+          setMessage("Error: Invalid JSON in Actions field");
+          setSaving(false);
+          return;
+        }
+      }
+
       // Build updated props_json
       const updatedProps: any = {
         label: label.trim() || undefined,
         title: title.trim() || undefined,
-        subtitle: subtitle.trim() || undefined,
         body: body.trim() || undefined,
         buttons: buttonsValue || undefined,
         defaultLang: defaultLang.trim() || undefined,
         audioId: audioId.trim() || undefined,
       };
+
+      // For lesson-end slides, use message instead of subtitle
+      if (slideType === "lesson-end") {
+        updatedProps.message = lessonEndMessage.trim() || undefined;
+        updatedProps.actions = actionsValue || undefined;
+      } else {
+        updatedProps.subtitle = subtitle.trim() || undefined;
+      }
 
       // Add boolean flags (always include them, even if false)
       updatedProps.isInteractive = isInteractive;
@@ -490,13 +524,15 @@ export default function EditSlidePage() {
       if (error) {
         setMessage(`Error: ${error}`);
       } else {
-        setMessage("Changes saved successfully!");
+    setMessage("Changes saved successfully!");
         // Update initial values to reflect saved state
         if (initialValuesRef.current) {
           initialValuesRef.current = {
             label,
             title,
-            subtitle,
+            subtitle: slideType === "lesson-end" ? "" : subtitle,
+            lessonEndMessage: slideType === "lesson-end" ? lessonEndMessage : "",
+            lessonEndActions: slideType === "lesson-end" ? lessonEndActions : "",
             body,
             buttons,
             defaultLang,
@@ -515,7 +551,7 @@ export default function EditSlidePage() {
             minAttemptsBeforeSkip,
           };
         }
-        setHasUnsavedChanges(false);
+    setHasUnsavedChanges(false);
       }
     } catch (error: any) {
       setMessage(`Error: ${error.message || "Failed to save changes"}`);
@@ -583,58 +619,58 @@ export default function EditSlidePage() {
           )}
 
           {loadState.status === "ready" && (
-            <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
-              {/* Identity & Structure Section */}
-              <CmsSection
-                title="Identity & Structure"
-                backgroundColor="#e6f1f1"
-                borderColor="#b4d5d5"
-                description="Basic slide identification and structure"
-              >
-                <FormField 
-                  label="Slide ID"
-                  infoTooltip="System UUID for the slide (read-only). Used internally by the CMS to identify this slide."
-                >
-                  <Input
-                    type="text"
-                    value={slideIdValue}
-                    readOnly
-                    style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
+          <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
+        {/* Identity & Structure Section */}
+        <CmsSection
+          title="Identity & Structure"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Basic slide identification and structure"
+        >
+          <FormField 
+            label="Slide ID"
+            infoTooltip="System UUID for the slide (read-only). Used internally by the CMS to identify this slide."
+          >
+            <Input
+              type="text"
+              value={slideIdValue}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
 
-                <FormField 
-                  label="Slide Type"
-                  infoTooltip="Type key used to select the editor (read-only). Determines which editor component is used to edit this slide."
-                >
-                  <Input
-                    type="text"
-                    value={slideType}
-                    readOnly
-                    style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
+          <FormField 
+            label="Slide Type"
+            infoTooltip="Type key used to select the editor (read-only). Determines which editor component is used to edit this slide."
+          >
+            <Input
+              type="text"
+              value={slideType}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
 
-                <FormField 
-                  label="Group ID"
-                  infoTooltip="Owning group UUID (read-only). This slide belongs to this group in the lesson hierarchy."
-                >
-                  <Input
-                    type="text"
-                    value={groupId}
-                    readOnly
-                    style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
+          <FormField 
+            label="Group ID"
+            infoTooltip="Owning group UUID (read-only). This slide belongs to this group in the lesson hierarchy."
+          >
+            <Input
+              type="text"
+              value={groupId}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
 
                 <FormField 
                   label="Group Name"
@@ -651,100 +687,138 @@ export default function EditSlidePage() {
                   </div>
                 </FormField>
 
-                <FormField 
-                  label="Order Index"
-                  infoTooltip="Sequence position in the group (read-only). Determines the order this slide appears within its group."
-                >
-                  <Input
-                    type="number"
-                    value={orderIndex}
-                    readOnly
-                    style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
+          <FormField 
+            label="Order Index"
+            infoTooltip="Sequence position in the group (read-only). Determines the order this slide appears within its group."
+          >
+            <Input
+              type="number"
+              value={orderIndex}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
 
-                <FormField 
-                  label="Label"
-                  infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners. Required for CMS organization."
-                  required
-                >
-                  <Input
-                    type="text"
-                    value={label}
-                    onChange={(e) => {
-                      setLabel(e.target.value);
-                    }}
-                    placeholder="Enter slide label"
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
-              </CmsSection>
+          <FormField 
+            label="Label"
+            infoTooltip="Internal name for this slide used in the CMS and navigation. Not shown to learners. Required for CMS organization."
+            required
+          >
+            <Input
+              type="text"
+              value={label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+              }}
+              placeholder="Enter slide label"
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
 
-              {/* Core Content Section */}
-              <CmsSection
-                title="Core Content"
-                backgroundColor="#e6f1f1"
-                borderColor="#b4d5d5"
-                description="Main content shown to learners"
-              >
+        {/* Core Content Section */}
+        <CmsSection
+          title="Core Content"
+          backgroundColor="#e6f1f1"
+          borderColor="#b4d5d5"
+          description="Main content shown to learners"
+        >
                 {slideType !== "ai-speak-repeat" && slideType !== "ai-speak-student-repeat" && slideType !== "speech-match" && (
                   <>
-                    <FormField 
-                      label="Title"
-                      infoTooltip="Primary heading for the slide. This is shown to learners as the main title of the slide."
-                    >
-                      <Input
-                        type="text"
-                        value={title}
-                        onChange={(e) => {
-                          setTitle(e.target.value);
-                        }}
-                        placeholder="Enter slide title"
-                      />
-                      <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                        [title]
-                      </div>
-                    </FormField>
+          <FormField 
+            label="Title"
+            infoTooltip="Primary heading for the slide. This is shown to learners as the main title of the slide."
+          >
+            <Input
+              type="text"
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+              }}
+              placeholder="Enter slide title"
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+[title]
+            </div>
+          </FormField>
 
-                    <FormField 
-                      label="Subtitle"
-                      infoTooltip="Secondary heading or subtopic. Shown to learners below the main title."
-                    >
-                      <Input
-                        type="text"
-                        value={subtitle}
-                        onChange={(e) => {
-                          setSubtitle(e.target.value);
-                        }}
-                        placeholder="Enter slide subtitle"
-                      />
-                      <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                        [title]
-                      </div>
-                    </FormField>
+          {slideType === "lesson-end" ? (
+            <>
+              <FormField 
+                label="Message"
+                infoTooltip="Message text shown to learners below the title. This is the main content for lesson-end slides."
+              >
+                <Textarea
+                  value={lessonEndMessage}
+                  onChange={(e) => {
+                    setLessonEndMessage(e.target.value);
+                  }}
+                  placeholder="Enter lesson end message"
+                  rows={4}
+                />
+                <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+                  [lesson-end]
+                </div>
+              </FormField>
 
-                    {slideType !== "title-slide" && (
-                      <FormField 
-                        label="Body"
-                        infoTooltip="Main slide copy shown to learners. This is the primary content text displayed on the slide."
-                      >
-                        <Textarea
-                          value={body}
-                          onChange={(e) => {
-                            setBody(e.target.value);
-                          }}
-                          placeholder="Enter slide body text"
-                          rows={6}
-                        />
-                        <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                          [text]
-                        </div>
-                      </FormField>
+              <FormField 
+                label="Actions"
+                infoTooltip="Action buttons displayed at the bottom of the slide. Enter as JSON array, e.g., [{&quot;type&quot;: &quot;restart&quot;, &quot;label&quot;: &quot;Recommencer la leçon&quot;}, {&quot;type&quot;: &quot;progress&quot;, &quot;label&quot;: &quot;Voir ma progression&quot;}]"
+              >
+                <Textarea
+                  value={lessonEndActions}
+                  onChange={(e) => {
+                    setLessonEndActions(e.target.value);
+                  }}
+                  placeholder='[{"type": "restart", "label": "Recommencer la leçon"}, {"type": "progress", "label": "Voir ma progression"}]'
+                  rows={4}
+                />
+                <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+                  [lesson-end] Enter as JSON array
+                </div>
+              </FormField>
+            </>
+          ) : (
+            <FormField 
+              label="Subtitle"
+              infoTooltip="Secondary heading or subtopic. Shown to learners below the main title."
+            >
+              <Input
+                type="text"
+                value={subtitle}
+                onChange={(e) => {
+                  setSubtitle(e.target.value);
+                }}
+                placeholder="Enter slide subtitle"
+              />
+              <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+                [title]
+              </div>
+            </FormField>
+          )}
+
+                    {slideType !== "title-slide" && slideType !== "lesson-end" && (
+          <FormField 
+            label="Body"
+            infoTooltip="Main slide copy shown to learners. This is the primary content text displayed on the slide. For finale slides, uses the same font style as text slides and appears below the subtitle (or title if no subtitle)."
+          >
+            <Textarea
+              value={body}
+              onChange={(e) => {
+                setBody(e.target.value);
+              }}
+              placeholder="Enter slide body text"
+              rows={6}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+[text]
+            </div>
+          </FormField>
                     )}
                   </>
                 )}
@@ -842,23 +916,23 @@ export default function EditSlidePage() {
                   </>
                 )}
 
-                <FormField 
-                  label="Buttons"
+          <FormField 
+            label="Buttons"
                   infoTooltip="Interactive buttons displayed on the slide. Used for navigation, actions, or choices. Enter as JSON."
-                >
-                  <Textarea
-                    value={buttons}
-                    onChange={(e) => {
-                      setButtons(e.target.value);
-                    }}
+          >
+            <Textarea
+              value={buttons}
+              onChange={(e) => {
+                setButtons(e.target.value);
+              }}
                     placeholder='Enter button configuration as JSON, e.g., [{"label": "Next", "action": "next"}]'
-                    rows={4}
-                  />
-                  <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
-                    [title, text, ai-speak]
-                  </div>
-                </FormField>
-              </CmsSection>
+              rows={4}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: "#999" }}>
+              [title, text, ai-speak]
+            </div>
+          </FormField>
+        </CmsSection>
 
               {/* Language and Localization Section */}
               <CmsSection
@@ -1158,7 +1232,7 @@ export default function EditSlidePage() {
                 borderColor="#b4d5d5"
                 description="Metadata for CMS organization and tracking"
               >
-                {slideType !== "title-slide" && slideType !== "text-slide" && (
+                {slideType !== "title-slide" && slideType !== "lesson-end" && slideType !== "text-slide" && (
                   <FormField 
                     label="Activity Name"
                     infoTooltip="Name of the activity for CMS organization and tracking."
@@ -1177,7 +1251,7 @@ export default function EditSlidePage() {
                   </FormField>
                 )}
               </CmsSection>
-            </form>
+      </form>
           )}
         </div>
       </div>

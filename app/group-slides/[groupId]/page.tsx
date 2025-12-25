@@ -178,14 +178,14 @@ export default function GroupSlidesPage() {
       }
 
       // Step 2: Create the new slide at the insertion position
-      const { error: insertError } = await createSlide({
-        lesson_id: group.lessonId,
-        group_id: groupId,
-        type: slideType,
-        order_index: parsedOrderIndex,
-      });
+    const { error: insertError } = await createSlide({
+      lesson_id: group.lessonId,
+      group_id: groupId,
+      type: slideType,
+      order_index: parsedOrderIndex,
+    });
 
-      if (insertError) {
+    if (insertError) {
         setMessage(`Error creating slide: ${insertError}`);
         setSaving(false);
         return;
@@ -273,26 +273,26 @@ export default function GroupSlidesPage() {
       }
 
       setMessage("Slide duplicated successfully!");
-      
-      // Reload slides to include new record
-      const { data: slidesData, error: slidesError } = await supabase
-        .from("slides")
-        .select("id, lesson_id, group_id, order_index, type, props_json")
-        .eq("group_id", groupId)
-        .order("order_index", { ascending: true });
+    
+    // Reload slides to include new record
+    const { data: slidesData, error: slidesError } = await supabase
+      .from("slides")
+      .select("id, lesson_id, group_id, order_index, type, props_json")
+      .eq("group_id", groupId)
+      .order("order_index", { ascending: true });
 
-      if (slidesError) {
-        setError(slidesError.message);
-      } else {
-        setSlides((slidesData ?? []).map((s: any) => ({
-          id: s.id,
-          lessonId: s.lesson_id,
-          groupId: s.group_id,
-          orderIndex: s.order_index,
-          type: s.type,
-          propsJson: s.props_json,
-        })));
-      }
+    if (slidesError) {
+      setError(slidesError.message);
+    } else {
+      setSlides((slidesData ?? []).map((s: any) => ({
+        id: s.id,
+        lessonId: s.lesson_id,
+        groupId: s.group_id,
+        orderIndex: s.order_index,
+        type: s.type,
+        propsJson: s.props_json,
+      })));
+    }
     } catch (err) {
       setMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
@@ -427,6 +427,7 @@ export default function GroupSlidesPage() {
   const slideTypeOptions = [
     { value: "text-slide", label: "Text Slide" },
     { value: "title-slide", label: "Title Slide" },
+    { value: "lesson-end", label: "Lesson End" },
     { value: "ai-speak-repeat", label: "AI Speak Repeat" },
     { value: "ai-speak-student-repeat", label: "AI Speak Student Repeat" },
     { value: "speech-match", label: "Speech Match" },

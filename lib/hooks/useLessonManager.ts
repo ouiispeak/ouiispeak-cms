@@ -14,6 +14,8 @@ function defaultPropsForType(type: string): any {
     case "default":
     case "title-slide":
       return { title: "New title slide", subtitle: "" };
+    case "lesson-end":
+      return { title: "New lesson end slide", message: "" };
     case "text-slide":
     case "text":
       return { title: "New text", subtitle: "", body: "…" };
