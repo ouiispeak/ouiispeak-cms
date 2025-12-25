@@ -1,15 +1,15 @@
 "use client";
 
-import CmsPageShell from "../../../components/cms/CmsPageShell";
-import CmsOutlineView from "../../../components/cms/CmsOutlineView";
-import CmsSection from "../../../components/ui/CmsSection";
-import { uiTokens } from "../../../lib/uiTokens";
-import FormField from "../../../components/ui/FormField";
-import Input from "../../../components/ui/Input";
-import Textarea from "../../../components/ui/Textarea";
-import SaveChangesButton from "../../../components/ui/SaveChangesButton";
-import StatusMessage from "../../../components/ui/StatusMessage";
-import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton";
+import CmsPageShell from "../../components/cms/CmsPageShell";
+import CmsOutlineView from "../../components/cms/CmsOutlineView";
+import CmsSection from "../../components/ui/CmsSection";
+import { uiTokens } from "../../lib/uiTokens";
+import FormField from "../../components/ui/FormField";
+import Input from "../../components/ui/Input";
+import Textarea from "../../components/ui/Textarea";
+import SaveChangesButton from "../../components/ui/SaveChangesButton";
+import StatusMessage from "../../components/ui/StatusMessage";
+import PreviewInPlayerButton from "../../components/ui/PreviewInPlayerButton";
 import { useState } from "react";
 
 /**
