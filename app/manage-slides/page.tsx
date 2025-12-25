@@ -1,6 +1,5 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import CmsPageShell from "../../../components/cms/CmsPageShell";
 import CmsOutlineView from "../../../components/cms/CmsOutlineView";
 import CmsSection from "../../../components/ui/CmsSection";
@@ -14,17 +13,15 @@ import PreviewInPlayerButton from "../../../components/ui/PreviewInPlayerButton"
 import { useState } from "react";
 
 /**
- * Default Mock Slide Editor Page
+ * Manage Slides Page
  * 
- * This is a template slide editor that will be customized and applied to all slide types.
- * Currently not connected to any data - just a mock UI structure.
+ * This is the defining page layout for all slide editors.
+ * Edits made to this form will be applied to all individual slide editors.
+ * This page serves as the template/master form for slide editing.
  */
-export default function EditSlidePage() {
-  const params = useParams<{ slideId: string }>();
-  const slideId = params?.slideId;
-
+export default function ManageSlidesPage() {
   // Mock state - will be replaced with real data loading
-  const [slideIdValue, setSlideIdValue] = useState(slideId || "");
+  const [slideIdValue, setSlideIdValue] = useState("");
   const [slideType, setSlideType] = useState("");
   const [groupId, setGroupId] = useState("");
   const [orderIndex, setOrderIndex] = useState<number>(0);
@@ -51,11 +48,11 @@ export default function EditSlidePage() {
   };
 
   return (
-    <CmsPageShell title={`Edit Slide ${slideId ? `(${slideId.slice(0, 8)})` : ""}`}>
+    <CmsPageShell title="Manage Slides">
       <div style={{ display: "flex", gap: uiTokens.space.lg, width: "100%", minHeight: "100vh" }}>
         {/* Left column - outline view */}
         <div style={{ flex: "0 0 25%", backgroundColor: "transparent", border: "1px solid #9cc7c7", borderRadius: uiTokens.radius.lg, overflow: "auto" }}>
-          <CmsOutlineView currentSlideId={slideId} />
+          <CmsOutlineView />
         </div>
         
         {/* Right column - content */}
@@ -76,8 +73,8 @@ export default function EditSlidePage() {
               </StatusMessage>
             )}
             <PreviewInPlayerButton
-              href={slideId ? `/debug/lesson-preview/${slideId}` : undefined}
-              disabled={!slideId}
+              href={undefined}
+              disabled={true}
               label="Preview in lesson player"
             />
             <SaveChangesButton
