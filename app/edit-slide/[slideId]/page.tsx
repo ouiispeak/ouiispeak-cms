@@ -54,6 +54,34 @@ export default function EditSlidePage() {
         
         {/* Right column - content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: uiTokens.space.md }}>
+          {/* Top actions bar */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: uiTokens.space.md,
+              marginBottom: uiTokens.space.sm,
+            }}
+          >
+            {message && (
+              <StatusMessage variant={message.includes("error") ? "error" : "success"}>
+                {message}
+              </StatusMessage>
+            )}
+            <SaveChangesButton
+              onClick={() => {
+                const form = document.querySelector("form");
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+              hasUnsavedChanges={hasUnsavedChanges}
+              saving={saving}
+              label="Save Changes"
+            />
+          </div>
+
           <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
         {/* Identity & Structure Section */}
         <CmsSection
@@ -121,34 +149,6 @@ export default function EditSlidePage() {
             />
           </FormField>
         </CmsSection>
-
-        {/* Actions */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: uiTokens.space.md,
-            paddingTop: uiTokens.space.md,
-            borderTop: `1px solid ${uiTokens.color.border}`,
-          }}
-        >
-          {message && (
-            <StatusMessage variant={message.includes("error") ? "error" : "success"}>
-              {message}
-            </StatusMessage>
-          )}
-          <SaveChangesButton
-            onClick={() => {
-              const form = document.querySelector("form");
-              if (form) {
-                form.requestSubmit();
-              }
-            }}
-            hasUnsavedChanges={hasUnsavedChanges}
-            saving={saving}
-            label="Save Changes"
-          />
-        </div>
       </form>
         </div>
       </div>
