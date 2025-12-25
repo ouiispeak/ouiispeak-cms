@@ -500,6 +500,17 @@ export default function DefaultSlideEditor({
           const groupSpecialFields = group.fields.filter((field) => isSpecialMetadataField(field.key));
           const groupHasMetadataSection = group.fields.some((field) => isAuthoringMetadataField(field.key));
 
+          // DEBUG: Log what fields are in each group before rendering
+          if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+            console.log(`[DEBUG] Rendering group "${group.title}":`, {
+              allFieldsInGroup: group.fields.map(f => f.key),
+              systemFields: groupSystemFields.map(f => f.key),
+              editableFields: groupEditableFields.map(f => f.key),
+              specialFields: groupSpecialFields.map(f => f.key),
+              hasMetadataSection: groupHasMetadataSection,
+            });
+          }
+
           if (
             groupSystemFields.length === 0 &&
             groupEditableFields.length === 0 &&
