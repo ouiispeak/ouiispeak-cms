@@ -160,10 +160,19 @@ export default function DefaultSlideEditor({
     }),
     [groupId, orderIndex, row.groupId, row.id, row.orderIndex, row.type, slideType]
   );
-  const groupedRenderedFields = useMemo(
-    () => groupFieldsForDisplay(renderedFields),
-    [renderedFields]
-  );
+  const groupedRenderedFields = useMemo(() => {
+    const grouped = groupFieldsForDisplay(renderedFields);
+    // DEBUG: Log what groups are created
+    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+      console.log(`[DEBUG] Grouped fields for "${slideType}":`, grouped.map(g => ({
+        id: g.id,
+        title: g.title,
+        fieldKeys: g.fields.map(f => f.key),
+        allGroupKeys: g.keys,
+      })));
+    }
+    return grouped;
+  }, [renderedFields, slideType]);
 
   const hasUnsavedChanges = useMemo(() => {
     if (!initialDataRef.current) return false;
