@@ -23,6 +23,10 @@ export default function EditSlidePage() {
   const slideId = params?.slideId;
 
   // Mock state - will be replaced with real data loading
+  const [slideIdValue, setSlideIdValue] = useState(slideId || "");
+  const [slideType, setSlideType] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [orderIndex, setOrderIndex] = useState<number>(0);
   const [label, setLabel] = useState("");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -90,6 +94,54 @@ export default function EditSlidePage() {
           borderColor="#b4d5d5"
           description="Basic slide identification and structure"
         >
+          <FormField label="Slide ID">
+            <Input
+              type="text"
+              value={slideIdValue}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
+              System UUID for the slide (read-only).
+            </div>
+          </FormField>
+
+          <FormField label="Slide Type">
+            <Input
+              type="text"
+              value={slideType}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
+              Type key used to select the editor (read-only).
+            </div>
+          </FormField>
+
+          <FormField label="Group ID">
+            <Input
+              type="text"
+              value={groupId}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
+              Owning group UUID (read-only).
+            </div>
+          </FormField>
+
+          <FormField label="Order Index">
+            <Input
+              type="number"
+              value={orderIndex}
+              readOnly
+              style={{ backgroundColor: uiTokens.color.surface, cursor: "not-allowed" }}
+            />
+            <div className="metaText" style={{ marginTop: uiTokens.space.xs }}>
+              Sequence position in the group (read-only).
+            </div>
+          </FormField>
+
           <FormField label="Label" required>
             <Input
               type="text"
