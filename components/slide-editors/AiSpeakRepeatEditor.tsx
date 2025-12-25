@@ -84,21 +84,30 @@ export default function AiSpeakRepeatEditor({
       // Handle validation errors more gracefully
       let errorMessage = "Validation failed when parsing ai-speak-repeat slide.";
       try {
-        if (result.error && typeof result.error.format === 'function') {
-          const formatted = result.error.format();
-          console.error("Validation error:", formatted);
-          // Extract a more helpful error message
-          const issues = result.error.issues || [];
-          if (issues.length > 0) {
-            const firstIssue = issues[0];
-            errorMessage = `Validation error: ${firstIssue.path.join('.')} - ${firstIssue.message}`;
-          }
+        const issues = result.error?.issues || [];
+        if (issues.length > 0) {
+          // Log issues array which is more informative than format()
+          console.error("Validation error issues:", issues);
+          const firstIssue = issues[0];
+          const path = firstIssue.path.length > 0 ? firstIssue.path.join('.') : 'root';
+          errorMessage = `Validation error: ${path} - ${firstIssue.message}`;
         } else {
-          console.error("Validation error:", result.error);
+          // Fallback: try format() if issues not available
+          if (result.error && typeof result.error.format === 'function') {
+            const formatted = result.error.format();
+            const formattedKeys = Object.keys(formatted);
+            if (formattedKeys.length > 0) {
+              console.error("Validation error (formatted):", formatted);
+            } else {
+              console.error("Validation error (no details):", result.error);
+            }
+          } else {
+            console.error("Validation error:", result.error);
+          }
           errorMessage = "Invalid slide data. Please check that all required fields are present.";
         }
       } catch (e) {
-        console.error("Error formatting validation error:", e, result.error);
+        console.error("Error processing validation error:", e, result.error);
         errorMessage = "Invalid slide data. Please check that all required fields are present.";
       }
       
