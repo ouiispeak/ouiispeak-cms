@@ -159,7 +159,6 @@ export default function ChoiceElementMapper({
                   <FormField label="Audio File">
                     <AudioFileSelector
                       bucketName={bucketName}
-                      folder="media-assets"
                       value={element.speech.fileUrl || ""}
                       onChange={(fileUrl) => handleElementChange(index, "speech", { ...element.speech, fileUrl, mode: "file" })}
                     />

@@ -21,6 +21,10 @@ import { getSlideDisplayName, getGroupDisplayName } from "../../../lib/utils/dis
 import { getAudioFileUrl } from "../../../lib/storage/audioFiles";
 import StudentRepeatElementMapper from "../../../components/ui/StudentRepeatElementMapper";
 import ChoiceElementMapper from "../../../components/ui/ChoiceElementMapper";
+import { shouldUseDynamicForm } from "../../../lib/config/featureFlags";
+import { DynamicSlideForm } from "../../../components/slide-editor/DynamicSlideForm";
+import { buildFormValues } from "../../../components/slide-editor/DynamicSlideFormWrapper";
+import { createFormChangeHandler } from "../../../lib/utils/formStateMapper";
 
 type LoadState =
   | { status: "loading" }
@@ -114,6 +118,8 @@ export default function EditSlidePage() {
     title: string;
     subtitle: string;
     body: string;
+    lessonEndMessage: string;
+    lessonEndActions: string;
     buttons: string;
     defaultLang: string;
     audioId: string;
@@ -747,8 +753,80 @@ export default function EditSlidePage() {
 
           {loadState.status === "ready" && (
           <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.lg }}>
-        {/* Identity & Structure Section */}
-        <CmsSection
+        {/* Dynamic Form (if feature flag enabled) */}
+        {shouldUseDynamicForm(slideType) ? (
+          <DynamicSlideForm
+            slideType={slideType}
+            values={{
+              // Identity fields
+              slideId: slideIdValue,
+              slideType: slideType,
+              groupId: groupId,
+              groupName: groupName,
+              orderIndex: orderIndex,
+              label: label,
+              // Content fields
+              title: title,
+              subtitle: subtitle,
+              body: body,
+              lessonEndMessage: lessonEndMessage,
+              lessonEndActions: lessonEndActions,
+              buttons: buttons,
+              // Language
+              defaultLang: defaultLang,
+              // Media
+              audioId: audioId,
+              // Speech & Audio
+              phrases: phrases,
+              instructions: instructions,
+              promptLabel: promptLabel,
+              note: note,
+              elements: elements,
+              choiceElements: choiceElements,
+              // Interaction flags
+              isInteractive: isInteractive,
+              allowSkip: allowSkip,
+              allowRetry: allowRetry,
+              isActivity: isActivity,
+              // Flow
+              onCompleteAtIndex: onCompleteAtIndex,
+              maxAttempts: maxAttempts,
+              minAttemptsBeforeSkip: minAttemptsBeforeSkip,
+              // Metadata
+              activityName: activityName
+            }}
+            onChange={createFormChangeHandler({
+              setLabel,
+              setTitle,
+              setSubtitle,
+              setBody,
+              setLessonEndMessage,
+              setLessonEndActions,
+              setButtons,
+              setDefaultLang,
+              setAudioId,
+              setPhrases,
+              setInstructions,
+              setPromptLabel,
+              setNote,
+              setElements,
+              setChoiceElements: handleChoiceElementsChange,
+              setIsInteractive,
+              setAllowSkip,
+              setAllowRetry,
+              setIsActivity,
+              setOnCompleteAtIndex,
+              setMaxAttempts,
+              setMinAttemptsBeforeSkip,
+              setActivityName
+            })}
+            defaultLang={defaultLang}
+          />
+        ) : (
+          <>
+            {/* Legacy Form (hardcoded) */}
+            {/* Identity & Structure Section */}
+            <CmsSection
           title="Identity & Structure"
           backgroundColor="#e6f1f1"
           borderColor="#b4d5d5"
@@ -1378,6 +1456,8 @@ export default function EditSlidePage() {
                   </FormField>
                 )}
               </CmsSection>
+          </>
+        )}
       </form>
           )}
         </div>

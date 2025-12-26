@@ -77,7 +77,7 @@ export default function AudioFileSelector({
 
   return (
     <div>
-      <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: uiTokens.space.sm, alignItems: "center" }}>
         <Input
           type="text"
           value={value}
@@ -113,12 +113,12 @@ export default function AudioFileSelector({
           }}
         >
           {/* Breadcrumb navigation */}
-          <div style={{ marginBottom: uiTokens.space.sm, display: "flex", gap: uiTokens.space.xs, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ marginBottom: uiTokens.space.sm, display: "flex", gap: uiTokens.space.sm, alignItems: "center", flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={() => setCurrentFolder("")}
               style={{
-                padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                padding: `${uiTokens.space.sm} ${uiTokens.space.sm}`,
                 fontSize: uiTokens.font.meta.size,
                 color: currentFolder ? uiTokens.color.primary : uiTokens.color.text,
                 backgroundColor: "transparent",
@@ -135,13 +135,13 @@ export default function AudioFileSelector({
               const path = pathParts.join("/");
               const isLast = index === getBreadcrumbs().length - 1;
               return (
-                <span key={index} style={{ display: "flex", alignItems: "center", gap: uiTokens.space.xs }}>
+                <span key={index} style={{ display: "flex", alignItems: "center", gap: uiTokens.space.sm }}>
                   <span style={{ color: uiTokens.color.textMuted }}>/</span>
                   <button
                     type="button"
                     onClick={() => setCurrentFolder(path)}
                     style={{
-                      padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                      padding: `${uiTokens.space.sm} ${uiTokens.space.sm}`,
                       fontSize: uiTokens.font.meta.size,
                       color: isLast ? uiTokens.color.text : uiTokens.color.primary,
                       backgroundColor: "transparent",
@@ -162,7 +162,7 @@ export default function AudioFileSelector({
                 onClick={handleNavigateUp}
                 style={{
                   marginLeft: uiTokens.space.sm,
-                  padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                  padding: `${uiTokens.space.sm} ${uiTokens.space.sm}`,
                   fontSize: uiTokens.font.meta.size,
                   color: uiTokens.color.text,
                   backgroundColor: uiTokens.color.surface,
@@ -178,14 +178,14 @@ export default function AudioFileSelector({
 
           {/* Current path display */}
           <div style={{ marginBottom: uiTokens.space.sm, fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>
-            Current: <code style={{ backgroundColor: uiTokens.color.surface, padding: `2px ${uiTokens.space.xs}`, borderRadius: uiTokens.radius.xs }}>{getCurrentPathDisplay()}</code>
+            Current: <code style={{ backgroundColor: uiTokens.color.surface, padding: `2px ${uiTokens.space.sm}`, borderRadius: uiTokens.radius.sm }}>{getCurrentPathDisplay()}</code>
           </div>
 
           {loading && <p style={{ fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>Loading...</p>}
           {error && (
             <div style={{ fontSize: uiTokens.font.meta.size, color: uiTokens.color.danger }}>
               <p><strong>Error:</strong> {error}</p>
-              <p style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size * 0.9 }}>
+              <p style={{ marginTop: uiTokens.space.sm, fontSize: uiTokens.font.meta.size * 0.9 }}>
                 Make sure the bucket "{bucketName}" has SELECT permissions on storage.objects for the anon role.
                 Check the browser console for more details.
               </p>
@@ -194,13 +194,13 @@ export default function AudioFileSelector({
           {!loading && !error && items.length === 0 && (
             <div style={{ fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>
               <p>No items found in this folder.</p>
-              <p style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size * 0.9 }}>
+              <p style={{ marginTop: uiTokens.space.sm, fontSize: uiTokens.font.meta.size * 0.9 }}>
                 Check browser console (F12) for debugging information.
               </p>
             </div>
           )}
           {!loading && !error && items.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.xs }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: uiTokens.space.sm }}>
               {/* Show folders first */}
               {items
                 .filter((item) => item.isFolder)
@@ -210,7 +210,7 @@ export default function AudioFileSelector({
                     type="button"
                     onClick={() => handleNavigateToFolder(item.fullPath)}
                     style={{
-                      padding: uiTokens.space.xs,
+                      padding: uiTokens.space.sm,
                       textAlign: "left",
                       border: `1px solid ${uiTokens.color.border}`,
                       borderRadius: uiTokens.radius.sm,
@@ -220,7 +220,7 @@ export default function AudioFileSelector({
                       color: uiTokens.color.text,
                       display: "flex",
                       alignItems: "center",
-                      gap: uiTokens.space.xs,
+                      gap: uiTokens.space.sm,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = "#e0efef";
@@ -244,7 +244,7 @@ export default function AudioFileSelector({
                       type="button"
                       onClick={() => handleSelectFile(item.fullPath)}
                       style={{
-                        padding: uiTokens.space.xs,
+                        padding: uiTokens.space.sm,
                         textAlign: "left",
                         border: `1px solid ${isSelected ? uiTokens.color.primary : uiTokens.color.border}`,
                         borderRadius: uiTokens.radius.sm,
@@ -254,7 +254,7 @@ export default function AudioFileSelector({
                         color: uiTokens.color.text,
                         display: "flex",
                         alignItems: "center",
-                        gap: uiTokens.space.xs,
+                        gap: uiTokens.space.sm,
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected) {
@@ -278,8 +278,8 @@ export default function AudioFileSelector({
       )}
 
       {value && (
-        <div style={{ marginTop: uiTokens.space.xs, fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>
-          Preview URL: <code style={{ backgroundColor: uiTokens.color.surface, padding: `2px ${uiTokens.space.xs}`, borderRadius: uiTokens.radius.xs }}>{getAudioFileUrl(bucketName, value)}</code>
+        <div style={{ marginTop: uiTokens.space.sm, fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>
+          Preview URL: <code style={{ backgroundColor: uiTokens.color.surface, padding: `2px ${uiTokens.space.sm}`, borderRadius: uiTokens.radius.sm }}>{getAudioFileUrl(bucketName, value)}</code>
         </div>
       )}
     </div>

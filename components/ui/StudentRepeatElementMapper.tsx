@@ -136,7 +136,6 @@ export default function StudentRepeatElementMapper({
                       </label>
                       <AudioFileSelector
                         bucketName={bucketName}
-                        folder="media-assets"
                         value={element.audioPath}
                         onChange={(value) => handleElementChange(index, "audioPath", value)}
                       />

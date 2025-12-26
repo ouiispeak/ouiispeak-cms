@@ -19,6 +19,7 @@ export default function TopNav() {
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
   const isSlideActive = pathname.startsWith("/edit-slide/");
+  const isConfigActive = pathname.startsWith("/manage-slide-configs");
 
   // Level colors: background and border/underline
   const levelColors = {
@@ -114,9 +115,28 @@ export default function TopNav() {
       <span style={navLinkStyle(isLessonActive, false, "lesson")}>
         Lesson
       </span>
-      <span style={navLinkStyle(isGroupActive, true, "group")}>
+      <span style={navLinkStyle(isGroupActive, false, "group")}>
         Group
       </span>
+      <Link
+        href="/manage-slide-configs"
+        style={{
+          ...navLinkStyle(isConfigActive, true),
+        }}
+        onMouseEnter={(e) => {
+          if (!isConfigActive) {
+            Object.assign(e.currentTarget.style, hoverStyle);
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isConfigActive) {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = uiTokens.color.textMuted;
+          }
+        }}
+      >
+        Slide Configs
+      </Link>
     </nav>
   );
 }
