@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import { lessonInputSchema } from "../schemas/lessonSchema";
 import type { Lesson, LessonMinimal } from "../domain/lesson";
 import { toLesson, toLessonMinimal } from "../mappers/lessonMapper";
+import { logger } from "../utils/logger";
 
 /**
  * Standard fields to select from lessons table
@@ -284,18 +285,16 @@ export async function updateLesson(
     finalUpdateData.activity_types = parts.length > 0 ? parts : null;
   }
 
-  // DEV-ONLY: Log the outgoing update payload
-  if (process.env.NODE_ENV === "development") {
-    console.log("[lesson save payload]", {
-      id,
-      payloadKeys: Object.keys(finalUpdateData),
-      hasLabel: "label" in finalUpdateData,
-      labelValue: finalUpdateData.label,
-      activityTypesType: typeof finalUpdateData.activity_types,
-      activityTypesValue: finalUpdateData.activity_types,
-      fullPayload: finalUpdateData,
-    });
-  }
+  // Debug logging
+  logger.debug("[lesson save payload]", {
+    id,
+    payloadKeys: Object.keys(finalUpdateData),
+    hasLabel: "label" in finalUpdateData,
+    labelValue: finalUpdateData.label,
+    activityTypesType: typeof finalUpdateData.activity_types,
+    activityTypesValue: finalUpdateData.activity_types,
+    fullPayload: finalUpdateData,
+  });
 
   const { data, error } = await supabase
     .from("lessons")
@@ -304,15 +303,13 @@ export async function updateLesson(
     .select("id, label, title, " + LESSON_FIELDS_FULL)
     .single();
 
-  // DEV-ONLY: Log the Supabase response
-  if (process.env.NODE_ENV === "development") {
-    const dataTyped = error ? null : (data as unknown as LessonData | null);
-    console.log("[lesson save result]", {
-      error: error ? { message: error.message, details: error.details, hint: error.hint, code: error.code } : null,
-      data: dataTyped ? { id: dataTyped.id, label: dataTyped.label, title: dataTyped.title } : null,
-      fullData: dataTyped,
-    });
-  }
+  // Debug logging
+  const dataTyped = error ? null : (data as unknown as LessonData | null);
+  logger.debug("[lesson save result]", {
+    error: error ? { message: error.message, details: error.details, hint: error.hint, code: error.code } : null,
+    data: dataTyped ? { id: dataTyped.id, label: dataTyped.label, title: dataTyped.title } : null,
+    fullData: dataTyped,
+  });
 
   if (error) {
     return { data: null, error: error.message };

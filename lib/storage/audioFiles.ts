@@ -56,8 +56,9 @@ export async function listStorageItems(
       });
 
     return { data: items, error: null };
-  } catch (error: any) {
-    return { data: null, error: error.message || "Failed to list storage items" };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to list storage items";
+    return { data: null, error: errorMessage };
   }
 }
 

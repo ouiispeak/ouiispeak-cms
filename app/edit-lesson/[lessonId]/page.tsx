@@ -20,7 +20,8 @@ import { updateLesson, loadLessonById } from "../../../lib/data/lessons";
 import { loadModules } from "../../../lib/data/modules";
 import type { Module } from "../../../lib/domain/module";
 import type { Lesson } from "../../../lib/domain/lesson";
-import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/cms/useUnsavedChangesWarning";
+import { logger } from "../../../lib/utils/logger";
 
 type LoadState =
   | { status: "loading" }
@@ -304,14 +305,14 @@ export default function EditLessonPage() {
 
       if (updateResult.error) {
         const errorMessage = `Error saving lesson: ${updateResult.error}`;
-        console.error("[lesson save UI error]", errorMessage);
+        logger.error("[lesson save UI error]", errorMessage);
         setMessage(errorMessage);
         return;
       }
 
       if (!updateResult.data) {
         const errorMessage = "Error: Lesson update returned no data";
-        console.error("[lesson save UI error]", errorMessage);
+        logger.error("[lesson save UI error]", errorMessage);
         setMessage(errorMessage);
         return;
       }

@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import type { Slide, SlideMinimal } from "../domain/slide";
 import { toSlide, toSlideMinimal } from "../mappers/slideMapper";
+import { logger } from "../utils/logger";
 
 /**
  * Standard fields to select from slides table
@@ -243,12 +244,24 @@ export async function updateSlide(
   if (input.max_score_value !== undefined) updateData.max_score_value = input.max_score_value;
   if (input.pass_required_for_next !== undefined) updateData.pass_required_for_next = input.pass_required_for_next;
 
+  // Debug logging
+  logger.debug("[updateSlide] Updating slide:", id);
+  logger.debug("[updateSlide] updateData:", JSON.stringify(updateData, null, 2));
+
   const { data, error } = await supabase
     .from("slides")
     .update(updateData)
     .eq("id", id)
     .select(SLIDE_FIELDS_FULL)
     .maybeSingle();
+
+  // Debug logging
+  if (error) {
+    logger.error("[updateSlide] Database error:", error);
+  } else {
+    logger.debug("[updateSlide] Database response:", data);
+    logger.debug("[updateSlide] Response props_json:", data?.props_json);
+  }
 
   if (error) {
     return { data: null, error: error.message };

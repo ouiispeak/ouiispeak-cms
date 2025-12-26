@@ -57,11 +57,18 @@ export function SlideTypeConfigEditor({
           }]
         : prev.formConfig.fields.filter(f => f.fieldId !== fieldId);
 
+      // Clean up validation rules for removed fields
+      const fieldIds = new Set(newFields.map(f => f.fieldId));
+      const cleanedValidationRules = prev.formConfig.validationRules.filter(
+        rule => fieldIds.has(rule.fieldId)
+      );
+
       return {
         ...prev,
         formConfig: {
           ...prev.formConfig,
-          fields: newFields
+          fields: newFields,
+          validationRules: cleanedValidationRules
         }
       };
     });
@@ -95,7 +102,24 @@ export function SlideTypeConfigEditor({
     setSaving(true);
     setMessage(null);
 
-    const result = await updateSlideTypeConfig(editedConfig.typeKey, editedConfig);
+    // Clean up validation rules for fields that don't exist
+    const fieldIds = new Set(editedConfig.formConfig.fields.map(f => f.fieldId));
+    const cleanedValidationRules = editedConfig.formConfig.validationRules.filter(
+      rule => fieldIds.has(rule.fieldId)
+    );
+
+    // If validation rules were cleaned, update the config
+    const configToSave = cleanedValidationRules.length !== editedConfig.formConfig.validationRules.length
+      ? {
+          ...editedConfig,
+          formConfig: {
+            ...editedConfig.formConfig,
+            validationRules: cleanedValidationRules
+          }
+        }
+      : editedConfig;
+
+    const result = await updateSlideTypeConfig(configToSave.typeKey, configToSave);
 
     if (result.error) {
       setMessage(`Error: ${result.error}`);
@@ -104,6 +128,8 @@ export function SlideTypeConfigEditor({
       setMessage("Configuration saved successfully!");
       setSaving(false);
       if (result.data) {
+        // Update local state with cleaned config
+        setEditedConfig(result.data);
         onSave(result.data);
       }
     }

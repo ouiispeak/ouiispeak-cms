@@ -20,7 +20,7 @@ import { loadGroupById, updateGroup } from "../../../lib/data/groups";
 import type { Group } from "../../../lib/domain/group";
 import type { LessonMinimal } from "../../../lib/domain/lesson";
 import { loadLessons } from "../../../lib/data/lessons";
-import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/cms/useUnsavedChangesWarning";
 
 type LoadState =
   | { status: "loading" }

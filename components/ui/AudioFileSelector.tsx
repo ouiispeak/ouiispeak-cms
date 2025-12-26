@@ -5,6 +5,7 @@ import { listStorageItems, getAudioFileUrl, type StorageItem } from "../../lib/s
 import Input from "./Input";
 import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
+import { logger } from "../../lib/utils/logger";
 
 interface AudioFileSelectorProps {
   value: string;
@@ -36,15 +37,15 @@ export default function AudioFileSelector({
       const { data, error: listError } = await listStorageItems(bucketName, currentFolder);
       if (listError) {
         setError(listError);
-        console.error("Storage list error:", listError);
+        logger.error("Storage list error:", listError);
       } else {
-        console.log("Storage items loaded:", data?.length || 0, "items in folder:", currentFolder || "root");
+        logger.debug("Storage items loaded:", data?.length || 0, "items in folder:", currentFolder || "root");
         setItems(data || []);
       }
     } catch (err: any) {
       const errorMsg = err?.message || "Failed to load items";
       setError(errorMsg);
-      console.error("Error loading storage items:", err);
+      logger.error("Error loading storage items:", err);
     }
     setLoading(false);
   }

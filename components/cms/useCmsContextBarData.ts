@@ -18,6 +18,7 @@ import {
   type SlideAncestors,
 } from "../../lib/data/ancestors";
 import { getModuleDisplayName, getLessonDisplayName, getGroupDisplayName, getSlideDisplayName } from "../../lib/utils/displayName";
+import { logger } from "../../lib/utils/logger";
 
 export interface CmsContextBarDataProps {
   moduleId?: string;
@@ -292,7 +293,7 @@ export function useCmsContextBarData({
         }
       } catch (err) {
         if (!cancelled) {
-          console.error("Error loading selectors:", err);
+          logger.error("Error loading selectors:", err);
         }
       } finally {
         if (!cancelled) {

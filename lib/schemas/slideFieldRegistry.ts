@@ -22,7 +22,7 @@ export interface FieldDefinition {
   componentName?: string;
   
   /** Default value for the field */
-  defaultValue?: any;
+  defaultValue?: unknown;
   
   /** Validation rules */
   validation?: {
@@ -415,7 +415,7 @@ export function getAllFieldIds(): string[] {
 /**
  * Validate field value against field definition
  */
-export function validateFieldValue(fieldId: string, value: any): { valid: boolean; message?: string } {
+export function validateFieldValue(fieldId: string, value: unknown): { valid: boolean; message?: string } {
   const field = getFieldDefinition(fieldId);
   if (!field) {
     return { valid: false, message: `Unknown field: ${fieldId}` };

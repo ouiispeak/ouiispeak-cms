@@ -15,7 +15,7 @@ import { uiTokens } from "../../../lib/uiTokens";
 import { loadCefrLevelByLevel, upsertCefrLevel } from "../../../lib/data/cefrLevels";
 import type { CefrLevel } from "../../../lib/domain/cefrLevel";
 import { updateCefrLevelSchema } from "../../../lib/schemas/cefrLevelSchema";
-import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/cms/useUnsavedChangesWarning";
 import Link from "next/link";
 
 type LoadState =

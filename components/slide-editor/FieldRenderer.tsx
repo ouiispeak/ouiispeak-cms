@@ -15,6 +15,7 @@ import { getFieldDefinition } from "../../lib/schemas/slideFieldRegistry";
 import type { FormFieldConfig } from "../../lib/schemas/slideTypeConfig";
 import type { FieldDefinition } from "../../lib/schemas/slideFieldRegistry";
 import { uiTokens } from "../../lib/uiTokens";
+import { logger } from "../../lib/utils/logger";
 import dynamic from "next/dynamic";
 
 // Dynamically import complex components to avoid SSR issues
@@ -60,7 +61,7 @@ export function FieldRenderer({
   const fieldDefinition = getFieldDefinition(fieldConfig.fieldId);
   
   if (!fieldDefinition) {
-    console.warn(`Field definition not found for fieldId: ${fieldConfig.fieldId}`);
+    logger.warn(`Field definition not found for fieldId: ${fieldConfig.fieldId}`);
     return (
       <FormField label={fieldConfig.fieldId} required={fieldConfig.required}>
         <div style={{ color: uiTokens.color.danger }}>
@@ -173,8 +174,8 @@ function renderStandardField(
     if (fieldDefinition.type === "checkbox") {
       onChange((e.target as HTMLInputElement).checked);
     } else if (fieldDefinition.type === "number") {
-      const numValue = e.target.value === "" ? "" : Number(e.target.value);
-      onChange(numValue);
+      // Keep as string for number fields (state expects strings for maxAttempts, etc.)
+      onChange(e.target.value);
     } else {
       onChange(e.target.value);
     }

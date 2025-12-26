@@ -100,7 +100,7 @@ export async function loadDashboardData(): Promise<DashboardResult<DashboardData
         }
 
         // Map slides to domain types with propsJson
-        slides = (slidesData ?? []).map((row: any) => ({
+        slides = (slidesData ?? []).map((row: { id: string; lesson_id: string | null; group_id: string | null; order_index: number | null; type: string; props_json: unknown }) => ({
           ...toSlideMinimal({
             id: row.id,
             lesson_id: row.lesson_id,
@@ -124,10 +124,11 @@ export async function loadDashboardData(): Promise<DashboardResult<DashboardData
       },
       error: null,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Unknown error loading dashboard data";
     return {
       data: null,
-      error: err.message || "Unknown error loading dashboard data",
+      error: errorMessage,
     };
   }
 }

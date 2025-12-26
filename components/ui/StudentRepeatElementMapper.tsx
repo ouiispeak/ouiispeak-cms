@@ -1,21 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { getAudioFileUrl } from "../../lib/storage/audioFiles";
+import { useState } from "react";
 import Input from "./Input";
 import AudioFileSelector from "./AudioFileSelector";
 import { uiTokens } from "../../lib/uiTokens";
 import { Button } from "../Button";
+import { useElementMapper } from "../../lib/hooks/utils/useElementMapper";
 
-interface StudentRepeatElement {
+/**
+ * Form element type for StudentRepeatElementMapper
+ * Maps to StudentRepeatElement but uses audioPath for form state
+ */
+export type StudentRepeatFormElement = {
   samplePrompt: string;
   referenceText: string;
   audioPath: string; // For mapping to speech.fileUrl
-}
+};
 
 interface StudentRepeatElementMapperProps {
-  elements: StudentRepeatElement[];
-  onElementsChange: (elements: StudentRepeatElement[]) => void;
+  elements: StudentRepeatFormElement[];
+  onElementsChange: (elements: StudentRepeatFormElement[]) => void;
   bucketName: string;
   defaultLang: string;
 }
@@ -28,20 +32,17 @@ export default function StudentRepeatElementMapper({
 }: StudentRepeatElementMapperProps) {
   const [showMapper, setShowMapper] = useState(false);
 
-  function handleElementChange(index: number, field: keyof StudentRepeatElement, value: string) {
-    const newElements = [...elements];
-    newElements[index] = { ...newElements[index], [field]: value };
-    onElementsChange(newElements);
-  }
+  const createEmptyElement = () => ({
+    samplePrompt: "",
+    referenceText: "",
+    audioPath: "",
+  } as StudentRepeatFormElement);
 
-  function handleAddElement() {
-    onElementsChange([...elements, { samplePrompt: "", referenceText: "", audioPath: "" }]);
-  }
-
-  function handleRemoveElement(index: number) {
-    const newElements = elements.filter((_, i) => i !== index);
-    onElementsChange(newElements);
-  }
+  const { handleAddElement, handleRemoveElement, handleFieldChange } = useElementMapper(
+    elements,
+    onElementsChange,
+    createEmptyElement
+  );
 
   return (
     <div>
@@ -103,7 +104,7 @@ export default function StudentRepeatElementMapper({
                       <Input
                         type="text"
                         value={element.samplePrompt}
-                        onChange={(e) => handleElementChange(index, "samplePrompt", e.target.value)}
+                        onChange={(e) => handleFieldChange(index, "samplePrompt", e.target.value)}
                         placeholder={`Element ${index + 1} sample prompt`}
                       />
                     </div>
@@ -126,7 +127,7 @@ export default function StudentRepeatElementMapper({
                       <Input
                         type="text"
                         value={element.referenceText}
-                        onChange={(e) => handleElementChange(index, "referenceText", e.target.value)}
+                        onChange={(e) => handleFieldChange(index, "referenceText", e.target.value)}
                         placeholder="Text for pronunciation matching"
                       />
                     </div>
@@ -137,7 +138,7 @@ export default function StudentRepeatElementMapper({
                       <AudioFileSelector
                         bucketName={bucketName}
                         value={element.audioPath}
-                        onChange={(value) => handleElementChange(index, "audioPath", value)}
+                        onChange={(value) => handleFieldChange(index, "audioPath", value)}
                       />
                     </div>
                   </div>

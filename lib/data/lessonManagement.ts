@@ -92,29 +92,40 @@ export async function loadLessonManagement(
   const uniqueTypes = Array.from(
     new Set(
       (allSlides ?? [])
-        .map((s: any) => (s.type || "").trim())
+        .map((s) => {
+          const slideRow = s as { type: string | null };
+          return (slideRow.type || "").trim();
+        })
         .filter((t: string) => t.length > 0)
-    ).add("default")
+    )
   ).sort();
 
   return {
     data: {
       lesson: { id: lesson.id, title: lesson.title },
-      groups: (groups ?? []).map((g: any) => toGroupMinimal({
-        id: g.id,
-        lesson_id: g.lesson_id,
-        order_index: g.order_index,
-        label: g.label,
-        title: g.title,
-      })),
-      slides: (slides ?? []).map((s: any) => ({
-        id: s.id,
-        lessonId: s.lesson_id,
-        groupId: s.group_id,
-        orderIndex: s.order_index,
-        type: s.type,
-        propsJson: s.props_json,
-      })),
+      groups: (groups ?? []).map((g) => {
+        // Type assertion for Supabase response
+        const groupRow = g as { id: string; lesson_id: string; order_index: number | null; label: string | null; title: string };
+        return toGroupMinimal({
+          id: groupRow.id,
+          lesson_id: groupRow.lesson_id,
+          order_index: groupRow.order_index,
+          label: groupRow.label,
+          title: groupRow.title,
+        });
+      }),
+      slides: (slides ?? []).map((s) => {
+        // Type assertion for Supabase response
+        const slideRow = s as { id: string; lesson_id: string | null; group_id: string | null; order_index: number | null; type: string; props_json: unknown };
+        return {
+          id: slideRow.id,
+          lessonId: slideRow.lesson_id,
+          groupId: slideRow.group_id,
+          orderIndex: slideRow.order_index,
+          type: slideRow.type,
+          propsJson: slideRow.props_json,
+        };
+      }),
       slideTypes: uniqueTypes,
     },
     error: null,

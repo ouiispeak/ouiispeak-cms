@@ -1,0 +1,319 @@
+/**
+ * Hook for saving slide form data
+ * 
+ * Handles validation, building props_json, and saving to database.
+ */
+
+import { useState } from "react";
+import { updateSlide } from "../../data/slides";
+import { getAudioFileUrl } from "../../storage/audioFiles";
+import { logger } from "../../utils/logger";
+import {
+  SLIDE_TYPES,
+  type SlideProps,
+  type ButtonConfig,
+  type CmsLanguage,
+  type AISpeakStudentRepeatSlideProps,
+  type SpeechMatchSlideProps,
+  type LessonEndSlideProps,
+  type AISpeakRepeatSlideProps,
+  type TextSlideProps,
+  type TitleSlideProps,
+  type ChoiceElement,
+  mapLanguageToPlayerFormat,
+} from "../../types/slideProps";
+import type { SlideFormState } from "./useSlideFormState";
+
+export interface SaveResult {
+  success: boolean;
+  error: string | null;
+}
+
+/**
+ * Hook for saving slide form
+ */
+export function useSlideFormSave() {
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const save = async (
+    slideId: string,
+    slideType: string,
+    state: SlideFormState,
+    isActivity: boolean,
+    originalSpeechMatchElements: ChoiceElement[] | null,
+    speechMatchElementsTouched: boolean,
+    validationResult: { valid: boolean; error: string | null }
+  ): Promise<SaveResult> => {
+    // Validate first
+    if (!validationResult.valid) {
+      setMessage(`Error: ${validationResult.error}`);
+      return { success: false, error: validationResult.error };
+    }
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      // Parse buttons if provided
+      let buttonsValue: unknown = null;
+      if (state.buttons.trim()) {
+        try {
+          buttonsValue = JSON.parse(state.buttons);
+        } catch (parseError) {
+          setMessage("Error: Invalid JSON in Buttons field");
+          setSaving(false);
+          return { success: false, error: "Invalid JSON in Buttons field" };
+        }
+      }
+
+      // Parse actions if provided (for lesson-end slides)
+      let actionsValue: unknown = null;
+      if (slideType === SLIDE_TYPES.LESSON_END && state.lessonEndActions.trim()) {
+        try {
+          actionsValue = JSON.parse(state.lessonEndActions);
+        } catch (parseError) {
+          setMessage("Error: Invalid JSON in Actions field");
+          setSaving(false);
+          return { success: false, error: "Invalid JSON in Actions field" };
+        }
+      }
+
+      // Build updated props_json with type safety
+      const updatedProps: Partial<SlideProps> = {
+        label: state.label.trim() || undefined,
+        title: state.title.trim() || undefined,
+        body: state.body.trim() || undefined,
+        buttons: buttonsValue ? (buttonsValue as ButtonConfig[]) : undefined,
+        defaultLang: (state.defaultLang.trim() || undefined) as CmsLanguage | undefined,
+        audioId: state.audioId.trim() || undefined,
+      };
+
+      // For lesson-end slides, use message instead of subtitle
+      if (slideType === SLIDE_TYPES.LESSON_END) {
+        (updatedProps as Partial<LessonEndSlideProps>).message =
+          state.lessonEndMessage.trim() || undefined;
+        (updatedProps as Partial<LessonEndSlideProps>).actions =
+          (actionsValue as LessonEndSlideProps["actions"]) || undefined;
+      } else {
+        (
+          updatedProps as Partial<
+            TextSlideProps | TitleSlideProps | AISpeakRepeatSlideProps | AISpeakStudentRepeatSlideProps | SpeechMatchSlideProps
+          >
+        ).subtitle = state.subtitle.trim() || undefined;
+      }
+
+      // Add boolean flags (always include them, even if false)
+      updatedProps.isInteractive = state.isInteractive;
+      updatedProps.allowSkip = state.allowSkip;
+      updatedProps.allowRetry = state.allowRetry;
+
+      // Add numeric attempt fields (only if set)
+      if (state.maxAttempts.trim() !== "") {
+        const maxAttemptsValue = Math.max(0, Math.floor(Number(state.maxAttempts)));
+        updatedProps.maxAttempts = maxAttemptsValue;
+      }
+      if (state.minAttemptsBeforeSkip.trim() !== "") {
+        const minAttemptsValue = Math.max(0, Math.floor(Number(state.minAttemptsBeforeSkip)));
+        // Auto-adjust if it exceeds maxAttempts
+        if (state.maxAttempts.trim() !== "" && minAttemptsValue > Number(state.maxAttempts)) {
+          updatedProps.minAttemptsBeforeSkip = Math.max(0, Math.floor(Number(state.maxAttempts)));
+        } else {
+          updatedProps.minAttemptsBeforeSkip = minAttemptsValue;
+        }
+      }
+
+      // Handle slide type-specific data structures
+      if (slideType === SLIDE_TYPES.AI_SPEAK_STUDENT_REPEAT) {
+        const studentRepeatProps = updatedProps as Partial<AISpeakStudentRepeatSlideProps>;
+        // For ai-speak-student-repeat: save elements array
+        if (state.elements.length > 0) {
+          studentRepeatProps.elements = state.elements
+            .filter((el) => el.samplePrompt.trim() !== "") // Only include elements with samplePrompt
+            .map((el) => {
+              const samplePrompt = el.samplePrompt.trim();
+              const referenceText = el.referenceText.trim() || samplePrompt; // Default to samplePrompt if not provided
+
+              const element: AISpeakStudentRepeatSlideProps["elements"][0] = {
+                samplePrompt,
+                referenceText, // Always include referenceText for pronunciation assessment
+              };
+
+              // Add speech if audio is provided
+              if (el.audioPath.trim()) {
+                const audioUrl = getAudioFileUrl("lesson-audio", el.audioPath.trim());
+                element.speech = {
+                  mode: "file" as const,
+                  fileUrl: audioUrl,
+                };
+              } else if (referenceText || samplePrompt) {
+                // Use TTS if no audio file but we have text
+                // Map CMS language format to player format
+                const mappedLang = mapLanguageToPlayerFormat((state.defaultLang || "en") as CmsLanguage) as "en" | "fr";
+                element.speech = {
+                  mode: "tts" as const,
+                  lang: mappedLang,
+                  text: referenceText || samplePrompt,
+                };
+              }
+
+              return element;
+            });
+        }
+
+        // Add ai-speak-student-repeat specific fields
+        if (state.instructions.trim()) {
+          studentRepeatProps.instructions = state.instructions.trim();
+        }
+        if (state.promptLabel.trim()) {
+          studentRepeatProps.promptLabel = state.promptLabel.trim();
+        }
+        if (state.onCompleteAtIndex.trim() !== "") {
+          const indexValue = Math.max(0, Math.floor(Number(state.onCompleteAtIndex)));
+          studentRepeatProps.onCompleteAtIndex = indexValue;
+        }
+      } else if (slideType === SLIDE_TYPES.SPEECH_MATCH) {
+        const speechMatchProps = updatedProps as Partial<SpeechMatchSlideProps>;
+        // For speech-match: save choiceElements as elements array
+        // Guard: preserve originals only if empty, originals existed, and user hasn't touched elements
+        if (state.choiceElements.length > 0) {
+          speechMatchProps.elements = state.choiceElements
+            .filter((el) => {
+              // Only include elements with label
+              if (!el.label.trim()) return false;
+              // If file mode, must have fileUrl
+              if (el.speech.mode === "file" && !el.speech.fileUrl?.trim()) return false;
+              // If TTS mode, must have text or label
+              if (el.speech.mode === "tts" && !el.speech.text?.trim() && !el.label.trim())
+                return false;
+              return true;
+            })
+            .map((el) => {
+              const element: SpeechMatchSlideProps["elements"][0] = {
+                label: el.label.trim(),
+                speech: {
+                  mode: el.speech.mode,
+                },
+              };
+
+              if (el.speech.mode === "file") {
+                // Convert storage path to public URL if it's not already a URL
+                const filePath = el.speech.fileUrl!.trim();
+                if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                  // Already a full URL, use as-is
+                  element.speech.fileUrl = filePath;
+                } else {
+                  // Storage path, convert to public URL
+                  element.speech.fileUrl = getAudioFileUrl("lesson-audio", filePath);
+                }
+              } else {
+                // TTS mode
+                const mappedLang = mapLanguageToPlayerFormat((state.defaultLang || "en") as CmsLanguage) as "en" | "fr";
+                element.speech.lang = (el.speech.lang || mappedLang) as "en" | "fr" | undefined;
+                element.speech.text = el.speech.text?.trim() || el.label.trim();
+              }
+
+              return element;
+            });
+        } else if (
+          state.choiceElements.length === 0 &&
+          originalSpeechMatchElements &&
+          originalSpeechMatchElements.length > 0 &&
+          speechMatchElementsTouched === false
+        ) {
+          // Preserve original elements only if empty, originals existed, and user hasn't touched elements
+          speechMatchProps.elements = originalSpeechMatchElements as SpeechMatchSlideProps["elements"];
+        }
+
+        // Add speech-match specific fields
+        if (state.note.trim()) {
+          speechMatchProps.note = state.note.trim();
+        }
+      } else {
+        // For ai-speak-repeat: convert textarea text to lines array
+        // Use TTS mode for all phrases
+        const aiSpeakRepeatProps = updatedProps as Partial<AISpeakRepeatSlideProps>;
+        if (state.phrases.trim()) {
+          const phraseList = state.phrases
+            .split("\n")
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+
+          if (phraseList.length > 0) {
+            // Convert to lines[][] structure for ai-speak-repeat slides
+            // Map CMS language format to player format
+            const mappedLang = mapLanguageToPlayerFormat((state.defaultLang || "en") as CmsLanguage) as "en" | "fr";
+            aiSpeakRepeatProps.lines = [
+              phraseList.map((label) => ({
+                label,
+                speech: {
+                  mode: "tts" as const,
+                  lang: mappedLang,
+                  text: label,
+                },
+              })),
+            ];
+          }
+        }
+      }
+
+      // Remove undefined values (but keep false values for booleans)
+      Object.keys(updatedProps).forEach((key) => {
+        const propsRecord = updatedProps as Record<string, unknown>;
+        if (propsRecord[key] === undefined) {
+          delete propsRecord[key];
+        }
+      });
+
+      // Build updated meta_json
+      const updatedMeta: { activityName?: string } = {};
+      if (state.activityName.trim()) {
+        updatedMeta.activityName = state.activityName.trim();
+      }
+
+      // Debug logging
+      logger.debug("[Save] About to save to database:");
+      logger.debug("[Save] slideId:", slideId);
+      logger.debug("[Save] props_json:", JSON.stringify(updatedProps, null, 2));
+      logger.debug("[Save] meta_json:", JSON.stringify(updatedMeta, null, 2));
+      logger.debug("[Save] is_activity:", isActivity);
+
+      const { error, data: savedData } = await updateSlide(slideId, {
+        props_json: updatedProps,
+        meta_json: Object.keys(updatedMeta).length > 0 ? updatedMeta : undefined,
+        is_activity: isActivity,
+      });
+
+      // Debug logging
+      if (error) {
+        logger.error("[Save] Error saving:", error);
+      } else {
+        logger.debug("[Save] Success! Saved data:", savedData);
+        logger.debug("[Save] Saved props_json:", savedData?.propsJson);
+      }
+
+      if (error) {
+        setMessage(`Error: ${error}`);
+        setSaving(false);
+        return { success: false, error };
+      } else {
+        setMessage("Changes saved successfully!");
+        setSaving(false);
+        return { success: true, error: null };
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save changes";
+      setMessage(`Error: ${errorMessage}`);
+      setSaving(false);
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  return {
+    save,
+    saving,
+    message,
+    setMessage,
+  };
+}
+

@@ -4,8 +4,8 @@ import { useState } from "react";
 import CmsPageShell from "../components/cms/CmsPageShell";
 import { uiTokens } from "../lib/uiTokens";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { useCmsDashboard } from "../lib/hooks/useCmsDashboard";
-import { useCmsDeleteFlow } from "../lib/hooks/useCmsDeleteFlow";
+import { useCmsDashboard } from "../lib/hooks/cms/useCmsDashboard";
+import { useCmsDeleteFlow } from "../lib/hooks/cms/useCmsDeleteFlow";
 export const dynamic = "force-dynamic";
 
 import CmsDashboardTree from "../components/cms/CmsDashboardTree";

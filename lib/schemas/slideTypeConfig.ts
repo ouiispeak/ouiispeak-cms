@@ -67,7 +67,7 @@ export interface FormFieldConfig {
     operator: "equals" | "not-equals" | "exists" | "not-exists" | "contains" | "not-contains";
     
     /** Value to compare against */
-    value: any;
+    value: unknown;
   };
 }
 

@@ -17,7 +17,7 @@ import StatusMessage from "../../../components/ui/StatusMessage";
 import { loadModuleById, updateModule } from "../../../lib/data/modules";
 import type { Module } from "../../../lib/domain/module";
 import { updateModuleSchema } from "../../../lib/schemas/moduleSchema";
-import { useUnsavedChangesWarning } from "../../../lib/hooks/useUnsavedChangesWarning";
+import { useUnsavedChangesWarning } from "../../../lib/hooks/cms/useUnsavedChangesWarning";
 
 type LoadState =
   | { status: "loading" }

@@ -7,16 +7,10 @@ import Input from "./Input";
 import Select from "./Select";
 import AudioFileSelector from "./AudioFileSelector";
 import { Button } from "../Button";
-
-type ChoiceElement = {
-  label: string;
-  speech: {
-    mode: "tts" | "file";
-    lang?: "en" | "fr";
-    text?: string;
-    fileUrl?: string;
-  };
-};
+import { useElementMapper } from "../../lib/hooks/utils/useElementMapper";
+import { normalizeLanguageToPlayer } from "../../lib/utils/elementMapperUtils";
+import type { ChoiceElement } from "../../lib/types/slideProps";
+import { SPEECH_MODES, PLAYER_LANGUAGES } from "../../lib/constants/slideConstants";
 
 type ChoiceElementMapperProps = {
   elements: ChoiceElement[];
@@ -33,46 +27,75 @@ export default function ChoiceElementMapper({
 }: ChoiceElementMapperProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleAddElement = () => {
-    onElementsChange([
-      ...elements,
-      {
-        label: "",
-        speech: {
-          mode: "tts",
-          lang: defaultLang === "english" || defaultLang === "en" ? "en" : defaultLang === "french" || defaultLang === "fr" ? "fr" : "en",
-          text: "",
-        },
+  const createEmptyElement = (): ChoiceElement => {
+    const normalizedLang = normalizeLanguageToPlayer(defaultLang);
+    return {
+      label: "",
+      speech: {
+        mode: SPEECH_MODES.TTS,
+        lang: normalizedLang,
+        text: "",
       },
-    ]);
+    };
   };
 
-  const handleRemoveElement = (index: number) => {
-    onElementsChange(elements.filter((_, i) => i !== index));
-  };
-
-  const handleElementChange = (index: number, field: keyof ChoiceElement, value: any) => {
-    const updated = [...elements];
-    if (field === "speech") {
-      updated[index] = { ...updated[index], speech: { ...updated[index].speech, ...value } };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
-    onElementsChange(updated);
-  };
+  const { handleAddElement, handleRemoveElement, handleElementChange } = useElementMapper(
+    elements,
+    onElementsChange,
+    createEmptyElement
+  );
 
   const handleSpeechModeChange = (index: number, mode: "tts" | "file") => {
     const element = elements[index];
+    const normalizedLang = normalizeLanguageToPlayer(element.speech.lang, defaultLang);
+    
     const updatedSpeech: ChoiceElement["speech"] = {
       mode,
-      lang: element.speech.lang || (defaultLang === "english" || defaultLang === "en" ? "en" : defaultLang === "french" || defaultLang === "fr" ? "fr" : "en"),
+      lang: normalizedLang,
     };
-    if (mode === "tts") {
+    
+    if (mode === SPEECH_MODES.TTS) {
       updatedSpeech.text = element.speech.text || element.label;
     } else {
       updatedSpeech.fileUrl = element.speech.fileUrl || "";
     }
-    handleElementChange(index, "speech", updatedSpeech);
+    
+    handleElementChange(index, { speech: updatedSpeech });
+  };
+
+  const handleLabelChange = (index: number, label: string) => {
+    handleElementChange(index, { label });
+  };
+
+  const handleSpeechLangChange = (index: number, lang: "en" | "fr") => {
+    const element = elements[index];
+    handleElementChange(index, {
+      speech: {
+        ...element.speech,
+        lang,
+      },
+    });
+  };
+
+  const handleSpeechTextChange = (index: number, text: string) => {
+    const element = elements[index];
+    handleElementChange(index, {
+      speech: {
+        ...element.speech,
+        text,
+      },
+    });
+  };
+
+  const handleSpeechFileUrlChange = (index: number, fileUrl: string) => {
+    const element = elements[index];
+    handleElementChange(index, {
+      speech: {
+        ...element.speech,
+        fileUrl,
+        mode: SPEECH_MODES.FILE,
+      },
+    });
   };
 
   return (
@@ -121,7 +144,7 @@ export default function ChoiceElementMapper({
                 <FormField label="Label" required>
                   <Input
                     value={element.label}
-                    onChange={(e) => handleElementChange(index, "label", e.target.value)}
+                    onChange={(e) => handleLabelChange(index, e.target.value)}
                     placeholder="e.g., A, B, C"
                   />
                 </FormField>
@@ -140,17 +163,17 @@ export default function ChoiceElementMapper({
                   <>
                     <FormField label="Language">
                       <Select
-                        value={element.speech.lang || defaultLang === "english" || defaultLang === "en" ? "en" : defaultLang === "french" || defaultLang === "fr" ? "fr" : "en"}
-                        onChange={(e) => handleElementChange(index, "speech", { ...element.speech, lang: e.target.value as "en" | "fr" })}
+                        value={element.speech.lang || normalizeLanguageToPlayer(defaultLang)}
+                        onChange={(e) => handleSpeechLangChange(index, e.target.value as "en" | "fr")}
                       >
-                        <option value="en">English</option>
-                        <option value="fr">French</option>
+                        <option value={PLAYER_LANGUAGES.ENGLISH}>English</option>
+                        <option value={PLAYER_LANGUAGES.FRENCH}>French</option>
                       </Select>
                     </FormField>
                     <FormField label="Text for TTS">
                       <Input
                         value={element.speech.text || ""}
-                        onChange={(e) => handleElementChange(index, "speech", { ...element.speech, text: e.target.value })}
+                        onChange={(e) => handleSpeechTextChange(index, e.target.value)}
                         placeholder={element.label || "Text to speak"}
                       />
                     </FormField>
@@ -160,7 +183,7 @@ export default function ChoiceElementMapper({
                     <AudioFileSelector
                       bucketName={bucketName}
                       value={element.speech.fileUrl || ""}
-                      onChange={(fileUrl) => handleElementChange(index, "speech", { ...element.speech, fileUrl, mode: "file" })}
+                      onChange={(fileUrl) => handleSpeechFileUrlChange(index, fileUrl)}
                     />
                   </FormField>
                 )}

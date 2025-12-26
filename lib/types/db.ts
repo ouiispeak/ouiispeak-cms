@@ -46,7 +46,7 @@ export type SlideRow = {
   lesson_id?: string;
   group_id: string | null;
   type: string;
-  props_json: any;
+  props_json: unknown;
   order_index: number | null;
   aid_hook?: string | null;
   code?: string | null;

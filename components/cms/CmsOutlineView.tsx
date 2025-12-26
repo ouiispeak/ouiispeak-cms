@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../Button";
 import { uiTokens } from "../../lib/uiTokens";
-import { useCmsDashboard } from "../../lib/hooks/useCmsDashboard";
+import { useCmsDashboard } from "../../lib/hooks/cms/useCmsDashboard";
 import { getModuleDisplayName, getSlideDisplayName } from "../../lib/utils/displayName";
 
 const LEVELS = ["A0", "A1", "A2", "B1", "B2", "C1", "C2"] as const;

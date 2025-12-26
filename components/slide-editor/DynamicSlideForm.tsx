@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useSlideTypeConfig } from "../../lib/hooks/useSlideTypeConfig";
+import { useSlideTypeConfig } from "../../lib/hooks/slides/useSlideTypeConfig";
 import { SectionRenderer } from "./SectionRenderer";
 import { groupFieldsBySection } from "../../lib/utils/formUtils";
 import { uiTokens } from "../../lib/uiTokens";

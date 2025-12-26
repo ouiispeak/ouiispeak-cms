@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { uiTokens } from "../../lib/uiTokens";
+import { logger } from "../../lib/utils/logger";
 
 interface CopyButtonProps {
   text: string;
@@ -34,7 +35,7 @@ export default function CopyButton({
         setShowCopied(false);
       }, 1200);
     } catch (err) {
-      console.error("Failed to copy text:", err);
+      logger.error("Failed to copy text:", err);
       setError("Copy failed");
       setShowCopied(false);
       setTimeout(() => {

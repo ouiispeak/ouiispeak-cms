@@ -1,3 +1,5 @@
+import type { SlideProps } from "../types/slideProps";
+
 /**
  * Domain model for Slide
  * Uses camelCase field names for UI consumption
@@ -8,7 +10,8 @@ export type Slide = {
   groupId: string | null;
   orderIndex: number | null;
   type: string;
-  propsJson: unknown;
+  /** Slide-specific properties. Use getTypedSlideProps() or type guards for type-safe access. */
+  propsJson: SlideProps | unknown; // Prefer SlideProps, but allow unknown for backward compatibility
   aidHook: string | null;
   code: string | null;
   metaJson: unknown | null;
