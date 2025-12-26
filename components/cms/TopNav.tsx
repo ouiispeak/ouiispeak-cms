@@ -18,8 +18,7 @@ export default function TopNav() {
                        pathname.startsWith("/lesson-slides/");
   const isGroupActive = pathname.startsWith("/edit-group/") || 
                         pathname.startsWith("/group-slides/");
-  const isSlideActive = pathname.startsWith("/manage-slides/") || 
-                        pathname.startsWith("/edit-slide/");
+  const isSlideActive = pathname.startsWith("/edit-slide/");
 
   // Level colors: background and border/underline
   const levelColors = {
@@ -105,25 +104,6 @@ export default function TopNav() {
         }}
       >
         CMS Dashboard
-      </Link>
-      <Link
-        href="/manage-slides"
-        style={{
-          ...navLinkStyle(isSlideActive, false, "slide"),
-        }}
-        onMouseEnter={(e) => {
-          if (!isSlideActive) {
-            Object.assign(e.currentTarget.style, hoverStyle);
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSlideActive) {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = uiTokens.color.textMuted;
-          }
-        }}
-      >
-        Manage Slides
       </Link>
       <span style={navLinkStyle(isCefrActive, false, "cefr")}>
         CEFR

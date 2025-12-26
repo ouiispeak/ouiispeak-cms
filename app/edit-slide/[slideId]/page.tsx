@@ -76,6 +76,14 @@ export default function EditSlidePage() {
   const playerBaseUrl = process.env.NEXT_PUBLIC_PLAYER_BASE_URL || "";
   const playerHref = playerBaseUrl && lessonId ? `${playerBaseUrl}/lecons/db/${lessonId}` : undefined;
 
+  // Wrapper for setChoiceElements that tracks user interaction for speech-match
+  const handleChoiceElementsChange = (newElements: Array<{label: string; speech: {mode: "tts" | "file"; lang?: "en" | "fr"; text?: string; fileUrl?: string}}>) => {
+    if (slideType === "speech-match") {
+      speechMatchElementsTouchedRef.current = true;
+    }
+    setChoiceElements(newElements);
+  };
+
   // Helper function to extract path from Supabase Storage URL
   function extractPathFromUrl(url: string): string {
     if (url.includes("/storage/v1/object/public/")) {
@@ -115,6 +123,7 @@ export default function EditSlidePage() {
     promptLabel: string;
     onCompleteAtIndex: string;
     elements: Array<{samplePrompt: string; referenceText: string; audioPath: string}>;
+    choiceElements: Array<{label: string; speech: {mode: "tts" | "file"; lang?: "en" | "fr"; text?: string; fileUrl?: string}}>;
     isInteractive: boolean;
     allowSkip: boolean;
     allowRetry: boolean;
@@ -122,6 +131,11 @@ export default function EditSlidePage() {
     maxAttempts: string;
     minAttemptsBeforeSkip: string;
   } | null>(null);
+
+  // Store original props.elements for speech-match to preserve if needed
+  const originalSpeechMatchElementsRef = useRef<any[] | null>(null);
+  // Track if user has intentionally modified speech-match elements
+  const speechMatchElementsTouchedRef = useRef<boolean>(false);
 
   // Warn before navigating away with unsaved changes
   useUnsavedChangesWarning(hasUnsavedChanges);
@@ -200,21 +214,32 @@ export default function EditSlidePage() {
       // Load speech-match specific fields
       setNote(props.note || "");
       // Load choiceElements array for speech-match
-      if (slideType === "speech-match") {
+      if (slide.type === "speech-match") {
+        // Reset touched flag on load
+        speechMatchElementsTouchedRef.current = false;
         if (props.elements && Array.isArray(props.elements)) {
+          // Store original elements for preservation guard
+          originalSpeechMatchElementsRef.current = props.elements;
+          // Use props.defaultLang for default language, not component state
+          const defaultLangValue = props.defaultLang || "";
+          const mappedLang = defaultLangValue === "english" || defaultLangValue === "en" ? "en" : defaultLangValue === "french" || defaultLangValue === "fr" ? "fr" : "en";
           const loadedChoiceElements = props.elements.map((el: any) => ({
             label: el.label || "",
             speech: {
               mode: el.speech?.mode || "tts",
-              lang: el.speech?.lang || (defaultLang === "english" || defaultLang === "en" ? "en" : defaultLang === "french" || defaultLang === "fr" ? "fr" : "en"),
+              lang: el.speech?.lang || mappedLang,
               text: el.speech?.text || el.label || "",
               fileUrl: el.speech?.fileUrl || "",
             },
           }));
           setChoiceElements(loadedChoiceElements);
         } else {
+          originalSpeechMatchElementsRef.current = null;
           setChoiceElements([]);
         }
+      } else {
+        originalSpeechMatchElementsRef.current = null;
+        speechMatchElementsTouchedRef.current = false;
       }
       // Handle phrases - if it's lines array, flatten it; otherwise use as string
       if (props.lines && Array.isArray(props.lines)) {
@@ -242,6 +267,23 @@ export default function EditSlidePage() {
       const initialPhrases = props.lines && Array.isArray(props.lines)
         ? props.lines.flat().map((cell: any) => cell.label || cell).join("\n")
         : (props.phrases || "");
+      
+      // Build initial choiceElements for speech-match
+      let initialChoiceElements: Array<{label: string; speech: {mode: "tts" | "file"; lang?: "en" | "fr"; text?: string; fileUrl?: string}}> = [];
+      if (slide.type === "speech-match" && props.elements && Array.isArray(props.elements)) {
+        const defaultLangValue = props.defaultLang || "";
+        const mappedLang = defaultLangValue === "english" || defaultLangValue === "en" ? "en" : defaultLangValue === "french" || defaultLangValue === "fr" ? "fr" : "en";
+        initialChoiceElements = props.elements.map((el: any) => ({
+          label: el.label || "",
+          speech: {
+            mode: el.speech?.mode || "tts",
+            lang: el.speech?.lang || mappedLang,
+            text: el.speech?.text || el.label || "",
+            fileUrl: el.speech?.fileUrl || "",
+          },
+        }));
+      }
+      
       initialValuesRef.current = {
         label: props.label || "",
         title: props.title || "",
@@ -257,13 +299,14 @@ export default function EditSlidePage() {
         instructions: props.instructions || "",
         promptLabel: props.promptLabel || "",
         onCompleteAtIndex: props.onCompleteAtIndex !== undefined && props.onCompleteAtIndex !== null ? String(props.onCompleteAtIndex) : "",
-        elements: props.elements && Array.isArray(props.elements)
+        elements: props.elements && Array.isArray(props.elements) && slide.type !== "speech-match"
           ? props.elements.map((el: any) => ({
               samplePrompt: el.samplePrompt || "",
               referenceText: el.referenceText || "",
               audioPath: el.speech?.fileUrl ? extractPathFromUrl(el.speech.fileUrl) : "",
             }))
           : [],
+        choiceElements: initialChoiceElements,
         isInteractive: props.isInteractive || false,
         allowSkip: props.allowSkip || false,
         allowRetry: props.allowRetry || false,
@@ -306,10 +349,11 @@ export default function EditSlidePage() {
       instructions !== initialValuesRef.current.instructions ||
       promptLabel !== initialValuesRef.current.promptLabel ||
       onCompleteAtIndex !== initialValuesRef.current.onCompleteAtIndex ||
-      JSON.stringify(elements) !== JSON.stringify(initialValuesRef.current.elements);
+      JSON.stringify(elements) !== JSON.stringify(initialValuesRef.current.elements) ||
+      JSON.stringify(choiceElements) !== JSON.stringify(initialValuesRef.current.choiceElements);
 
       setHasUnsavedChanges(hasChanges);
-  }, [label, title, subtitle, lessonEndMessage, lessonEndActions, body, buttons, defaultLang, audioId, activityName, phrases, instructions, promptLabel, onCompleteAtIndex, elements, isInteractive, allowSkip, allowRetry, isActivity, maxAttempts, minAttemptsBeforeSkip, loadState]);
+  }, [label, title, subtitle, lessonEndMessage, lessonEndActions, body, buttons, defaultLang, audioId, activityName, phrases, instructions, promptLabel, onCompleteAtIndex, elements, choiceElements, isInteractive, allowSkip, allowRetry, isActivity, maxAttempts, minAttemptsBeforeSkip, loadState]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,6 +361,71 @@ export default function EditSlidePage() {
 
     setSaving(true);
     setMessage(null);
+
+    // Pre-save validation for interactive slide types
+    if (slideType === "ai-speak-repeat") {
+      // Require non-empty phrases/lines array
+      if (!phrases.trim()) {
+        setMessage("Error: AI Speak Repeat: add at least 1 phrase before saving.");
+        setSaving(false);
+        return;
+      }
+      const phraseList = phrases
+        .split("\n")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+      if (phraseList.length === 0) {
+        setMessage("Error: AI Speak Repeat: add at least 1 phrase before saving.");
+        setSaving(false);
+        return;
+      }
+    } else if (slideType === "ai-speak-student-repeat") {
+      // Require at least 1 element with non-empty samplePrompt
+      if (elements.length === 0) {
+        setMessage("Error: Student Repeat: add at least 1 element before saving.");
+        setSaving(false);
+        return;
+      }
+      const hasValidElement = elements.some((el) => el.samplePrompt && el.samplePrompt.trim() !== "");
+      if (!hasValidElement) {
+        setMessage("Error: Student Repeat: each element needs a sample prompt.");
+        setSaving(false);
+        return;
+      }
+    } else if (slideType === "speech-match") {
+      // Require at least 1 choice element with non-empty label and either TTS text or audio file
+      if (choiceElements.length === 0) {
+        // Check if we're preserving originals (which would be valid)
+        if (
+          !originalSpeechMatchElementsRef.current ||
+          originalSpeechMatchElementsRef.current.length === 0 ||
+          speechMatchElementsTouchedRef.current === true
+        ) {
+          setMessage("Error: Speech Match: add at least 1 choice with a label and TTS text or audio.");
+          setSaving(false);
+          return;
+        }
+      } else {
+        // Validate each choice element
+        const hasValidChoice = choiceElements.some((el) => {
+          if (!el.label || el.label.trim() === "") {
+            return false;
+          }
+          // Must have either TTS text or audio file
+          if (el.speech.mode === "tts") {
+            return el.speech.text && el.speech.text.trim() !== "";
+          } else if (el.speech.mode === "file") {
+            return el.speech.fileUrl && el.speech.fileUrl.trim() !== "";
+          }
+          return false;
+        });
+        if (!hasValidChoice) {
+          setMessage("Error: Speech Match: add at least 1 choice with a label and TTS text or audio.");
+          setSaving(false);
+          return;
+        }
+      }
+    }
 
     try {
       // Parse buttons if provided
@@ -431,6 +540,7 @@ export default function EditSlidePage() {
         }
       } else if (slideType === "speech-match") {
         // For speech-match: save choiceElements as elements array
+        // Guard: preserve originals only if empty, originals existed, and user hasn't touched elements
         if (choiceElements.length > 0) {
           updatedProps.elements = choiceElements
             .filter((el) => {
@@ -469,6 +579,14 @@ export default function EditSlidePage() {
               
               return element;
             });
+        } else if (
+          choiceElements.length === 0 &&
+          originalSpeechMatchElementsRef.current &&
+          originalSpeechMatchElementsRef.current.length > 0 &&
+          speechMatchElementsTouchedRef.current === false
+        ) {
+          // Preserve original elements only if empty, originals existed, and user hasn't touched elements
+          updatedProps.elements = originalSpeechMatchElementsRef.current;
         }
         
         // Add speech-match specific fields
@@ -543,6 +661,7 @@ export default function EditSlidePage() {
             promptLabel,
             onCompleteAtIndex,
             elements,
+            choiceElements: [...choiceElements],
             isInteractive,
             allowSkip,
             allowRetry,
@@ -550,6 +669,14 @@ export default function EditSlidePage() {
             maxAttempts,
             minAttemptsBeforeSkip,
           };
+        }
+        // Update original elements ref if this was a speech-match save
+        if (slideType === "speech-match") {
+          // Store the saved elements as the new original (either from choiceElements or preserved original)
+          const savedElements = updatedProps.elements;
+          if (savedElements && Array.isArray(savedElements)) {
+            originalSpeechMatchElementsRef.current = savedElements;
+          }
         }
     setHasUnsavedChanges(false);
       }
@@ -1024,7 +1151,7 @@ export default function EditSlidePage() {
                       >
                         <ChoiceElementMapper
                           elements={choiceElements}
-                          onElementsChange={setChoiceElements}
+                          onElementsChange={handleChoiceElementsChange}
                           bucketName="lesson-audio"
                           defaultLang={defaultLang || "en"}
                         />
