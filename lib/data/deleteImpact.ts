@@ -36,8 +36,33 @@ export type ImpactResult<T> = {
 };
 
 /**
- * Get impact counts for deleting a module
- * Returns counts of lessons, groups, slides, and user_lessons that will be deleted
+ * Calculates the impact of deleting a module.
+ * 
+ * Returns counts of all dependent records that would be deleted:
+ * - Lessons in the module
+ * - Groups in those lessons
+ * - Slides in those lessons
+ * - User lesson progress records
+ * 
+ * Used to show users what will be deleted before confirming deletion.
+ * 
+ * @param moduleId - The ID of the module to check
+ * @param client - Optional Supabase client (defaults to global client)
+ * 
+ * @returns Promise resolving to impact counts or an error
+ * 
+ * @example
+ * ```tsx
+ * const { data, error } = await getModuleDeleteImpact("module-123");
+ * if (data) {
+ *   console.log(`Deleting will remove ${data.lessons} lessons, ${data.slides} slides`);
+ * }
+ * ```
+ * 
+ * @remarks
+ * - Gracefully handles missing `user_lessons` table (returns 0 if table doesn't exist)
+ * - Uses efficient count queries (head: true) to avoid loading full data
+ * - Returns 0 counts if module has no lessons
  */
 export async function getModuleDeleteImpact(
   moduleId: string,
@@ -180,8 +205,19 @@ export async function getLessonDeleteImpact(
 }
 
 /**
- * Get impact counts for deleting a group
- * Returns count of slides that will be deleted
+ * Calculates the impact of deleting a group.
+ * 
+ * Returns the count of slides that would be deleted.
+ * 
+ * Used to show users what will be deleted before confirming deletion.
+ * 
+ * @param groupId - The ID of the group to check
+ * @param client - Optional Supabase client (defaults to global client)
+ * 
+ * @returns Promise resolving to impact count or an error
+ * 
+ * @remarks
+ * - Uses efficient count query (head: true) to avoid loading full data
  */
 export async function getGroupDeleteImpact(
   groupId: string,

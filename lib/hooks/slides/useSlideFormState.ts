@@ -91,7 +91,47 @@ export interface SlideFormStateSetters {
 }
 
 /**
- * Hook to manage slide form state and track unsaved changes
+ * Hook to manage slide form state and track unsaved changes.
+ * 
+ * This hook centralizes all form state management for the slide editor, including:
+ * - Managing all form field values (title, subtitle, body, etc.)
+ * - Tracking unsaved changes by comparing current state to initial values
+ * - Handling special cases like speech-match element preservation
+ * - Providing setters for all form fields
+ * 
+ * @param initialValues - Initial form values loaded from the database. When this changes
+ *                        (e.g., after loading a new slide), the hook updates all state
+ *                        variables and resets the unsaved changes flag.
+ * 
+ * @returns An object containing:
+ *   - `state`: Current form state values (all fields)
+ *   - `setters`: Functions to update each field
+ *   - `originalSpeechMatchElementsRef`: Ref to original speech-match elements (for preservation logic)
+ *   - `speechMatchElementsTouchedRef`: Ref tracking if user has modified speech-match elements
+ *   - `hasUnsavedChanges`: Boolean indicating if form has been modified
+ *   - `updateInitialValues`: Function to update initial values after successful save
+ * 
+ * @example
+ * ```tsx
+ * const { state, setters, hasUnsavedChanges, updateInitialValues } = useSlideFormState(initialValues);
+ * 
+ * // Update a field
+ * setters.setTitle("New Title");
+ * 
+ * // Check if there are unsaved changes
+ * if (hasUnsavedChanges) {
+ *   // Show warning before navigation
+ * }
+ * 
+ * // After successful save, update initial values
+ * updateInitialValues();
+ * ```
+ * 
+ * @remarks
+ * - The hook uses `useRef` to store initial values for comparison, preventing unnecessary re-renders
+ * - Special handling for speech-match slides: preserves original elements if user hasn't touched them
+ * - Automatically warns user before navigation if there are unsaved changes (via `useUnsavedChangesWarning`)
+ * - Prevents infinite loops by tracking the last initialized slide ID
  */
 export function useSlideFormState(initialValues: Partial<SlideFormState> | null) {
   // Identity state

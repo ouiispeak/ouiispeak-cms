@@ -30,12 +30,69 @@ export interface SaveResult {
 }
 
 /**
- * Hook for saving slide form
+ * Hook for saving slide form data to the database.
+ * 
+ * This hook handles the complete save flow:
+ * 1. Validates the form data (validation must be done externally)
+ * 2. Parses JSON fields (buttons, actions)
+ * 3. Builds the props_json object based on slide type
+ * 4. Handles slide-type-specific data transformations
+ * 5. Saves to database via `updateSlide`
+ * 
+ * @returns An object containing:
+ *   - `save`: Async function to save the form data
+ *   - `saving`: Boolean indicating if save is in progress
+ *   - `message`: Success or error message
+ *   - `setMessage`: Function to manually set the message
+ * 
+ * @example
+ * ```tsx
+ * const { save, saving, message } = useSlideFormSave();
+ * 
+ * const handleSave = async () => {
+ *   const validation = validateForm(state);
+ *   const result = await save(
+ *     slideId,
+ *     slideType,
+ *     state,
+ *     isActivity,
+ *     originalElements,
+ *     elementsTouched,
+ *     validation
+ *   );
+ *   
+ *   if (result.success) {
+ *     // Handle success
+ *   }
+ * };
+ * ```
+ * 
+ * @remarks
+ * - Validation must be performed before calling `save` - the hook expects a validation result
+ * - For speech-match slides, preserves original elements if empty and user hasn't touched them
+ * - Automatically handles language format conversion (CMS format → Player format)
+ * - Converts storage paths to public URLs for audio files
+ * - Auto-adjusts `minAttemptsBeforeSkip` if it exceeds `maxAttempts`
  */
 export function useSlideFormSave() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  /**
+   * Saves slide form data to the database.
+   * 
+   * @param slideId - The ID of the slide to update
+   * @param slideType - The type of slide (e.g., "text-slide", "speech-match")
+   * @param state - Current form state values
+   * @param isActivity - Whether this slide is marked as an activity
+   * @param originalSpeechMatchElements - Original speech-match elements (for preservation logic)
+   * @param speechMatchElementsTouched - Whether user has modified speech-match elements
+   * @param validationResult - Result from form validation (must be valid to proceed)
+   * 
+   * @returns Promise resolving to a SaveResult indicating success or failure
+   * 
+   * @throws Does not throw - errors are returned in the SaveResult
+   */
   const save = async (
     slideId: string,
     slideType: string,

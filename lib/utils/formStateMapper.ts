@@ -25,7 +25,40 @@ type ChoiceFormElement = {
 };
 
 /**
- * Creates a handler that maps fieldId changes to appropriate state setters
+ * Creates a handler function that maps dynamic form field IDs to appropriate state setters.
+ * 
+ * This utility bridges the gap between the dynamic form system (which uses fieldId strings)
+ * and the existing state management system (which uses individual setter functions).
+ * 
+ * The handler accepts a fieldId (e.g., "title", "isInteractive") and a value, then calls
+ * the appropriate setter function with proper type coercion.
+ * 
+ * @param setters - Object containing setter functions for form fields. Only setters
+ *                  for fields that should be handled need to be provided (others are optional).
+ * 
+ * @returns A function that accepts (fieldId: string, value: unknown) and calls the
+ *          appropriate setter with type-safe coercion.
+ * 
+ * @example
+ * ```tsx
+ * const handleChange = createFormChangeHandler({
+ *   setTitle: setters.setTitle,
+ *   setIsInteractive: setters.setIsInteractive,
+ *   setElements: setters.setElements,
+ * });
+ * 
+ * // In dynamic form component
+ * <FieldRenderer
+ *   fieldId="title"
+ *   value={state.title}
+ *   onChange={(value) => handleChange("title", value)}
+ * />
+ * ```
+ * 
+ * @remarks
+ * - Handles type coercion: strings, booleans, and arrays are properly typed
+ * - Logs warnings if a fieldId doesn't have a corresponding setter
+ * - Used by DynamicSlideFormWrapper to bridge dynamic forms with existing state
  */
 export function createFormChangeHandler(setters: {
   setLabel?: (v: string) => void;

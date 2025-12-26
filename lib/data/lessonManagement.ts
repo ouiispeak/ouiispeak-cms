@@ -33,8 +33,38 @@ export type LessonManagementData = {
 };
 
 /**
- * Load all data needed for the lesson management page
- * Returns lesson, groups, slides (all ordered), and unique slide types
+ * Loads all data needed for the lesson management page.
+ * 
+ * This function performs parallel queries to fetch:
+ * - Lesson information (id, title)
+ * - All groups for the lesson (ordered by order_index)
+ * - All slides for the lesson (ordered by order_index)
+ * - All unique slide types from the entire database (for dropdown)
+ * 
+ * @param lessonId - The ID of the lesson to load data for
+ * @param client - Optional Supabase client (defaults to the global client)
+ * 
+ * @returns Promise resolving to a LessonManagementResult containing:
+ *   - `lesson`: Basic lesson info (id, title)
+ *   - `groups`: Array of groups (ordered by order_index)
+ *   - `slides`: Array of slides (ordered by order_index) with propsJson included
+ *   - `slideTypes`: Array of unique slide types (sorted alphabetically)
+ * 
+ * @example
+ * ```tsx
+ * const { data, error } = await loadLessonManagement("lesson-123");
+ * if (error) {
+ *   console.error("Failed to load:", error);
+ * } else {
+ *   console.log(`Loaded ${data.slides.length} slides for lesson ${data.lesson.title}`);
+ * }
+ * ```
+ * 
+ * @remarks
+ * - All queries run in parallel for better performance
+ * - Slide types are extracted from the entire database, not just this lesson
+ * - Empty and null slide types are filtered out
+ * - Returns domain models (camelCase) rather than database rows (snake_case)
  */
 export async function loadLessonManagement(
   lessonId: string,

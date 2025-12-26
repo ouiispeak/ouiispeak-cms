@@ -32,14 +32,46 @@ export interface CmsHierarchyMaps {
 
 /**
  * Builds hierarchical maps from flat arrays of modules, lessons, groups, and slides.
- * Groups items by their parent relationships and sorts them by orderIndex.
- * Uses domain types (camelCase).
- *
+ * 
+ * This utility function transforms flat arrays into nested Maps that organize content
+ * by their parent-child relationships. It's used by the dashboard to efficiently
+ * render the CMS hierarchy (Modules → Lessons → Groups → Slides).
+ * 
+ * The function:
+ * - Groups lessons by module
+ * - Groups groups by lesson
+ * - Groups slides by group (or lesson if ungrouped)
+ * - Groups modules by level (CEFR level)
+ * - Sorts all items by orderIndex (with ID as fallback)
+ * 
  * @param modules - Array of module domain objects
  * @param lessons - Array of lesson domain objects (must include moduleId and orderIndex)
  * @param groups - Array of group domain objects (minimal)
  * @param slides - Array of slide domain objects (must include propsJson for title extraction)
- * @returns Hierarchical maps grouping items by their parent relationships
+ * 
+ * @returns Object containing Maps for:
+ *   - `modulesByLevel`: Modules grouped by CEFR level (e.g., "A0", "A1")
+ *   - `lessonsByModule`: Lessons grouped by module ID
+ *   - `groupsByLesson`: Groups grouped by lesson ID
+ *   - `slidesByGroup`: Slides grouped by group ID
+ *   - `ungroupedSlidesByLesson`: Slides without groups, grouped by lesson ID
+ * 
+ * @example
+ * ```tsx
+ * const hierarchy = buildCmsHierarchy(modules, lessons, groups, slides);
+ * 
+ * // Access lessons for a module
+ * const moduleLessons = hierarchy.lessonsByModule.get("module-123") || [];
+ * 
+ * // Access slides for a group
+ * const groupSlides = hierarchy.slidesByGroup.get("group-456") || [];
+ * ```
+ * 
+ * @remarks
+ * - All arrays are sorted by orderIndex (ascending), then by ID if orderIndex is equal
+ * - Items without parent relationships are filtered out (e.g., lessons without moduleId)
+ * - Uses Map data structures for O(1) lookup performance
+ * - Returns domain types (camelCase) rather than database rows
  */
 export function buildCmsHierarchy(
   modules: Module[],

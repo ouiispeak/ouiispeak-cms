@@ -30,8 +30,33 @@ export type DashboardData = {
 };
 
 /**
- * Load all data needed for the CMS dashboard
- * Returns domain types (camelCase)
+ * Loads all data needed for the CMS dashboard.
+ * 
+ * This function orchestrates loading the complete content hierarchy:
+ * - All modules
+ * - All lessons (organized by module)
+ * - All groups (for all lessons)
+ * - All slides (for all lessons, with propsJson for display)
+ * 
+ * All data is loaded in parallel where possible for optimal performance.
+ * 
+ * @returns Promise resolving to a DashboardResult containing the complete hierarchy
+ * 
+ * @example
+ * ```tsx
+ * const { data, error } = await loadDashboardData();
+ * if (error) {
+ *   console.error("Failed to load dashboard:", error);
+ * } else {
+ *   console.log(`Loaded ${data.modules.length} modules`);
+ * }
+ * ```
+ * 
+ * @remarks
+ * - Uses `noStore()` to prevent Next.js caching (ensures fresh data)
+ * - Validates UUIDs before querying slides to prevent SQL errors
+ * - Returns domain models (camelCase) rather than database rows
+ * - Handles empty database gracefully (returns empty arrays)
  */
 export async function loadDashboardData(): Promise<DashboardResult<DashboardData>> {
   noStore();

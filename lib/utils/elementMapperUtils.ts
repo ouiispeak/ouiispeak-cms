@@ -6,8 +6,26 @@
 import { PLAYER_LANGUAGES, CMS_LANGUAGES, type CmsLanguage, type PlayerLanguage } from "../constants/slideConstants";
 
 /**
- * Map CMS language format to player language format
- * Handles various input formats for flexibility
+ * Normalizes language values from CMS format to player format.
+ * 
+ * Handles various input formats for flexibility:
+ * - "en" or "english" → "en"
+ * - "fr" or "french" → "fr"
+ * - Falls back to defaultLang if provided
+ * - Defaults to English if no valid language found
+ * 
+ * @param lang - Language value to normalize (can be "en", "english", "fr", "french", etc.)
+ * @param defaultLang - Optional fallback language if lang is not provided or invalid
+ * 
+ * @returns Normalized player language format ("en" or "fr")
+ * 
+ * @example
+ * ```tsx
+ * normalizeLanguageToPlayer("english") // Returns "en"
+ * normalizeLanguageToPlayer("fr") // Returns "fr"
+ * normalizeLanguageToPlayer(null, "french") // Returns "fr"
+ * normalizeLanguageToPlayer("invalid") // Returns "en" (default)
+ * ```
  */
 export function normalizeLanguageToPlayer(
   lang: string | undefined | null,
@@ -40,7 +58,27 @@ export function normalizeLanguageToPlayer(
 }
 
 /**
- * Validate that an element has required fields
+ * Validates a student repeat element to ensure it has required fields.
+ * 
+ * Used by StudentRepeatElementMapper to validate elements before saving.
+ * 
+ * @param element - The element to validate
+ * @param element.samplePrompt - The sample prompt text (required)
+ * @param element.referenceText - Optional reference text
+ * @param element.audioPath - Optional audio file path
+ * 
+ * @returns Validation result with `valid` boolean and optional `error` message
+ * 
+ * @example
+ * ```tsx
+ * const result = validateStudentRepeatElement({
+ *   samplePrompt: "Hello",
+ *   referenceText: "Hello",
+ * });
+ * if (!result.valid) {
+ *   console.error(result.error);
+ * }
+ * ```
  */
 export function validateStudentRepeatElement(element: {
   samplePrompt: string;
@@ -54,7 +92,31 @@ export function validateStudentRepeatElement(element: {
 }
 
 /**
- * Validate that a choice element has required fields
+ * Validates a choice element (for speech-match slides) to ensure it has required fields.
+ * 
+ * Validates based on the speech mode:
+ * - TTS mode: Requires label and text
+ * - File mode: Requires label and fileUrl
+ * 
+ * @param element - The choice element to validate
+ * @param element.label - The choice label (required)
+ * @param element.speech - Speech configuration object
+ * @param element.speech.mode - Either "tts" or "file"
+ * @param element.speech.text - Required if mode is "tts"
+ * @param element.speech.fileUrl - Required if mode is "file"
+ * 
+ * @returns Validation result with `valid` boolean and optional `error` message
+ * 
+ * @example
+ * ```tsx
+ * const result = validateChoiceElement({
+ *   label: "Apple",
+ *   speech: { mode: "tts", text: "Apple" },
+ * });
+ * if (!result.valid) {
+ *   console.error(result.error);
+ * }
+ * ```
  */
 export function validateChoiceElement(element: {
   label: string;
