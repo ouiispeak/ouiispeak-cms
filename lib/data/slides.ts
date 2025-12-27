@@ -2,6 +2,8 @@ import { supabase } from "../supabase";
 import type { Slide, SlideMinimal } from "../domain/slide";
 import { toSlide, toSlideMinimal } from "../mappers/slideMapper";
 import { logger } from "../utils/logger";
+import { executeTransaction, transactionResultToStandard } from "../utils/transactions";
+import { validateSlidePropsRuntime } from "../utils/validateSlideProps";
 
 /**
  * Standard fields to select from slides table
@@ -79,6 +81,26 @@ export type SlideResult<T> = {
 };
 
 /**
+ * Pagination metadata
+ */
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
+/**
+ * Paginated result type
+ */
+export type PaginatedResult<T> = {
+  data: T | null;
+  error: string | null;
+  meta: PaginationMeta | null;
+};
+
+/**
  * Load slides by lesson ID
  * Returns domain models (camelCase)
  */
@@ -95,6 +117,60 @@ export async function loadSlidesByLesson(lessonId: string): Promise<SlideResult<
 
   const rows = (data ?? []) as SlideDataMinimal[];
   return { data: rows.map(toSlideMinimal), error: null };
+}
+
+/**
+ * Tier 2.1 Step 2c: Load all slides with pagination (includes props_json for dashboard)
+ * Returns slide data with pagination metadata
+ * 
+ * @param page - 1-indexed page number (default: 1)
+ * @param pageSize - Number of items per page (default: 50)
+ */
+export async function loadSlidesPaginated(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedResult<Array<SlideDataMinimal & { props_json: unknown }>>> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Get total count
+  const { count, error: countError } = await supabase
+    .from("slides")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    return { data: null, error: countError.message, meta: null };
+  }
+
+  const total = count ?? 0;
+
+  // Get paginated data (ordered by lesson_id, then order_index for dashboard consistency)
+  // Include props_json for dashboard display
+  const { data, error } = await supabase
+    .from("slides")
+    .select("id, lesson_id, group_id, order_index, type, props_json")
+    .order("lesson_id", { ascending: true })
+    .order("order_index", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    return { data: null, error: error.message, meta: null };
+  }
+
+  const rows = (data ?? []) as Array<SlideDataMinimal & { props_json: unknown }>;
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    data: rows,
+    error: null,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+  };
 }
 
 /**
@@ -120,6 +196,12 @@ export async function loadSlidesByGroup(groupId: string): Promise<SlideResult<Sl
  * Load a single slide by ID
  * Returns domain model (camelCase)
  */
+/**
+ * Load a single slide by ID
+ * Returns domain model (camelCase)
+ * 
+ * Tier 3.2 Step 2: Validates props_json at runtime
+ */
 export async function loadSlideById(id: string): Promise<SlideResult<Slide>> {
   const { data, error } = await supabase
     .from("slides")
@@ -135,7 +217,21 @@ export async function loadSlideById(id: string): Promise<SlideResult<Slide>> {
     return { data: null, error: `No slide found with id "${id}"` };
   }
 
-  return { data: toSlide(data as SlideData), error: null };
+  const slideData = data as SlideData;
+
+  // Tier 3.2 Step 2: Validate props_json at runtime
+  const validation = validateSlidePropsRuntime(slideData.type, slideData.props_json, id);
+  if (!validation.valid) {
+    // Log validation errors but don't fail the load (non-breaking)
+    logger.warn("[Slide Props Validation]", {
+      slideId: id,
+      slideType: slideData.type,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    });
+  }
+
+  return { data: toSlide(slideData), error: null };
 }
 
 /**
@@ -276,16 +372,14 @@ export async function updateSlide(
 
 /**
  * Delete a slide by ID
+ * 
+ * Tier 2.2 Step 3: Uses transaction wrapper for atomic deletion
  */
 export async function deleteSlide(id: string): Promise<SlideResult<void>> {
-  const { error } = await supabase
-    .from("slides")
-    .delete()
-    .eq("id", id);
+  const result = await executeTransaction<void>(
+    "delete_slide_transaction",
+    { slide_id: id }
+  );
 
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: null, error: null };
+  return transactionResultToStandard(result);
 }

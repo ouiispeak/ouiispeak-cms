@@ -3,6 +3,7 @@ import { lessonInputSchema } from "../schemas/lessonSchema";
 import type { Lesson, LessonMinimal } from "../domain/lesson";
 import { toLesson, toLessonMinimal } from "../mappers/lessonMapper";
 import { logger } from "../utils/logger";
+import { executeTransaction, transactionResultToStandard } from "../utils/transactions";
 
 /**
  * Standard fields to select from lessons table
@@ -98,6 +99,26 @@ export type LessonResult<T> = {
 };
 
 /**
+ * Pagination metadata
+ */
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
+/**
+ * Paginated result type
+ */
+export type PaginatedResult<T> = {
+  data: T | null;
+  error: string | null;
+  meta: PaginationMeta | null;
+};
+
+/**
  * Load all lessons (minimal fields, for dropdowns)
  * Ordered by created_at DESC, limited to 50
  * Returns domain models (camelCase)
@@ -132,6 +153,59 @@ export async function loadLessonsByModule(moduleId: string): Promise<LessonResul
   }
 
   return { data: (data ?? []) as LessonData[], error: null };
+}
+
+/**
+ * Tier 2.1 Step 2a: Load all lessons with pagination
+ * Returns lesson data with pagination metadata
+ * 
+ * @param page - 1-indexed page number (default: 1)
+ * @param pageSize - Number of items per page (default: 50)
+ */
+export async function loadLessonsPaginated(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedResult<LessonData[]>> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Get total count
+  const { count, error: countError } = await supabase
+    .from("lessons")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    return { data: null, error: countError.message, meta: null };
+  }
+
+  const total = count ?? 0;
+
+  // Get paginated data (ordered by module_id, then order_index for dashboard consistency)
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(LESSON_FIELDS_FULL)
+    .order("module_id", { ascending: true })
+    .order("order_index", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    return { data: null, error: error.message, meta: null };
+  }
+
+  const rows = (data ?? []) as LessonData[];
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    data: rows,
+    error: null,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+  };
 }
 
 /**
@@ -324,44 +398,20 @@ export async function updateLesson(
 
 /**
  * Delete a lesson by ID with cascading deletes
- * Deletes slides, groups, and the lesson itself
- * Order: child → parent (slides → groups → lesson)
+ * Deletes slides, groups, and the lesson itself atomically
+ * 
+ * Tier 2.2 Step 4: Uses transaction wrapper for atomic deletion
  * 
  * Note: DB has FK constraint user_lessons.lesson_id → lessons.id ON DELETE CASCADE,
  * so user_lessons records are automatically deleted by the database when the lesson is deleted.
  * No manual deletion of user_lessons is needed.
  */
 export async function deleteLesson(id: string): Promise<LessonResult<void>> {
-  // Delete all slides for this lesson
-  const { error: slidesError } = await supabase
-    .from("slides")
-    .delete()
-    .eq("lesson_id", id);
+  const result = await executeTransaction<void>(
+    "delete_lesson_transaction",
+    { lesson_id: id }
+  );
 
-  if (slidesError) {
-    return { data: null, error: `Failed to delete slides: ${slidesError.message}` };
-  }
-
-  // Delete all groups for this lesson
-  const { error: groupsError } = await supabase
-    .from("lesson_groups")
-    .delete()
-    .eq("lesson_id", id);
-
-  if (groupsError) {
-    return { data: null, error: `Failed to delete groups: ${groupsError.message}` };
-  }
-
-  // Finally, delete the lesson
-  const { error } = await supabase
-    .from("lessons")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: null, error: null };
+  return transactionResultToStandard(result);
 }
 

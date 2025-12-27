@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import { groupInputSchema } from "../schemas/groupSchema";
 import type { Group, GroupMinimal } from "../domain/group";
 import { toGroup, toGroupMinimal } from "../mappers/groupMapper";
+import { executeTransaction, transactionResultToStandard } from "../utils/transactions";
 
 /**
  * Standard fields to select from lesson_groups table
@@ -88,6 +89,26 @@ export type GroupResult<T> = {
 };
 
 /**
+ * Pagination metadata
+ */
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
+/**
+ * Paginated result type
+ */
+export type PaginatedResult<T> = {
+  data: T | null;
+  error: string | null;
+  meta: PaginationMeta | null;
+};
+
+/**
  * Load groups by lesson ID, ordered by order_index
  * Returns domain models (camelCase)
  */
@@ -104,6 +125,59 @@ export async function loadGroupsByLesson(lessonId: string): Promise<GroupResult<
 
   const rows = (data ?? []) as GroupDataMinimal[];
   return { data: rows.map(toGroupMinimal), error: null };
+}
+
+/**
+ * Tier 2.1 Step 2b: Load all groups with pagination
+ * Returns group data with pagination metadata
+ * 
+ * @param page - 1-indexed page number (default: 1)
+ * @param pageSize - Number of items per page (default: 50)
+ */
+export async function loadGroupsPaginated(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedResult<GroupDataMinimal[]>> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Get total count
+  const { count, error: countError } = await supabase
+    .from("lesson_groups")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    return { data: null, error: countError.message, meta: null };
+  }
+
+  const total = count ?? 0;
+
+  // Get paginated data (ordered by lesson_id, then order_index for dashboard consistency)
+  const { data, error } = await supabase
+    .from("lesson_groups")
+    .select(GROUP_FIELDS_MINIMAL)
+    .order("lesson_id", { ascending: true })
+    .order("order_index", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    return { data: null, error: error.message, meta: null };
+  }
+
+  const rows = (data ?? []) as GroupDataMinimal[];
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    data: rows,
+    error: null,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+  };
 }
 
 /**
@@ -237,17 +311,16 @@ export async function updateGroup(
 
 /**
  * Delete a group by ID
+ * 
+ * Tier 2.2 Step 4: Uses transaction wrapper for atomic deletion
+ * Deletes the group and all its slides atomically.
  */
 export async function deleteGroup(id: string): Promise<GroupResult<void>> {
-  const { error } = await supabase
-    .from("lesson_groups")
-    .delete()
-    .eq("id", id);
+  const result = await executeTransaction<void>(
+    "delete_group_transaction",
+    { group_id: id }
+  );
 
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: null, error: null };
+  return transactionResultToStandard(result);
 }
 

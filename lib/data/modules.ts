@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import { moduleInputSchema } from "../schemas/moduleSchema";
 import type { Module } from "../domain/module";
 import { toModule } from "../mappers/moduleMapper";
+import { executeTransaction, transactionResultToStandard } from "../utils/transactions";
 
 /**
  * Standard fields to select from modules table
@@ -73,6 +74,78 @@ export async function loadModules(): Promise<ModuleResult<Module[]>> {
 
   const rows = (data ?? []) as ModuleData[];
   return { data: rows.map(toModule), error: null };
+}
+
+/**
+ * Pagination metadata
+ */
+export type PaginationMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+};
+
+/**
+ * Paginated result type
+ */
+export type PaginatedResult<T> = {
+  data: T | null;
+  error: string | null;
+  meta: PaginationMeta | null;
+};
+
+/**
+ * Tier 2.1 Step 1: Load modules with pagination
+ * Returns domain models (camelCase) with pagination metadata
+ * 
+ * @param page - 1-indexed page number (default: 1)
+ * @param pageSize - Number of items per page (default: 50)
+ */
+export async function loadModulesPaginated(
+  page: number = 1,
+  pageSize: number = 50
+): Promise<PaginatedResult<Module[]>> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // Get total count
+  const { count, error: countError } = await supabase
+    .from("modules")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    return { data: null, error: countError.message, meta: null };
+  }
+
+  const total = count ?? 0;
+
+  // Get paginated data
+  const { data, error } = await supabase
+    .from("modules")
+    .select(MODULE_FIELDS)
+    .order("order_index", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    return { data: null, error: error.message, meta: null };
+  }
+
+  const rows = (data ?? []) as ModuleData[];
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    data: rows.map(toModule),
+    error: null,
+    meta: {
+      page,
+      pageSize,
+      total,
+      totalPages,
+      hasMore: page < totalPages,
+    },
+  };
 }
 
 /**
@@ -190,69 +263,20 @@ export async function updateModule(
 
 /**
  * Delete a module by ID with cascading deletes
- * Deletes all lessons, groups, and slides associated with the module
+ * Deletes all lessons, groups, and slides associated with the module atomically
+ * 
+ * Tier 2.2 Step 4: Uses transaction wrapper for atomic deletion
  * 
  * Note: DB has FK constraint user_lessons.lesson_id → lessons.id ON DELETE CASCADE,
  * so user_lessons records are automatically deleted by the database when lessons are deleted.
  * No manual deletion of user_lessons is needed.
  */
 export async function deleteModule(id: string): Promise<ModuleResult<void>> {
-  // Get all lessons for this module
-  const { data: lessons, error: lessonsError } = await supabase
-    .from("lessons")
-    .select("id")
-    .eq("module_id", id);
+  const result = await executeTransaction<void>(
+    "delete_module_transaction",
+    { module_id: id }
+  );
 
-  if (lessonsError) {
-    return { data: null, error: `Failed to load lessons: ${lessonsError.message}` };
-  }
-
-  const lessonIds = lessons?.map((l) => l.id) ?? [];
-
-  // Delete all slides for these lessons
-  if (lessonIds.length > 0) {
-    const { error: slidesError } = await supabase
-      .from("slides")
-      .delete()
-      .in("lesson_id", lessonIds);
-
-    if (slidesError) {
-      return { data: null, error: `Failed to delete slides: ${slidesError.message}` };
-    }
-  }
-
-  // Delete all groups for these lessons
-  if (lessonIds.length > 0) {
-    const { error: groupsError } = await supabase
-      .from("lesson_groups")
-      .delete()
-      .in("lesson_id", lessonIds);
-
-    if (groupsError) {
-      return { data: null, error: `Failed to delete groups: ${groupsError.message}` };
-    }
-  }
-
-  // Delete all lessons for this module
-  const { error: lessonsDeleteError } = await supabase
-    .from("lessons")
-    .delete()
-    .eq("module_id", id);
-
-  if (lessonsDeleteError) {
-    return { data: null, error: `Failed to delete lessons: ${lessonsDeleteError.message}` };
-  }
-
-  // Finally, delete the module
-  const { error } = await supabase
-    .from("modules")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    return { data: null, error: error.message };
-  }
-
-  return { data: null, error: null };
+  return transactionResultToStandard(result);
 }
 

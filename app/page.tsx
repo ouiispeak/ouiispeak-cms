@@ -4,7 +4,7 @@ import { useState } from "react";
 import CmsPageShell from "../components/cms/CmsPageShell";
 import { uiTokens } from "../lib/uiTokens";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { useCmsDashboard } from "../lib/hooks/cms/useCmsDashboard";
+import { useCmsDashboardPaginated } from "../lib/hooks/cms/useCmsDashboardPaginated";
 import { useCmsDeleteFlow } from "../lib/hooks/cms/useCmsDeleteFlow";
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,17 @@ import CmsDashboardTree from "../components/cms/CmsDashboardTree";
 import type { ModuleDeleteImpact, LessonDeleteImpact } from "../lib/data/deleteImpact";
 
 export default function CmsHome() {
-  const { loadState, reload } = useCmsDashboard();
+  const { 
+    loadState, 
+    reload,
+    page,
+    paginationMeta,
+    nextPage,
+    prevPage,
+    goToPage,
+    hasNextPage,
+    hasPrevPage,
+  } = useCmsDashboardPaginated(1, 50);
   const {
     deleteState,
     deleteImpact,
@@ -136,7 +146,8 @@ export default function CmsHome() {
           />
 
           {loadState.status === "ready" && (
-            <CmsDashboardTree
+            <>
+              <CmsDashboardTree
                 maps={loadState.maps}
                 openLevels={openLevels}
                 openModules={openModules}
@@ -151,6 +162,81 @@ export default function CmsHome() {
                 onDeleteGroup={(id, title) => handleDeleteClick("group", id, title)}
                 onDeleteSlide={(id, title) => handleDeleteClick("slide", id, title)}
               />
+              
+              {/* Pagination Controls */}
+              {paginationMeta && paginationMeta.totalPages > 1 && (
+                <div
+                  style={{
+                    marginTop: uiTokens.space.lg,
+                    padding: uiTokens.space.md,
+                    borderTop: `1px solid ${uiTokens.color.border}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: uiTokens.space.sm,
+                  }}
+                >
+                  <div style={{ fontSize: uiTokens.font.meta.size, color: uiTokens.color.textMuted }}>
+                    Page {page} of {paginationMeta.totalPages} ({paginationMeta.total} module{paginationMeta.total !== 1 ? "s" : ""})
+                  </div>
+                  <div style={{ display: "flex", gap: uiTokens.space.xs, alignItems: "center" }}>
+                    <button
+                      onClick={prevPage}
+                      disabled={!hasPrevPage}
+                      style={{
+                        padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                        backgroundColor: hasPrevPage ? uiTokens.color.primary : uiTokens.color.border,
+                        color: hasPrevPage ? "white" : uiTokens.color.textMuted,
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: hasPrevPage ? "pointer" : "not-allowed",
+                        fontSize: uiTokens.font.meta.size,
+                      }}
+                    >
+                      Previous
+                    </button>
+                    {paginationMeta.totalPages <= 10 && (
+                      <div style={{ display: "flex", gap: uiTokens.space.xs }}>
+                        {Array.from({ length: paginationMeta.totalPages }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => goToPage(p)}
+                            style={{
+                              padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                              backgroundColor: p === page ? uiTokens.color.primary : "transparent",
+                              color: p === page ? "white" : uiTokens.color.text,
+                              border: `1px solid ${p === page ? uiTokens.color.primary : uiTokens.color.border}`,
+                              borderRadius: "4px",
+                              cursor: "pointer",
+                              fontSize: uiTokens.font.meta.size,
+                              minWidth: "32px",
+                            }}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={nextPage}
+                      disabled={!hasNextPage}
+                      style={{
+                        padding: `${uiTokens.space.xs} ${uiTokens.space.sm}`,
+                        backgroundColor: hasNextPage ? uiTokens.color.primary : uiTokens.color.border,
+                        color: hasNextPage ? "white" : uiTokens.color.textMuted,
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: hasNextPage ? "pointer" : "not-allowed",
+                        fontSize: uiTokens.font.meta.size,
+                      }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </CmsPageShell>
